@@ -1,7 +1,16 @@
 node_modules/
 .env
 data/logs/
+data/events/*.jsonl
 dist/
 .claude/
 *.tmp
 *.tmp.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
