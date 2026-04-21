@@ -1571,4 +1571,72 @@ Task #53: 前端 — 错误状态处理（API 失败 Toast + WebSocket 断连状
 
 ### 下一步
 
-Task #52: 前端 — 加载骨架屏与按钮 Loading 状态
+Task #57: 后端 — graceful shutdown（Server 退出时中止所有 SDK 查询）
+
+---
+
+## Task #55: 启动脚本 start.js（跨平台）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`start.js`** — 跨平台启动脚本
+   - 默认开发模式（dev）：使用 `npx tsx watch` 启动 Server + `npx vite --host` 启动前端
+   - `--prod` 标志：使用 `node server/dist/index.js` 启动编译后的 Server
+   - Windows 平台：使用 `cmd.exe /d /s /c` 执行命令，正确解析 `.cmd` 脚本（npx.cmd 等）
+   - Unix 平台：直接 `spawn` 执行
+   - 进程管理：子进程 stdout/stderr 转发到主进程，带 tag 标识（Server/Web）
+   - SIGINT/SIGTERM 信号处理：Windows 使用 `taskkill /T /F` 终止进程树，Unix 使用 `SIGTERM`
+   - 启动 banner 显示当前模式（development/production）
+   - 进程退出日志
+
+2. **`server/index.ts` 修复**
+   - 移除冗余的 `startServer()` 调用，避免双重启动（index.ts 和 app.ts 都调用 startServer 导致 ERR_SERVER_ALREADY_LISTEN）
+   - 保留 `app.ts` 的 `isMainModule` 自动启动逻辑
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| start.js dev 模式启动 | ✅ Server + Vite 双进程 |
+| Vite 启动速度 | ✅ 337ms |
+| Server 启动 | ✅ 127.0.0.1:3456 |
+| Windows 兼容性 | ✅ cmd.exe 执行 .cmd 脚本 |
+| 信号处理 | ✅ SIGINT/SIGTERM |
+| 无 deprecation 警告 | ✅ |
+
+### 下一步
+
+Task #56: 启动脚本 stop.js（跨平台）
+
+---
+
+## Task #56: 启动脚本 stop.js（跨平台）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`stop.js`** — 跨平台停止脚本
+   - 查找并终止监听 port 3456（Server）和 port 5173（Frontend）的进程
+   - Windows：`netstat -ano | findstr :<port> | findstr LISTENING` 查找 PID，`taskkill /F /T /PID` 终止
+   - Unix：`lsof -i :<port> -t -sTCP:LISTEN` 查找 PID，`kill SIGTERM` 终止
+   - 清晰的日志输出：每个端口的查找结果和终止操作
+   - 无运行进程时输出 "No running processes found"
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 无进程时输出 | ✅ "not running" |
+| 有进程时终止 | ✅ Vite PID 被终止 |
+| 终止后端口释放 | ✅ 第二次运行确认 "not running" |
+| 后端测试 | ✅ 240/240 通过 |
+| 前端构建 | ✅ 605ms, 44 模块 |
+
+### 下一步
+
+Task #57: 后端 — graceful shutdown（Server 退出时中止所有 SDK 查询）
