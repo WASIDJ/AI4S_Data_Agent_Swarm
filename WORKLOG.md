@@ -1683,3 +1683,51 @@ Task #57: 后端 — graceful shutdown（Server 退出时中止所有 SDK 查询
 ### 下一步
 
 Task #58: 后端 — 并发 Task 数限制与 Agent 单 Task 执行约束
+
+---
+
+## Task #58: 后端 — 并发 Task 数限制与 Agent 单 Task 执行约束
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/services/taskManager.ts`** — 并发限制改进
+   - 系统并发上限错误码改为 `409 RESOURCE_HAS_DEPENDENTS`，消息含活跃任务数 `已达到并发上限（N/10）`
+   - Agent 活跃任务错误码统一为 `409 AGENT_BUSY`，消息含当前执行的任务标题 `Agent X 当前正在执行任务「Y」`
+
+2. **`web/src/components/TaskCard.tsx`** — 启动按钮 Agent 忙碌禁用
+   - Todo 状态 Task 的"启动"按钮在 Agent 处于 working/stuck 状态时禁用（置灰 + cursor: not-allowed）
+   - hover tooltip 提示 `Agent 当前忙碌中` / `Agent 当前阻塞中`
+   - ActionButton 组件新增 `disabled` 和 `title` props
+
+3. **`server/services/taskManager.test.ts`** — 新增 2 个测试
+   - Agent 有活跃 Task 时启动拒绝（含任务标题）
+   - 系统并发上限拒绝（含并发数）
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `server/services/taskManager.ts` | 并发限制错误码 + 消息改进 |
+| `web/src/components/TaskCard.tsx` | 启动按钮禁用 + tooltip |
+| `server/services/taskManager.test.ts` | 新增 2 个测试 |
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 并发限制 409 RESOURCE_HAS_DEPENDENTS | ✅ |
+| 并发限制消息含 N/10 | ✅ |
+| Agent 忙碌 409 AGENT_BUSY | ✅ |
+| Agent 忙碌消息含任务标题 | ✅ |
+| 前端启动按钮禁用 | ✅ Agent working/stuck 时置灰 |
+| 前端 tooltip | ✅ hover 提示 |
+| TypeScript 类型检查 | ✅ 无错误 |
+| Vite 生产构建 | ✅ 604ms, 44 模块 |
+| 全部测试 (243) | ✅ |
+
+### 下一步
+
+Task #59: 后端 — 预算/轮次超限自动停止 Task

@@ -83,8 +83,8 @@ class TaskManager {
     if (activeTask) {
       throw new TaskManagerError(
         409,
-        "AGENT_HAS_ACTIVE_TASK",
-        `Agent ${agent.name} already has an active task`,
+        "AGENT_BUSY",
+        `Agent ${agent.name} 当前正在执行任务「${activeTask.title}」`,
       );
     }
 
@@ -92,9 +92,9 @@ class TaskManager {
     const activeCount = sdkSessionManager.getActiveTaskCount();
     if (activeCount >= MAX_CONCURRENT_TASKS) {
       throw new TaskManagerError(
-        429,
-        "MAX_CONCURRENT_TASKS",
-        `System has reached maximum concurrent tasks (${MAX_CONCURRENT_TASKS})`,
+        409,
+        "RESOURCE_HAS_DEPENDENTS",
+        `已达到并发上限（${activeCount}/${MAX_CONCURRENT_TASKS}）`,
       );
     }
 

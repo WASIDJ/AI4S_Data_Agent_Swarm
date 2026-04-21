@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { Task, TaskStatus } from "../types";
 import { useAppState } from "../store/AppContext";
 import * as api from "../api/client";
@@ -44,6 +44,17 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
   const agent = agents.get(task.agentId);
   const statusColor = STATUS_COLORS[task.status];
   const statusBg = STATUS_BG[task.status];
+
+  // Agent busy detection for start button
+  const agentBusyInfo = useMemo(() => {
+    if (!agent || task.status !== "Todo") return null;
+    if (agent.status === "working" || agent.status === "stuck") {
+      return `Agent 当前${agent.status === "working" ? "忙碌" : "阻塞"}中`;
+    }
+    return null;
+  }, [agent?.status, task.status]);
+
+  const startDisabled = !!agentBusyInfo;
 
   const handleAction = useCallback(
     async (action: string, fn: () => Promise<unknown>) => {
@@ -110,10 +121,11 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
             <ActionButton
               label="▶ 启动"
               loading={loading === "start"}
+              disabled={startDisabled}
+              title={agentBusyInfo ?? undefined}
               onClick={() =>
                 handleAction("start", async () => {
                   const res = await api.startTask(task.id);
-                  // State will be updated via WebSocket broadcast
                   console.log("Task started:", res.task.status);
                 })
               }
@@ -195,17 +207,22 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
 function ActionButton({
   label,
   loading,
+  disabled,
+  title,
   onClick,
 }: {
   label: string;
   loading: boolean;
+  disabled?: boolean;
+  title?: string;
   onClick: () => void;
 }) {
   return (
     <button
       className="task-action-btn"
       onClick={onClick}
-      disabled={loading}
+      disabled={loading || disabled}
+      title={title}
     >
       {loading ? (
         <span className="btn-loading">

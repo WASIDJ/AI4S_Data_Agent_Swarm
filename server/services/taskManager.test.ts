@@ -171,6 +171,50 @@ describe("TaskManager", () => {
       });
     });
 
+    it("should reject with task title when Agent has active task", async () => {
+      const agent = makeAgent();
+      const project = makeProject();
+      const activeTask = makeTask({
+        id: "task-active",
+        title: "正在执行的任务",
+        status: "Running",
+        startedAt: Date.now(),
+      });
+      const newTask = makeTask({ id: "task-new" });
+
+      agentStore.createAgent(agent);
+      projectStore.createProject(project);
+      taskStore.createTask(activeTask);
+      taskStore.createTask(newTask);
+
+      await expect(taskManager.startTask(newTask.id)).rejects.toMatchObject({
+        code: "AGENT_BUSY",
+        statusCode: 409,
+        message: expect.stringContaining("正在执行的任务"),
+      });
+    });
+
+    it("should reject when system concurrent limit reached", async () => {
+      const { sdkSessionManager } = await import("./sdkSessionManager.js");
+      vi.mocked(sdkSessionManager.getActiveTaskCount).mockReturnValue(10);
+
+      const agent = makeAgent();
+      const project = makeProject();
+      const task = makeTask();
+
+      agentStore.createAgent(agent);
+      projectStore.createProject(project);
+      taskStore.createTask(task);
+
+      await expect(taskManager.startTask(task.id)).rejects.toMatchObject({
+        code: "RESOURCE_HAS_DEPENDENTS",
+        statusCode: 409,
+        message: expect.stringContaining("并发上限"),
+      });
+
+      vi.mocked(sdkSessionManager.getActiveTaskCount).mockReturnValue(0);
+    });
+
     it("should rollback on SDK start failure", async () => {
       const { sdkSessionManager } = await import("./sdkSessionManager.js");
       vi.mocked(sdkSessionManager.startTask).mockRejectedValueOnce(new Error("SDK failed"));
