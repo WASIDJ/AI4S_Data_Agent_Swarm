@@ -605,4 +605,72 @@ Task #20: 后端 — TaskManager
 
 ### 下一步
 
-Task #20: 后端 — TaskManager
+Task #21: 后端 — Task 操作 API（start/cancel/done/retry）
+
+---
+
+## Task #20: 后端 — TaskManager — 核心状态迁移（start/complete/cancel/done）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/services/taskManager.ts`** — Task 生命周期状态管理器（单例）
+   - `startTask(taskId)`: Todo → Running 状态迁移
+     - 校验 Task 为 Todo、Agent 为 idle 且 isEnabled
+     - 检查 Agent 单 Task 约束（`getActiveTaskForAgent`）
+     - 检查系统并发上限（`MAX_CONCURRENT_TASKS`）
+     - 校验 Project 存在
+     - 调用 `sdkSessionManager.startTask()` 启动 SDK 会话
+     - 更新 Task 状态/startedAt、Agent 状态→working/currentTaskId
+     - SDK 启动失败时自动回滚（Task→Todo、Agent→idle）
+     - 广播 `task:update` + `agent:update`
+   - `completeTask(taskId, reason, output?)`: Running/Stuck → Done
+     - 供 SDK 完成或外部调用
+     - 更新 completedAt/completedReason/output（截断 10KB）
+     - 更新 Agent 统计（totalTasksCompleted++、totalCostUsd 累加、avgDurationMs 重算）
+     - 智能判断 Agent 是否有其他活跃 Task，有则保持当前状态，无则→idle
+   - `cancelTask(taskId)`: Running/Stuck → Cancelled
+     - 调用 `sdkSessionManager.stopTask()` 中止 SDK 会话
+     - completedReason = 'user_cancelled'
+     - 更新 Agent 统计（totalTasksCancelled++）
+     - Agent 状态智能管理
+   - `doneTask(taskId)`: Running/Stuck → Done
+     - 用户手动标记完成，completedReason = 'user_done'
+     - 同 completeTask 的统计逻辑
+   - `updateAgentStatus(agentId)` 私有辅助：检查 Agent 是否还有 Running/Stuck Task
+   - `TaskManagerError` 自定义错误类（含 statusCode/code/message）
+
+2. **`server/services/taskManager.test.ts`** — 20 个单元测试
+   - startTask: Todo→Running+Agent→working、Task不存在、非Todo、Agent禁用、Agent忙碌、SDK失败回滚
+   - cancelTask: Running→Cancelled+Agent→idle、更新cancelled统计、不存在、非活跃状态、调用stopTask
+   - doneTask: Running→Done+user_done、更新Agent统计、Todo拒绝
+   - completeTask: sdk_result+output、不存在跳过、Todo跳过、output截断
+   - Agent状态管理: 多Task保持working、全部完成后→idle
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| startTask Todo→Running | ✅ |
+| startTask Agent→working | ✅ |
+| startTask 不存在Task 404 | ✅ |
+| startTask 非Todo 409 | ✅ |
+| startTask Agent禁用 409 | ✅ |
+| startTask Agent忙碌 409 | ✅ |
+| startTask SDK失败回滚 | ✅ |
+| cancelTask Running→Cancelled | ✅ |
+| cancelTask Agent→idle | ✅ |
+| cancelTask cancelled统计 | ✅ |
+| doneTask Running→Done | ✅ |
+| doneTask user_done reason | ✅ |
+| doneTask Agent统计更新 | ✅ |
+| completeTask sdk_result | ✅ |
+| completeTask output截断 | ✅ |
+| 多Task Agent保持working | ✅ |
+| 全部测试 (156) | ✅ |
+
+### 下一步
+
+Task #21: 后端 — Task 操作 API（start/cancel/done/retry）

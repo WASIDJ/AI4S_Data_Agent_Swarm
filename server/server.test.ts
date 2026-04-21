@@ -5,12 +5,14 @@ import { app, server, startServer } from "./app.js";
 describe("Express Server", () => {
   beforeAll(async () => {
     if (!server.listening) {
-      await startServer();
+      await startServer(0);
     }
   });
 
   afterAll(() => {
-    server.close();
+    if (server.listening) {
+      server.close();
+    }
   });
 
   describe("GET /api/health", () => {
