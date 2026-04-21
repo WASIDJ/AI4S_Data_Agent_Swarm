@@ -6,11 +6,12 @@ import http from "node:http";
 import { loadAllStores } from "./store/index.js";
 import * as taskStore from "./store/taskStore.js";
 import * as agentStore from "./store/agentStore.js";
-import { initWebSocket, getConnectedClientCount } from "./services/wsBroadcaster.js";
+import { initWebSocket, getConnectedClientCount, closeWebSocket } from "./services/wsBroadcaster.js";
 import { projectsRouter } from "./routes/projects.js";
 import { agentsRouter } from "./routes/agents.js";
 import { tasksRouter } from "./routes/tasks.js";
 import { eventsRouter } from "./routes/events.js";
+import { sdkSessionManager } from "./services/sdkSessionManager.js";
 
 // ---------------------------------------------------------------------------
 // Environment
@@ -182,6 +183,58 @@ app.use(
 );
 
 // ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+
+let isShuttingDown = false;
+
+export function gracefulShutdown(signal: string): void {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`\n[Agent Swarm] Received ${signal}, shutting down gracefully...`);
+
+  // 1. Stop all active SDK queries
+  const activeCount = sdkSessionManager.getActiveTaskCount();
+  if (activeCount > 0) {
+    console.log(`[Agent Swarm] Stopping ${activeCount} active SDK query/queries...`);
+    sdkSessionManager.stopAll();
+  }
+
+  // 2. Mark all Running tasks as Stuck (so user can resume after restart)
+  const allTasks = taskStore.getAllTasks();
+  const runningTasks = allTasks.filter(
+    (t) => t.status === "Running" || t.status === "Stuck",
+  );
+
+  for (const task of runningTasks) {
+    taskStore.updateTask(task.id, {
+      status: "Stuck",
+      stuckReason: "Server 正常关闭，请重启后恢复",
+    });
+
+    if (task.agentId) {
+      agentStore.updateAgent(task.agentId, { status: "stuck" });
+    }
+
+    console.log(`[Agent Swarm] Task ${task.id} (${task.title}) → Stuck`);
+  }
+
+  // 3. Close WebSocket connections
+  closeWebSocket();
+
+  // 4. Close HTTP server
+  server.close(() => {
+    console.log("[Agent Swarm] HTTP server closed.");
+  });
+
+  // Force exit after 5 seconds if graceful shutdown hangs
+  setTimeout(() => {
+    console.warn("[Agent Swarm] Forced shutdown after 5s timeout.");
+  }, 5000);
+}
+
+// ---------------------------------------------------------------------------
 // Start (only when run directly, not when imported)
 // ---------------------------------------------------------------------------
 
@@ -224,8 +277,14 @@ const isMainModule =
   process.argv[1]?.includes("tsx");
 
 if (isMainModule) {
-  startServer().catch((err) => {
-    console.error("[Agent Swarm] Failed to start server:", err);
-    process.exit(1);
-  });
+  startServer()
+    .then(() => {
+      // Register signal handlers after server is ready
+      process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+      process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    })
+    .catch((err) => {
+      console.error("[Agent Swarm] Failed to start server:", err);
+      process.exit(1);
+    });
 }

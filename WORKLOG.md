@@ -1640,3 +1640,46 @@ Task #56: 启动脚本 stop.js（跨平台）
 ### 下一步
 
 Task #57: 后端 — graceful shutdown（Server 退出时中止所有 SDK 查询）
+
+---
+
+## Task #57: 后端 — graceful shutdown（Server 退出时中止所有 SDK 查询）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/app.ts`** — graceful shutdown 函数
+   - `gracefulShutdown(signal)`: 接收 SIGINT/SIGTERM 信号
+   - `isShuttingDown` 防重入守卫：避免多次触发
+   - 调用 `sdkSessionManager.stopAll()` 中止所有活跃 SDK 查询
+   - 遍历所有 Running/Stuck Task → 标记为 Stuck（stuckReason = "Server 正常关闭，请重启后恢复"）
+   - 对应 Agent 状态更新为 stuck
+   - 调用 `closeWebSocket()` 关闭所有 WebSocket 连接
+   - 调用 `server.close()` 关闭 HTTP Server
+   - 5 秒超时强制退出保护
+   - 在 `startServer()` 完成后注册 SIGINT/SIGTERM 处理器
+
+2. **`server/index.ts` 修复**（Task #55 中已完成）
+   - 移除冗余 `startServer()` 调用，消除 ERR_SERVER_ALREADY_LISTEN 错误
+
+3. **`server/server.shutdown.test.ts`** — 1 个集成测试
+   - 创建 Running/Todo/Done 三种状态 Task → 触发 gracefulShutdown
+   - 验证 Running → Stuck（含 stuckReason）、Agent → stuck
+   - 验证 Todo/Done 不受影响
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| Running → Stuck + stuckReason | ✅ |
+| Agent → stuck | ✅ |
+| Todo/Done 不受影响 | ✅ |
+| sdkSessionManager.stopAll 调用 | ✅ |
+| closeWebSocket 调用 | ✅ |
+| 全部测试 (241) | ✅ |
+
+### 下一步
+
+Task #58: 后端 — 并发 Task 数限制与 Agent 单 Task 执行约束
