@@ -984,4 +984,32 @@ Task #37: 前端 — WebSocket 客户端 Hook（useWebSocket.ts）
 
 ### 下一步
 
-Task #37: 前端 — WebSocket 客户端 Hook（useWebSocket.ts）
+Task #38: 前端 — 全局状态管理（Context + Reducer）
+
+---
+
+## Task #37: 前端 — WebSocket 客户端 Hook（useWebSocket.ts）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`web/src/hooks/useWebSocket.ts`** — WebSocket 连接管理 Hook
+   - 组件挂载时自动连接 `ws://localhost:3456/ws`
+   - 指数退避重连: 初始延迟 1s，每次失败翻倍，最大 30s
+   - 消息路由: 解析 JSON，根据 `type` 分发到对应回调
+   - 支持 7 种消息类型: `task:update`, `agent:update`, `event:new`, `tool:approval`, `task:budget`, `notification`, `error`
+   - 返回 `{ connected, reconnectCount }` 状态
+   - 组件卸载时自动断开连接，阻止重连
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ |
+| Vite 生产构建 | ✅ 503ms |
+
+### 下一步
+
+Task #38: 前端 — 全局状态管理（Context + Reducer）
