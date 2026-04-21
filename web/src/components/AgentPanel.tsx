@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppState, useAppDispatch } from "../store/AppContext";
 import { AgentCard } from "./AgentCard";
-import * as api from "../api/client";
+import { AgentFormModal } from "./modals/AgentFormModal";
 import type { Agent, AgentStatus } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -28,40 +28,13 @@ function sortAgents(agents: Agent[]): Agent[] {
 export function AgentPanel() {
   const { agents, selectedAgentId } = useAppState();
   const dispatch = useAppDispatch();
-  const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    avatar: "\u{1F916}",
-    role: "",
-    prompt: "",
-  });
+  const [modalAgent, setModalAgent] = useState<Agent | "create" | null>(null);
 
   const agentList = sortAgents([...agents.values()]);
 
-  async function handleCreate() {
-    if (!form.name.trim() || !form.prompt.trim()) return;
-    setCreating(true);
-    try {
-      const res = await api.createAgent({
-        name: form.name.trim(),
-        avatar: form.avatar,
-        role: form.role.trim() || form.name.trim(),
-        prompt: form.prompt.trim(),
-      });
-      dispatch({ type: "UPDATE_AGENT", agent: res.agent });
-      setShowCreate(false);
-      setForm({ name: "", avatar: "\u{1F916}", role: "", prompt: "" });
-    } catch (err) {
-      console.error("Failed to create agent:", err);
-    } finally {
-      setCreating(false);
-    }
-  }
-
   return (
     <div className="agent-panel">
-      {agentList.length === 0 && !showCreate ? (
+      {agentList.length === 0 && modalAgent === null ? (
         <div className="agent-empty">
           <span className="agent-empty-icon">{"\u{1F916}"}</span>
           <p className="agent-empty-title">还没有 Agent</p>
@@ -70,7 +43,7 @@ export function AgentPanel() {
           </p>
           <button
             className="btn btn-primary"
-            onClick={() => setShowCreate(true)}
+            onClick={() => setModalAgent("create")}
           >
             创建 Agent
           </button>
@@ -81,69 +54,11 @@ export function AgentPanel() {
             <span className="agent-panel-count">{agentList.length} 个 Agent</span>
             <button
               className="btn btn-small"
-              onClick={() => setShowCreate(!showCreate)}
+              onClick={() => setModalAgent("create")}
             >
               + Agent
             </button>
           </div>
-
-          {showCreate && (
-            <div className="agent-create-form">
-              <label className="form-label">
-                名称
-                <input
-                  className="form-input"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm({ ...form, name: e.target.value })
-                  }
-                  placeholder="Agent 名称"
-                />
-              </label>
-              <label className="form-label">
-                角色
-                <input
-                  className="form-input"
-                  value={form.role}
-                  onChange={(e) =>
-                    setForm({ ...form, role: e.target.value })
-                  }
-                  placeholder="角色描述"
-                />
-              </label>
-              <label className="form-label">
-                Prompt
-                <textarea
-                  className="form-textarea"
-                  value={form.prompt}
-                  onChange={(e) =>
-                    setForm({ ...form, prompt: e.target.value })
-                  }
-                  placeholder="系统提示词（至少 10 字）"
-                  rows={4}
-                />
-              </label>
-              <div className="form-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowCreate(false)}
-                >
-                  取消
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleCreate}
-                  disabled={
-                    creating ||
-                    !form.name.trim() ||
-                    form.prompt.trim().length < 10
-                  }
-                >
-                  {creating ? "创建中..." : "创建"}
-                </button>
-              </div>
-            </div>
-          )}
 
           <div className="agent-list">
             {agentList.map((agent) => (
@@ -154,10 +69,18 @@ export function AgentPanel() {
                 onSelect={(id) =>
                   dispatch({ type: "SET_SELECTED_AGENT", agentId: id })
                 }
+                onEdit={(a) => setModalAgent(a)}
               />
             ))}
           </div>
         </>
+      )}
+
+      {modalAgent !== null && (
+        <AgentFormModal
+          agent={modalAgent === "create" ? undefined : modalAgent}
+          onClose={() => setModalAgent(null)}
+        />
       )}
     </div>
   );

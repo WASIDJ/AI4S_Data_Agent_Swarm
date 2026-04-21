@@ -33,13 +33,14 @@ interface AgentCardProps {
   agent: Agent;
   isSelected: boolean;
   onSelect: (agentId: string) => void;
+  onEdit: (agent: Agent) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
+export function AgentCard({ agent, isSelected, onSelect, onEdit }: AgentCardProps) {
   const color = STATUS_COLORS[agent.status];
 
   return (
@@ -62,6 +63,16 @@ export function AgentCard({ agent, isSelected, onSelect }: AgentCardProps) {
               {STATUS_ICONS[agent.status]} {STATUS_LABELS[agent.status]}
             </span>
           </div>
+          <button
+            className="agent-edit-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(agent);
+            }}
+            title="编辑"
+          >
+            \u270E
+          </button>
         </div>
 
         <div className="agent-card-meta">

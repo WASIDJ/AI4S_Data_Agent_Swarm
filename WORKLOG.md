@@ -1212,4 +1212,63 @@ Task #49: 前端 — Notification 通知队列组件
 
 ### 下一步
 
-Task #49: 前端 — Notification 通知队列组件
+Task #50: 前端 — Task 创建/编辑表单弹窗
+
+---
+
+## Task #49: 前端 — Agent 创建/编辑表单弹窗
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`web/src/components/modals/AgentFormModal.tsx`** — Agent 创建/编辑 Modal 表单
+   - 双模式：传入 `agent` 参数为编辑模式，不传为创建模式
+   - 20 个预设 Emoji 选择器，点击头像区域展开网格，选中高亮
+   - 表单字段：
+     - 名称（input，1-50 字符，实时字符计数）
+     - 头像（Emoji 选择器）
+     - 角色描述（input，1-200 字符，实时字符计数）
+     - 系统提示词（textarea，10-5000 字符，实时字符计数）
+     - 默认 Project（下拉选择，来自全局状态 projects）
+     - 最大轮次（number input，1-500，默认 200）
+     - 预算上限 USD（number input，0.1-50.0，默认 5.0）
+     - 允许工具（多选 checkbox：Bash/Read/Write/Edit/Grep/Glob/WebFetch）
+   - 实时表单验证：每个字段下方红色错误提示，提交按钮在有错误时禁用
+   - 提交调用 `api.createAgent()` 或 `api.updateAgent()`，成功后更新全局状态并关闭弹窗
+   - 提交按钮 loading 状态，API 失败时弹窗内显示错误信息
+   - 点击背景区域关闭弹窗
+
+2. **`web/src/components/AgentPanel.tsx`** 重构
+   - 替换原来的内联创建表单，改为打开 AgentFormModal
+   - 空状态和 "+ Agent" 按钮均打开创建模式 Modal
+   - `modalAgent` 状态管理：`null`(关闭) / `"create"`(创建) / `Agent` 对象(编辑)
+
+3. **`web/src/components/AgentCard.tsx`** 更新
+   - 新增 `onEdit` 回调 prop
+   - 悬停时显示编辑按钮（铅笔图标），点击打开编辑 Modal（stopPropagation 防止触发行点击）
+
+4. **`web/src/index.css`** 新增样式
+   - Modal 样式：backdrop + 居中弹窗 + 淡入动画 + 上滑动画
+   - 头像选择器：preview 按钮 + emoji 网格（5x4 布局）+ 选中高亮
+   - 表单增强：错误状态（红色边框）、字符计数、下拉选择框
+   - 工具复选框：flex wrap 布局
+   - Agent 编辑按钮：悬停时显示，点击背景变灰
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ 无错误 |
+| Vite 生产构建 | ✅ 634ms，41 模块 |
+| 后端测试 | ✅ 240/240 通过 |
+| Modal 创建模式 | ✅ 完整表单 + 验证 |
+| Modal 编辑模式 | ✅ 预填充数据 |
+| Emoji 选择器 | ✅ 20 个预设 |
+| 实时验证 | ✅ 字段下方红色提示 |
+| 提交 loading | ✅ 按钮禁用 + 文字变化 |
+
+### 下一步
+
+Task #50: 前端 — Task 创建/编辑表单弹窗
