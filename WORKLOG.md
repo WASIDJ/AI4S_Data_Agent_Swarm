@@ -460,4 +460,53 @@ Task #13-#16: 后端 — Task 管理 API（完整 CRUD）
 
 ### 下一步
 
-Task #17: 后端 — SDK queryWrapper
+Task #18: 后端 — SDK messageParser — SDK 消息流转换为 Event
+
+---
+
+## Task #17: 后端 — SDK queryWrapper — 封装 query() 调用与 canUseTool 回调
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/sdk/queryWrapper.ts`** — SDK query() 完整封装
+   - `isAutoAllowed(toolName, input)`: 自动批准规则
+     - Read/Glob/Grep 只读工具自动批准
+     - Bash 命令：不含危险关键词（rm -rf、format、del /s、shutdown、rmdir /s、mkfs、dd if=）时自动批准
+     - 其他工具（Write、Edit 等）需要人工审批
+   - `createCanUseToolCallback(taskId, sessionId)`: SDK canUseTool 回调工厂
+     - 自动批准的调用直接返回 `{ behavior: 'allow' }`
+     - 需要审批的调用：标记 Task 为 Stuck → 广播 `tool:approval` WebSocket 消息 → `Promise.race` 等待用户决策与超时
+     - 用户批准后自动加入缓存，后续同类调用自动批准
+   - `resolveToolDecision(taskId, decision)`: 供 approve-tool API 调用，解决等待中的决策
+   - `startQuery(task, agent, projectDir)`: 构建完整 SDK query() 参数（systemPrompt、cwd、maxTurns、maxBudgetUsd、canUseTool、abortController）
+   - `resumeQuery(sessionId, message, task, agent, projectDir)`: 恢复已有会话
+   - `cleanupQuery(taskId)`: 清理 pending decisions 和 auto-allow 缓存
+   - `hasPendingApproval(taskId)`: 查询是否有待审批的工具调用
+   - `summarizeToolInput(input, maxLen)`: 工具输入摘要，截断长输入
+
+2. **`server/sdk/queryWrapper.test.ts`** — 22 个单元测试
+   - isAutoAllowed: Read/Glob/Grep 自动批准、安全 Bash、危险 Bash、Write/Edit 拒绝、未知工具
+   - summarizeToolInput: 正常输出、长输入截断、默认长度
+   - createCanUseToolCallback: 自动允许 Read/Glob、标记 Stuck + 广播、超时 deny、缓存已批准工具、deny 决策
+   - resolveToolDecision: 无 pending 返回 false、有 pending 返回 true
+   - cleanupQuery: 清理 pending 状态、无 pending 时不报错
+   - hasPendingApproval: 无 pending 返回 false
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| isAutoAllowed 规则 | ✅ 8 项 |
+| summarizeToolInput | ✅ 3 项 |
+| canUseTool 回调 | ✅ 5 项 |
+| resolveToolDecision | ✅ 2 项 |
+| cleanupQuery | ✅ 2 项 |
+| hasPendingApproval | ✅ 2 项 |
+| 全部测试 (111) | ✅ |
+
+### 下一步
+
+Task #18: 后端 — SDK messageParser — SDK 消息流转换为 Event
