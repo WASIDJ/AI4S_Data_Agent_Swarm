@@ -1927,3 +1927,45 @@ Task #84: 后端 — dotenv 环境变量加载
 ### 下一步
 
 全部开发任务完成。剩余 Task #65-#67（E2E 真实 SDK 验证）需要真实环境。
+
+---
+
+## Task #90: 前端组件测试 — TaskCard 与 AgentCard 渲染
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **前端测试基础设施**
+   - 安装 `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jsdom`
+   - 创建 `web/vitest.config.ts`（jsdom 环境 + setupFiles）
+   - 创建 `web/src/test-setup.ts`（引入 jest-dom matchers）
+   - `web/package.json` 添加 `test` 和 `test:watch` 脚本
+
+2. **`web/src/components/__tests__/TaskCard.test.tsx`** — 7 个测试
+   - Todo: 启动/编辑/删除按钮
+   - Running: 停止/完成按钮
+   - Stuck: 警告信息 + 停止按钮
+   - Done: 重试按钮
+   - Cancelled: 重试按钮
+   - 点击卡片触发 onSelect
+   - 显示 Agent 名称和头像
+
+3. **`web/src/components/__tests__/AgentCard.test.tsx`** — 7 个测试
+   - 渲染名称和头像
+   - 4 种状态显示（idle/working/stuck/offline）
+   - 点击触发 onSelect
+   - 任务计数显示
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 前端组件测试 | ✅ 14 tests |
+| 后端测试 | ✅ 249 tests |
+| TypeScript 类型检查 | ✅ |
+
+### 下一步
+
+Task #91-#92: KanbanBoard 分列渲染 + 表单验证测试
