@@ -50,25 +50,51 @@ export const projectsStore = new FileStore({
 });
 
 // ---------------------------------------------------------------------------
-// Initialisation
+// Re-exports: low-level file store
 // ---------------------------------------------------------------------------
-
-const ALL_STORES = [agentsStore, tasksStore, sessionsStore, projectsStore];
-
-/**
- * Load all stores from disk (creating default files if needed) and run
- * pending schema migrations. Call once at server startup.
- */
-export async function loadAllStores(): Promise<void> {
-  await Promise.all(ALL_STORES.map((s) => s.load()));
-}
-
-/**
- * Return all store instances for diagnostic / testing purposes.
- */
-export function getAllStores(): FileStore[] {
-  return [...ALL_STORES];
-}
 
 export { FileStore } from "./fileStore.js";
 export type { FileStoreOptions, MigrationFn } from "./fileStore.js";
+
+// ---------------------------------------------------------------------------
+// Re-exports: in-memory stores
+// ---------------------------------------------------------------------------
+
+export * as agentStore from "./agentStore.js";
+export * as taskStore from "./taskStore.js";
+export * as sessionStore from "./sessionStore.js";
+export * as projectStore from "./projectStore.js";
+
+// ---------------------------------------------------------------------------
+// Initialisation
+// ---------------------------------------------------------------------------
+
+const ALL_FILE_STORES = [agentsStore, tasksStore, sessionsStore, projectsStore];
+
+/**
+ * Load all file stores from disk (creating default files if needed),
+ * run pending schema migrations, then populate in-memory Maps.
+ * Call once at server startup.
+ */
+export async function loadAllStores(): Promise<void> {
+  // 1. Load raw JSON from disk + run migrations
+  await Promise.all(ALL_FILE_STORES.map((s) => s.load()));
+
+  // 2. Populate in-memory Maps from persisted data
+  const { loadAgents } = await import("./agentStore.js");
+  const { loadTasks } = await import("./taskStore.js");
+  const { loadSessions } = await import("./sessionStore.js");
+  const { loadProjects } = await import("./projectStore.js");
+
+  loadAgents();
+  loadTasks();
+  loadSessions();
+  loadProjects();
+}
+
+/**
+ * Return all FileStore instances for diagnostic / testing purposes.
+ */
+export function getAllStores(): FileStore[] {
+  return [...ALL_FILE_STORES];
+}
