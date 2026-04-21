@@ -21,6 +21,9 @@ class EventProcessor {
   /** Map<toolUseId, timestamp> — tracks PreToolUse timestamps for duration calc */
   private pendingDurations = new Map<string, number>();
   private archiveQueue = new Set<string>();
+  /** Track event counts per taskId for archive check interval */
+  private eventCountsSinceArchiveCheck = new Map<string, number>();
+  private static readonly ARCHIVE_CHECK_INTERVAL = 100;
 
   // -----------------------------------------------------------------------
   // processEvent — main entry point
@@ -52,8 +55,13 @@ class EventProcessor {
     // Broadcast
     broadcast("event:new", event);
 
-    // Check archive threshold (async, non-blocking)
-    this.checkArchive(event.taskId);
+    // Check archive threshold every N events (async, non-blocking)
+    const count = (this.eventCountsSinceArchiveCheck.get(event.taskId) ?? 0) + 1;
+    this.eventCountsSinceArchiveCheck.set(event.taskId, count);
+    if (count >= EventProcessor.ARCHIVE_CHECK_INTERVAL) {
+      this.eventCountsSinceArchiveCheck.set(event.taskId, 0);
+      this.checkArchive(event.taskId);
+    }
 
     return true;
   }
@@ -174,6 +182,7 @@ class EventProcessor {
     this.processedIds.clear();
     this.pendingDurations.clear();
     this.archiveQueue.clear();
+    this.eventCountsSinceArchiveCheck.clear();
   }
 }
 

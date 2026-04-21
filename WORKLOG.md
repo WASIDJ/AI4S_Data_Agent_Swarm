@@ -1774,3 +1774,45 @@ Task #59: 后端 — 预算/轮次超限自动停止 Task
 ### 下一步
 
 Task #60: 后端 — JSONL 事件归档（超过 100MB 压缩为 .jsonl.gz）
+
+---
+
+## Task #60: 后端 — JSONL 事件归档（超过 100MB 压缩为 .jsonl.gz）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/services/eventProcessor.ts`** — 归档性能优化
+   - 新增 `eventCountsSinceArchiveCheck` 计数器，每 100 条事件检查一次文件大小（而非每条）
+   - `ARCHIVE_CHECK_INTERVAL = 100` 常量
+   - `reset()` 方法清理新增状态
+
+2. **已有实现**（Task #27-#32 完成）
+   - `checkArchive()` + `archiveFile()`: 100MB 阈值 → gzip 压缩为 `.jsonl.gz` → 清空原文件
+   - `GET /api/tasks/:id/events`: 读取 `.jsonl.gz` + `.jsonl` 合并排序
+
+3. **`server/services/eventProcessor.test.ts`** — 新增 2 个测试
+   - 归档文件写入验证
+   - `.jsonl.gz` + `.jsonl` 双源读取合并验证
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `server/services/eventProcessor.ts` | 每 100 条事件检查归档 |
+| `server/services/eventProcessor.test.ts` | 新增 2 个归档测试 |
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 每 100 条检查阈值 | ✅ |
+| 归档 gzip 压缩 | ✅ 已有 |
+| GET events 双源读取 | ✅ |
+| 全部测试 (245) | ✅ |
+
+### 下一步
+
+Task #61-#67: 补充测试与集成验证
