@@ -1012,4 +1012,35 @@ Task #38: 前端 — 全局状态管理（Context + Reducer）
 
 ### 下一步
 
-Task #38: 前端 — 全局状态管理（Context + Reducer）
+Task #39: 前端 — 整体三栏布局（App.tsx + 顶部栏 + 底部状态栏）
+
+---
+
+## Task #38: 前端 — 全局状态管理（Context + Reducer）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`web/src/store/AppContext.tsx`** — 全局状态管理
+   - `AppState` 接口: agents/tasks Map, projects 数组, selectedTaskId/selectedAgentId, notifications, wsConnected, activeProjectId, loading
+   - `appReducer`: 处理 14 种 action（SET_LOADING, SET_AGENTS, UPDATE_AGENT, REMOVE_AGENT, SET_TASKS, UPDATE_TASK, REMOVE_TASK, SET_PROJECTS, SET_SELECTED_TASK, SET_SELECTED_AGENT, ADD_NOTIFICATION, DISMISS_NOTIFICATION, SET_WS_CONNECTED, SET_ACTIVE_PROJECT）
+   - `Notification` 类型: id, type(info/warning/error/stuck), message, timestamp
+   - `AppProvider`: 启动时并行加载 agents/tasks/projects API 数据，集成 useWebSocket 实时更新状态
+   - `useAppState()` 和 `useAppDispatch()` hooks
+
+2. **`web/src/App.tsx`** 更新
+   - 用 `AppProvider` 包裹整个应用
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ |
+| Vite 生产构建 | ✅ 516ms |
+| Context + Reducer | ✅ 14 种 action |
+
+### 下一步
+
+Task #39: 前端 — 整体三栏布局（App.tsx + 顶部栏 + 底部状态栏）
