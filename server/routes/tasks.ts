@@ -1,12 +1,29 @@
 import { Router } from "express";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import zlib from "node:zlib";
+import { pipeline } from "node:stream/promises";
+import { Readable } from "node:stream";
 import * as taskStore from "../store/taskStore.js";
 import * as agentStore from "../store/agentStore.js";
 import * as projectStore from "../store/projectStore.js";
 import { broadcast } from "../services/wsBroadcaster.js";
 import { taskManager, TaskManagerError } from "../services/taskManager.js";
 import { resolveToolDecision } from "../sdk/queryWrapper.js";
-import type { Task } from "../store/types.js";
+import type { Task, Event } from "../store/types.js";
+
+// ---------------------------------------------------------------------------
+// Events directory
+// ---------------------------------------------------------------------------
+
+const EVENTS_DIR = path.resolve(process.cwd(), "data", "events");
+
+function ensureEventsDir(): void {
+  if (!fs.existsSync(EVENTS_DIR)) {
+    fs.mkdirSync(EVENTS_DIR, { recursive: true });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -104,6 +121,107 @@ tasksRouter.get("/:id", (req, res) => {
     });
   }
   res.json({ task });
+});
+
+// GET /api/tasks/:id/events — paginated event list from JSONL
+tasksRouter.get("/:id/events", async (req, res) => {
+  const task = taskStore.getTaskById(req.params.id);
+  if (!task) {
+    return res.status(404).json({
+      error: { code: "TASK_NOT_FOUND", message: "Task not found" },
+    });
+  }
+
+  const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string, 10) || 50));
+  const typeFilter = typeof req.query.type === "string" ? req.query.type : undefined;
+
+  ensureEventsDir();
+
+  const jsonlPath = path.join(EVENTS_DIR, `${req.params.id}.jsonl`);
+  const gzPath = path.join(EVENTS_DIR, `${req.params.id}.jsonl.gz`);
+
+  let allEvents: Event[] = [];
+
+  // Read archived events from .gz if exists
+  if (fs.existsSync(gzPath)) {
+    try {
+      const gzBuffer = fs.readFileSync(gzPath);
+      const decompressed = zlib.gunzipSync(gzBuffer);
+      const lines = decompressed.toString("utf-8").split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) continue;
+        try {
+          allEvents.push(JSON.parse(trimmed) as Event);
+        } catch {
+          // Skip malformed lines
+        }
+      }
+    } catch (err) {
+      console.error(`[Events] Failed to read archive ${gzPath}:`, err);
+    }
+  }
+
+  // Read current JSONL file
+  if (fs.existsSync(jsonlPath)) {
+    try {
+      const content = fs.readFileSync(jsonlPath, "utf-8");
+      const lines = content.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) continue;
+        try {
+          allEvents.push(JSON.parse(trimmed) as Event);
+        } catch {
+          // Skip malformed lines
+        }
+      }
+    } catch (err) {
+      console.error(`[Events] Failed to read ${jsonlPath}:`, err);
+    }
+  }
+
+  // Filter by type if specified
+  if (typeFilter) {
+    allEvents = allEvents.filter((e) => e.eventType === typeFilter);
+  }
+
+  // Sort by timestamp ascending (oldest first)
+  allEvents.sort((a, b) => a.timestamp - b.timestamp);
+
+  const total = allEvents.length;
+  const totalPages = Math.ceil(total / limit);
+  const start = (page - 1) * limit;
+  const paginated = allEvents.slice(start, start + limit);
+
+  res.json({
+    events: paginated,
+    total,
+    page,
+    limit,
+    totalPages,
+  });
+});
+
+// GET /api/tasks/:id/sdk-status — real-time SDK running status
+tasksRouter.get("/:id/sdk-status", async (req, res) => {
+  const task = taskStore.getTaskById(req.params.id);
+  if (!task) {
+    return res.status(404).json({
+      error: { code: "TASK_NOT_FOUND", message: "Task not found" },
+    });
+  }
+
+  const { sdkSessionManager } = await import("../services/sdkSessionManager.js");
+  const running = sdkSessionManager.hasActiveTask(req.params.id);
+
+  res.json({
+    running,
+    turnCount: task.turnCount,
+    budgetUsed: task.budgetUsed,
+    maxBudgetUsd: task.maxBudgetUsd,
+  });
 });
 
 // POST /api/tasks — create

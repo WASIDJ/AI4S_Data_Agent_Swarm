@@ -132,6 +132,11 @@ export function countTasksByStatus(status: TaskStatus): number {
   return getAllTasks().filter((t) => t.status === status).length;
 }
 
+/** Find a task by its SDK session_id */
+export function getTaskBySessionId(sessionId: string): Task | undefined {
+  return getAllTasks().find((t) => t.sessionId === sessionId);
+}
+
 // ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------

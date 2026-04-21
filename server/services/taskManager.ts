@@ -237,6 +237,37 @@ class TaskManager {
   }
 
   // -----------------------------------------------------------------------
+  // stuckTask — mark a Running task as Stuck (needs user intervention)
+  // -----------------------------------------------------------------------
+
+  stuckTask(taskId: string, reason?: string): void {
+    const task = taskStore.getTaskById(taskId);
+    if (!task) return;
+    if (task.status !== "Running") return;
+
+    taskStore.updateTask(taskId, {
+      status: "Stuck",
+      stuckReason: reason,
+    });
+
+    // Update agent status
+    if (task.agentId) {
+      agentStore.updateAgent(task.agentId, { status: "stuck" });
+
+      broadcast("agent:update", {
+        id: task.agentId,
+        status: "stuck",
+      });
+    }
+
+    broadcast("task:update", {
+      id: taskId,
+      status: "Stuck",
+      stuckReason: reason,
+    });
+  }
+
+  // -----------------------------------------------------------------------
   // doneTask — user manually marks task as done
   // -----------------------------------------------------------------------
 

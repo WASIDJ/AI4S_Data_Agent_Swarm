@@ -736,4 +736,98 @@ Task #27: 后端 — Task Event 查询 API
 
 ### 下一步
 
-Task #27: 后端 — Task Event 查询 API
+Task #27-#32: 后端 — Event 管道、Stuck 检测与崩溃恢复
+
+---
+
+## Task #27-#32: 后端 — Event 管道、Stuck 检测与崩溃恢复
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **Task #27: `GET /api/tasks/:id/events`** — Task 事件分页查询
+   - 从 `data/events/<taskId>.jsonl` 文件逐行读取事件
+   - 支持 `.jsonl.gz` 归档文件，自动解压读取后与当前文件合并
+   - 支持 `type` 事件类型过滤
+   - 分页参数: `page`/`limit`/`total`/`totalPages`
+   - 按时间戳升序排列
+   - 容错处理: 跳过格式错误的 JSONL 行
+
+2. **Task #28: `GET /api/tasks/:id/sdk-status`** — Task SDK 实时状态
+   - 返回 `{ running, turnCount, budgetUsed, maxBudgetUsd }`
+   - `running` 通过 `sdkSessionManager.hasActiveTask()` 判断
+
+3. **Task #29: `server/services/eventProcessor.ts`** — 事件处理器（单例）
+   - `processEvent(event)`: 去重(`Set<id>`) → 计算 duration → 写入 JSONL → 更新 Task.eventCount → 广播 WebSocket
+   - Duration 计算: PreToolUse 记录时间戳，PostToolUse 匹配计算差值
+   - JSONL 追加写入 `data/events/<taskId>.jsonl`
+   - 异步归档: 文件超 100MB 自动压缩为 `.jsonl.gz`
+
+4. **Task #30: `server/services/stuckDetector.ts`** — Stuck 检测器（双通道）
+   - `isPermissionPrompt(event)`: 检测 5 个权限关键词（大小写不敏感）
+   - `handleHookEvent(event)`: Notification + 权限关键词 → 标记 Task 为 Stuck + 广播通知
+   - `taskManager.stuckTask(taskId, reason)`: Running → Stuck 状态迁移
+
+5. **Task #31: `server/routes/events.ts`** — Hook 事件接收端点
+   - `POST /event`（无 `/api` 前缀）
+   - 接收 Claude Code Hook 上报的事件
+   - 通过 `session_id` → `taskStore.getTaskBySessionId()` 关联 Task
+   - 转换为内部 Event（source='hook'）→ eventProcessor → stuckDetector
+   - 原始数据追加到 `data/logs/hooks.log`
+
+6. **Task #32: Server 崩溃恢复**
+   - `recoverRunningTasks()`: 启动时扫描所有 Running Task
+     - 有 sessionId → Stuck（用户可恢复）
+     - 无 sessionId → Cancelled
+   - 对应 Agent 状态自动更新
+   - 磁盘空间检查（<500MB 警告，不阻止启动）
+   - `taskStore.getTaskBySessionId()`: 新增按 SDK session_id 查找 Task
+
+7. **`server/app.ts` 更新**
+   - 注册 eventsRouter: `app.use("/", eventsRouter)`
+   - 导入 agentStore 用于崩溃恢复
+   - 启动流程: loadAllStores → recoverRunningTasks → initWebSocket → listen
+
+### 新增/修改文件
+
+| 文件 | 操作 |
+|------|------|
+| `server/routes/tasks.ts` | 新增 events/sdk-status 路由 |
+| `server/routes/events.ts` | **新建** Hook 事件端点 |
+| `server/services/eventProcessor.ts` | **新建** 事件处理器 |
+| `server/services/stuckDetector.ts` | **新建** Stuck 检测器 |
+| `server/services/taskManager.ts` | 新增 stuckTask 方法 |
+| `server/store/taskStore.ts` | 新增 getTaskBySessionId |
+| `server/app.ts` | 新增崩溃恢复 + 磁盘检查 + eventsRouter |
+| `server/routes/taskEvents.test.ts` | **新建** 14 个测试 |
+| `server/services/eventProcessor.test.ts` | **新建** 8 个测试 |
+| `server/services/stuckDetector.test.ts` | **新建** 13 个测试 |
+| `server/routes/events.test.ts` | **新建** 9 个测试 |
+| `server/server.recovery.test.ts` | **新建** 3 个测试 |
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| GET /events 分页 | ✅ |
+| GET /events 类型过滤 | ✅ |
+| GET /events GZ 归档读取 | ✅ |
+| GET /events 合并归档+当前 | ✅ |
+| GET /events 容错 | ✅ |
+| GET /sdk-status | ✅ |
+| EventProcessor 去重 | ✅ |
+| EventProcessor duration 计算 | ✅ |
+| EventProcessor JSONL 写入 | ✅ |
+| StuckDetector 权限关键词检测 | ✅ 6 项 |
+| StuckDetector Hook 事件处理 | ✅ 6 项 |
+| POST /event Hook 端点 | ✅ 9 项 |
+| 崩溃恢复 Running→Stuck | ✅ |
+| 崩溃恢复 Running→Cancelled | ✅ |
+| 崩溃恢复 跳过非Running | ✅ |
+| 全部测试 (230) | ✅ |
+
+### 下一步
+
+Task #33: 后端 — Hook 脚本与注册工具

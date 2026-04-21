@@ -1,11 +1,14 @@
 node_modules/
 .env
 data/logs/
-data/events/*.jsonl
+data/events/
+data/*.json
+server/data/
 dist/
 .claude/
 *.tmp
 *.tmp.*
+nul
 
 # IDE
 .vscode/
