@@ -1271,4 +1271,64 @@ Task #50: 前端 — Task 创建/编辑表单弹窗
 
 ### 下一步
 
-Task #50: 前端 — Task 创建/编辑表单弹窗
+Task #51: 前端 — 通知系统（NotificationToast）
+
+---
+
+## Task #50: 前端 — Task 创建/编辑表单弹窗
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`web/src/components/modals/TaskFormModal.tsx`** — Task 创建/编辑 Modal 表单
+   - 双模式：传入 `task` 参数为编辑模式，不传为创建模式
+   - 表单字段：
+     - 标题（input，1-100 字符，实时字符计数）
+     - 描述（textarea，10-10000 字符，支持 Markdown，实时字符计数）
+     - Agent 下拉选择（显示 avatar + name + status，编辑模式下仅 Todo 状态可改）
+     - Project 下拉选择 + 内联新建（新建展开 name/path 两个字段，校验同 §8.5）
+     - 优先级单选（低/中/高 radio button，颜色编码）
+     - 标签输入（Enter 添加，最多 10 个，每个 1-20 字符，可删除）
+     - 最大轮次（可选，留空继承 Agent 配置）
+     - 预算上限 USD（可选，留空继承 Agent 配置）
+   - 实时表单验证 + 红色错误提示
+   - 编辑模式约束：Running/Stuck 状态 Task 不可更改 Agent 和 Project
+   - 新建 Project 时先创建 Project 再创建 Task，失败时显示 API 错误
+   - 提交按钮 loading 状态
+
+2. **`web/src/components/KanbanBoard.tsx`** 重构
+   - 移除内联创建表单，改用 TaskFormModal
+   - 每张 TaskCard 添加 onEdit 回调打开编辑 Modal
+   - `modalTask` 状态管理：`null`(关闭) / `"create"`(创建) / `Task` 对象(编辑)
+
+3. **`web/src/components/TaskCard.tsx`** 更新
+   - 新增 `onEdit` 回调 prop
+   - 所有状态的 Task 卡片均显示"编辑"按钮
+
+4. **`web/src/index.css`** 新增样式
+   - `.modal-wide` 宽版 Modal（640px）
+   - `.modal-row-inner` 内联行布局（select + 新建按钮并排）
+   - `.priority-group` / `.priority-label` 优先级单选组（低灰/中蓝/高红）
+   - `.tag-input-row` / `.tag-list` / `.tag-item` / `.tag-remove` 标签输入组件
+   - `.form-hint` 灰色提示文字
+   - `.btn-inline` 行内按钮
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ 无错误 |
+| Vite 生产构建 | ✅ 672ms，42 模块 |
+| Modal 创建模式 | ✅ 完整字段 + 验证 |
+| Modal 编辑模式 | ✅ 预填充 + Agent/Project 锁定 |
+| 优先级单选 | ✅ 三色编码 |
+| 标签输入 | ✅ Enter 添加 + 删除 |
+| 内联新建 Project | ✅ 展开额外字段 |
+| 实时验证 | ✅ 红色错误提示 |
+| 提交 loading | ✅ 按钮禁用 + 文字变化 |
+
+### 下一步
+
+Task #51: 前端 — 通知系统（NotificationToast）

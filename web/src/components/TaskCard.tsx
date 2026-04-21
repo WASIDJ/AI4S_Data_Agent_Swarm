@@ -30,13 +30,14 @@ const STATUS_BG: Record<TaskStatus, string> = {
 interface TaskCardProps {
   task: Task;
   onSelect: (taskId: string) => void;
+  onEdit: (task: Task) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function TaskCard({ task, onSelect }: TaskCardProps) {
+export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
   const { agents } = useAppState();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -93,6 +94,11 @@ export function TaskCard({ task, onSelect }: TaskCardProps) {
       </div>
 
       <div className="task-card-actions" onClick={(e) => e.stopPropagation()}>
+        <ActionButton
+          label="✎ 编辑"
+          loading={loading === "edit"}
+          onClick={() => onEdit(task)}
+        />
         {task.status === "Todo" && (
           <>
             <ActionButton

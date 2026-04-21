@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppState, useAppDispatch } from "../store/AppContext";
 import { TaskCard } from "./TaskCard";
-import * as api from "../api/client";
+import { TaskFormModal } from "./modals/TaskFormModal";
 import type { Task, TaskStatus } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -26,17 +26,9 @@ const COLUMNS: Column[] = [
 // ---------------------------------------------------------------------------
 
 export function KanbanBoard() {
-  const { tasks, agents, activeProjectId, projects } = useAppState();
+  const { tasks, activeProjectId } = useAppState();
   const dispatch = useAppDispatch();
-  const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    agentId: "",
-    projectId: "",
-    priority: 1 as 0 | 1 | 2,
-  });
+  const [modalTask, setModalTask] = useState<Task | "create" | null>(null);
 
   // Filter tasks by active project
   const filteredTasks = activeProjectId
@@ -55,126 +47,14 @@ export function KanbanBoard() {
       .sort((a, b) => b.priority - a.priority || b.createdAt - a.createdAt);
   };
 
-  const enabledAgents = [...agents.values()].filter((a) => a.isEnabled);
-  const availableProjects = projects;
-
-  async function handleCreate() {
-    if (!form.title.trim() || !form.agentId || !form.projectId) return;
-    setCreating(true);
-    try {
-      await api.createTask({
-        title: form.title.trim(),
-        description: form.description.trim(),
-        agentId: form.agentId,
-        projectId: form.projectId,
-        priority: form.priority,
-      });
-      setShowCreate(false);
-      setForm({
-        title: "",
-        description: "",
-        agentId: "",
-        projectId: "",
-        priority: 1,
-      });
-    } catch (err) {
-      console.error("Failed to create task:", err);
-    } finally {
-      setCreating(false);
-    }
-  }
-
   return (
     <div className="kanban">
       <div className="kanban-header">
         <span className="kanban-title">Tasks</span>
-        <button className="btn btn-small" onClick={() => setShowCreate(!showCreate)}>
+        <button className="btn btn-small" onClick={() => setModalTask("create")}>
           + Task
         </button>
       </div>
-
-      {showCreate && (
-        <div className="kanban-create-form">
-          <label className="form-label">
-            标题
-            <input
-              className="form-input"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Task 标题"
-            />
-          </label>
-          <label className="form-label">
-            描述
-            <textarea
-              className="form-textarea"
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              placeholder="任务描述（至少 10 字）"
-              rows={3}
-            />
-          </label>
-          <div className="kanban-create-row">
-            <label className="form-label">
-              Agent
-              <select
-                className="form-input"
-                value={form.agentId}
-                onChange={(e) =>
-                  setForm({ ...form, agentId: e.target.value })
-                }
-              >
-                <option value="">选择 Agent</option>
-                {enabledAgents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.avatar} {a.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-label">
-              Project
-              <select
-                className="form-input"
-                value={form.projectId}
-                onChange={(e) =>
-                  setForm({ ...form, projectId: e.target.value })
-                }
-              >
-                <option value="">选择 Project</option>
-                {availableProjects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="form-actions">
-            <button
-              className="btn btn-secondary"
-              onClick={() => setShowCreate(false)}
-            >
-              取消
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleCreate}
-              disabled={
-                creating ||
-                !form.title.trim() ||
-                !form.agentId ||
-                !form.projectId ||
-                form.description.trim().length < 10
-              }
-            >
-              {creating ? "创建中..." : "创建"}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="kanban-columns">
         {COLUMNS.map((col) => {
@@ -208,6 +88,7 @@ export function KanbanBoard() {
                           taskId: id,
                         })
                       }
+                      onEdit={(t) => setModalTask(t)}
                     />
                   ))
                 )}
@@ -216,6 +97,13 @@ export function KanbanBoard() {
           );
         })}
       </div>
+
+      {modalTask !== null && (
+        <TaskFormModal
+          task={modalTask === "create" ? undefined : modalTask}
+          onClose={() => setModalTask(null)}
+        />
+      )}
     </div>
   );
 }
