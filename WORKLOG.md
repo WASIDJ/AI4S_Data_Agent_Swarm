@@ -414,4 +414,50 @@ Task #12: 后端 — Agent 统计 API
 
 ### 下一步
 
-Task #13: 后端 — Task 管理 API（创建）
+Task #13-#16: 后端 — Task 管理 API（完整 CRUD）
+
+---
+
+## Task #13-#16: 后端 — Task 管理 API（完整 CRUD）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/routes/tasks.ts`** — Task 完整 CRUD REST API
+   - `POST /api/tasks` — 创建 Task
+     - 校验 title(1-100)/description(10-10000)/agentId/projectId
+     - 验证 Agent 和 Project 存在
+     - 继承 Agent 的 maxTurns/maxBudgetUsd 配置
+     - 默认值: priority=1, tags=[], eventCount/turnCount/budgetUsed=0
+     - 更新 Agent.taskCount(+1)
+   - `GET /api/tasks` — 列表查询
+     - 过滤: projectId, status(逗号分隔多值), agentId, q(关键词搜索)
+     - 分页: page/limit/total/totalPages
+     - 默认排除软删除，includeDeleted=true 显示
+   - `GET /api/tasks/:id` — 单 Task 查询
+   - `PUT /api/tasks/:id` — 编辑
+     - Running/Stuck 状态禁止修改 agentId (409)
+     - Todo 状态修改 agentId 时更新两个 Agent 的 taskCount
+   - `DELETE /api/tasks/:id` — 删除
+     - Running/Stuck 拒绝删除 (409)
+     - Done/Cancelled 软删除（设置 deletedAt）
+     - Todo 硬删除 + Agent.taskCount(-1)
+
+2. **`server/routes/tasks.test.ts`** — 23 个集成测试
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| POST 创建 + 校验 | ✅ 7 项 |
+| GET 列表 + 过滤/分页 | ✅ 6 项 |
+| GET 单个 + 404 | ✅ 2 项 |
+| PUT 编辑 + agentId 联动 | ✅ 4 项 |
+| DELETE + 软删除/硬删除 | ✅ 4 项 |
+| 全部测试 (89) | ✅ |
+
+### 下一步
+
+Task #17: 后端 — SDK queryWrapper
