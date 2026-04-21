@@ -3,6 +3,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadAllStores } from "./store/index.js";
 import * as taskStore from "./store/taskStore.js";
 import * as agentStore from "./store/agentStore.js";
@@ -242,6 +244,18 @@ export async function startServer(overridePort?: number): Promise<void> {
   const port = overridePort ?? PORT;
 
   await loadAllStores();
+
+  // Serve frontend static files in production
+  if (process.env.NODE_ENV === "production") {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const webDist = path.resolve(__dirname, "../../web/dist");
+    app.use(express.static(webDist));
+    // SPA fallback: serve index.html for non-API routes
+    app.get("*", (_req, res, next) => {
+      if (_req.path.startsWith("/api") || _req.path === "/event") return next();
+      res.sendFile(path.join(webDist, "index.html"));
+    });
+  }
 
   // Crash recovery: restore Running tasks
   recoverRunningTasks();

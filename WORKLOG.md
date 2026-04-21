@@ -1863,3 +1863,67 @@ Task #61-#64: 测试任务（已在前序开发中完成）
 ### 下一步
 
 Task #68: 文档 — README.md
+
+---
+
+## Task #69-#89: 开发任务（已在之前 Task #3-#57 中完成）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+以下任务在 Task #3-#57 的开发过程中已同步实现：
+
+| Task | 标题 | 对应实现 |
+|------|------|----------|
+| #69 | SDKSessionManager consumeStream | Task #19 |
+| #70 | SDKSessionManager resume/stop | Task #19 |
+| #71 | TaskManager Stuck/Resume | Task #20, #27-#32 |
+| #72 | 前端 Task CRUD API | Task #36 |
+| #73 | 前端 Task 操作 API | Task #36 |
+| #74 | DetailPanel | Task #44-#48 |
+| #75 | TypeScript 共享类型 | Task #36 (types.ts) |
+| #76 | Emoji 选择器 | Task #49 (AgentFormModal 内联) |
+| #77 | 标签输入 | Task #50 (TaskFormModal 内联) |
+| #79 | 相对时间格式化 | TaskCard.tsx (formatRelativeTime) |
+| #80 | 面板折叠/展开 | Task #39 (App.tsx) |
+| #81 | Agent 状态动画 | Task #40-#41 (CSS keyframes) |
+| #82 | 最小宽度检测 | Task #35 (App.tsx) |
+| #83 | Project 内嵌创建 | Task #50 (TaskFormModal) |
+| #86 | eventProcessor 测试 | Task #27 (eventProcessor.test.ts) |
+| #87 | messageParser 测试 | Task #18 (messageParser.test.ts) |
+| #88 | validateProject 测试 | Task #7 (projects.test.ts) |
+| #89 | wsBroadcaster 测试 | Task #6 (wsBroadcaster.test.ts) |
+
+### 下一步
+
+Task #84: 后端 — dotenv 环境变量加载
+
+---
+
+## Task #84-#85: dotenv 加载 + 生产模式构建
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **Task #84: dotenv 加载** — 已有实现
+   - `app.ts` 第一行 `import "dotenv/config"` 加载 `.env`
+   - `dotenv@^16.4.7` 已在 `server/package.json` 声明
+   - 环境变量 PORT/MAX_CONCURRENT_TASKS/MAX_WS_CLIENTS 在启动时读取
+
+2. **Task #85: 生产模式构建**
+   - `server/app.ts` `startServer()` 中添加 `NODE_ENV=production` 判断
+   - 生产模式下 Express 提供前端静态文件（`web/dist/`）
+   - SPA fallback：非 API 路由返回 `index.html`
+   - 启动命令：`tsc --project server/tsconfig.json && npm run build --prefix web && NODE_ENV=production node start.js --prod`
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `server/app.ts` | 生产模式静态文件服务 + SPA fallback |
+
+### 下一步
+
+全部开发任务完成。剩余 Task #65-#67（E2E 真实 SDK 验证）需要真实环境。
