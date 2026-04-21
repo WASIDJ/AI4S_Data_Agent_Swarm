@@ -1969,3 +1969,38 @@ Task #84: 后端 — dotenv 环境变量加载
 ### 下一步
 
 Task #91-#92: KanbanBoard 分列渲染 + 表单验证测试
+
+---
+
+## Task #95: 确认弹窗组件（ConfirmDialog）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`web/src/components/ConfirmDialog.tsx`** — 通用确认弹窗
+   - Props: title, message, confirmText, dangerous, onConfirm(async), onCancel
+   - 点击遮罩或 Escape 取消，Enter 确认
+   - dangerous=true 时确认按钮红色，否则蓝色
+   - 确认按钮 loading 状态（异步 onConfirm）
+
+2. **`web/src/components/TaskCard.tsx`** — 删除/停止操作二次确认
+   - 删除 Task：弹出确认弹窗
+   - 停止 Task（Running/Stuck）：弹出确认弹窗
+
+3. **`web/src/index.css`** — ConfirmDialog + btn-danger 样式
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ |
+| 前端测试 (14) | ✅ |
+| 删除确认弹窗 | ✅ |
+| 停止确认弹窗 | ✅ |
+| 键盘 Escape/Enter | ✅ |
+
+### 下一步
+
+剩余 Task #91-#94, #96-#97（前端测试和交互优化）

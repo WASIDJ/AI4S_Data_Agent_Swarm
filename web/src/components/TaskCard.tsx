@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import type { Task, TaskStatus } from "../types";
 import { useAppState } from "../store/AppContext";
+import { ConfirmDialog } from "./ConfirmDialog";
 import * as api from "../api/client";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ interface TaskCardProps {
 export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
   const { agents } = useAppState();
   const [loading, setLoading] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"delete" | "stop" | null>(null);
 
   const agent = agents.get(task.agentId);
   const statusColor = STATUS_COLORS[task.status];
@@ -133,9 +135,7 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
             <ActionButton
               label="🗑"
               loading={loading === "delete"}
-              onClick={() =>
-                handleAction("delete", () => api.deleteTask(task.id))
-              }
+              onClick={() => setConfirmAction("delete")}
             />
           </>
         )}
@@ -145,11 +145,7 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
             <ActionButton
               label="⏹ 停止"
               loading={loading === "stop"}
-              onClick={() =>
-                handleAction("stop", async () => {
-                  await api.stopTask(task.id);
-                })
-              }
+              onClick={() => setConfirmAction("stop")}
             />
             <ActionButton
               label="✅ 完成"
@@ -167,11 +163,7 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
           <ActionButton
             label="⏹ 停止"
             loading={loading === "stop"}
-            onClick={() =>
-              handleAction("stop", async () => {
-                await api.stopTask(task.id);
-              })
-            }
+            onClick={() => setConfirmAction("stop")}
           />
         )}
 
@@ -189,13 +181,33 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
             <ActionButton
               label="🗑"
               loading={loading === "delete"}
-              onClick={() =>
-                handleAction("delete", () => api.deleteTask(task.id))
-              }
+              onClick={() => setConfirmAction("delete")}
             />
           </>
         )}
       </div>
+
+      {confirmAction === "delete" && (
+        <ConfirmDialog
+          title="确认删除"
+          message={`确定要删除任务「${task.title}」吗？此操作不可撤销。`}
+          confirmText="删除"
+          dangerous
+          onConfirm={() => handleAction("delete", () => api.deleteTask(task.id)).then(() => setConfirmAction(null))}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+
+      {confirmAction === "stop" && (
+        <ConfirmDialog
+          title="确认停止"
+          message={`确定要停止正在运行的任务「${task.title}」吗？Agent 将回到空闲状态。`}
+          confirmText="停止"
+          dangerous
+          onConfirm={async () => { await handleAction("stop", async () => { await api.stopTask(task.id); }); setConfirmAction(null); }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </div>
   );
 }
