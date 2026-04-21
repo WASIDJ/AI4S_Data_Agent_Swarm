@@ -95,3 +95,64 @@ Task #2: SDK 集成验证 — 编写探针脚本验证 7 个关键假设
 ### 下一步
 
 Task #3: 后端 — JSON 数据存储基础设施（safeWrite + 文件锁 + 迁移）
+
+---
+
+## Task #3: 后端 — JSON 数据存储基础设施（safeWrite + 文件锁 + 迁移）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/store/fileStore.ts`** — 核心文件存储工具
+   - `safeWrite(filePath, data)`: 先写 `.tmp.<pid>` 临时文件再 `fs.rename` 原子替换，使用 `proper-lockfile` 加文件锁
+   - `loadJson(filePath, defaultValue)`: 文件不存在时返回默认值并初始化文件
+   - `migrate(filePath, data, targetVersion, migrations)`: 读取 `_schema_version` 字段，依次执行迁移函数
+   - `FileStore` 类: 使用 `p-queue`(concurrency: 1) 串行化所有写操作，提供 `load()`、`getData()`、`save()` 方法
+
+2. **`server/store/types.ts`** — 核心领域类型定义
+   - `Project`, `Agent`, `Task`, `Event`, `Session` 接口
+   - `SchemaEnvelope<T>` 及其子类型（`AgentsEnvelope`, `TasksEnvelope` 等）
+
+3. **`server/store/index.ts`** — 统一导出与初始化
+   - 创建 4 个 `FileStore` 单例（agents/tasks/sessions/projects）
+   - `loadAllStores()`: 并行加载所有 store
+   - `getAllStores()`: 返回所有 store 实例（诊断/测试用）
+
+4. **`server/store/fileStore.test.ts`** — 13 个单元测试
+   - safeWrite: 写入/覆写/无残留 tmp 文件/并发安全
+   - loadJson: 缺失文件/已存在文件/空文件
+   - migrate: 版本匹配/有序迁移/持久化
+   - FileStore: 默认加载/save+getData/并发串行化
+
+5. **数据文件初始化**
+   - `data/agents.json`, `data/tasks.json`, `data/sessions.json`, `data/projects.json` 自动生成
+   - 初始内容: `{ "_schema_version": 1, "<collection>": [] }`
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| safeWrite 原子写入 | ✅ |
+| safeWrite 无 tmp 残留 | ✅ |
+| safeWrite 并发安全 (5 并发) | ✅ |
+| loadJson 默认值初始化 | ✅ |
+| loadJson 读取已有文件 | ✅ |
+| loadJson 处理空文件 | ✅ |
+| migrate 版本匹配不操作 | ✅ |
+| migrate 有序执行迁移 | ✅ |
+| migrate 持久化到磁盘 | ✅ |
+| FileStore 加载默认值 | ✅ |
+| FileStore save+getData | ✅ |
+| FileStore 串行化并发 (50 并发) | ✅ |
+| 数据文件初始化 | ✅ 4 个 JSON 文件 |
+
+### Windows 注意事项
+
+- `proper-lockfile` 在 Windows 上并发锁竞争较慢，raw `safeWrite` 并发测试控制在 5 个
+- 实际并发安全由 `FileStore` 的 `p-queue` 保证（50 并发测试通过）
+
+### 下一步
+
+Task #4: 后端 — 内存状态管理（agents/tasks/sessions/projects Map）
