@@ -93,6 +93,12 @@ export function TaskCard({ task, onSelect, onEdit }: TaskCardProps) {
         )}
       </div>
 
+      {task.status === "Stuck" && task.stuckReason && (
+        <div className="task-card-warning">
+          {truncateReason(task.stuckReason, 80)}
+        </div>
+      )}
+
       <div className="task-card-actions" onClick={(e) => e.stopPropagation()}>
         <ActionButton
           label="✎ 编辑"
@@ -223,4 +229,9 @@ function formatRelativeTime(timestamp: number): string {
   if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
   return `${Math.floor(diff / 86400000)} 天前`;
+}
+
+function truncateReason(str: string, maxLen: number): string {
+  if (str.length <= maxLen) return str;
+  return str.slice(0, maxLen) + "...";
 }

@@ -1335,11 +1335,74 @@ Task #52: 前端 — 加载骨架屏与按钮 Loading 状态
 
 ---
 
-## Task #53: 前端 — 错误状态处理（API 失败 Toast + WebSocket 断连状态栏）
+## Task #54: 前端 — Project 管理弹窗（创建/编辑）
 
 ---
 
-## Task #52: 前端 — 加载骨架屏与按钮 Loading 状态
+## Task #53: 前端 — 错误状态处理（API 失败 Toast + WebSocket 断连状态栏）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`web/src/api/client.ts`** — 全局 API 错误拦截
+   - 新增 `setApiErrorHandler(handler)` 函数：允许外部注册错误处理器
+   - `request()` 函数在 fetch 网络异常（`NETWORK_ERROR`）和 HTTP 错误响应时自动调用 `globalErrorHandler`
+   - 网络错误生成 `ApiError("NETWORK_ERROR", message, 0)`
+
+2. **`web/src/store/AppContext.tsx`** — 注册错误处理器 + WS 重连通知
+   - AppProvider 初始化时调用 `api.setApiErrorHandler()` 注册全局处理器
+   - API 错误自动 dispatch `ADD_NOTIFICATION`（type: "error"），通过 NotificationToast 展示（5s 自动消失）
+   - 新增 WS 重连检测（`prevConnectedRef`）：断连后重连成功时 dispatch 蓝色 "连接已恢复" 通知（3s 消失）
+   - 导入 `useRef` 追踪上一次连接状态
+
+3. **`web/src/components/TaskCard.tsx`** — Stuck 状态红色警告
+   - Task 状态为 Stuck 且有 `stuckReason` 时，在 Agent 信息和操作按钮之间显示红色警告条
+   - `task-card-warning`：红色背景 + 红色边框 + 红色文字，stuckReason 截断至 80 字符
+   - 新增 `truncateReason()` 辅助函数
+
+4. **`web/src/components/DetailPanel.tsx`** — Stuck 详情完整原因展示
+   - ToolApproval 组件下方新增 `detail-stuck-reason` 区域
+   - 显示完整 stuckReason（红色背景卡片 + "Stuck 原因" 标签 + 完整文字）
+
+5. **`web/src/index.css`** — 新增样式
+   - `.task-card-warning`: Task 卡片内红色警告条
+   - `.detail-stuck-reason`: 详情面板 Stuck 原因展示区域
+   - `.detail-stuck-reason-label` / `.detail-stuck-reason-text`: 标签和文字样式
+
+6. **表单验证**（已在 Task #49-#50 完成）
+   - AgentFormModal / TaskFormModal 已有红色内联提示 + 按钮禁用
+   - 无需额外修改
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `web/src/api/client.ts` | 全局错误处理器 + 网络错误拦截 |
+| `web/src/store/AppContext.tsx` | 注册 API 错误处理 + WS 重连通知 |
+| `web/src/components/TaskCard.tsx` | Stuck 红色警告 + stuckReason |
+| `web/src/components/DetailPanel.tsx` | Stuck 完整原因展示 |
+| `web/src/index.css` | warning + stuck-reason 样式 |
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ 无错误 |
+| Vite 生产构建 | ✅ 589ms，43 模块 |
+| 后端测试 | ✅ 240/240 通过 |
+| API 错误自动 Toast | ✅ 红色通知 5s 消失 |
+| 网络错误 Toast | ✅ NETWORK_ERROR 通知 |
+| WS 断连状态栏 | ✅ 红点 + "连接中断"（已有） |
+| WS 重连通知 | ✅ 蓝色 "连接已恢复" 3s |
+| 表单验证 | ✅ 红色内联提示（已有） |
+| Stuck Task 警告 | ✅ 红色警告条 + 80 字符截断 |
+| Stuck 详情原因 | ✅ 完整原因红色卡片 |
+
+### 下一步
+
+Task #54: 前端 — Project 管理弹窗（创建/编辑）
 
 **日期**: 2026-04-21
 **状态**: ✅ 完成

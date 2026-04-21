@@ -159,6 +159,13 @@ function TaskDetail({
         />
       )}
 
+      {task.status === "Stuck" && task.stuckReason && (
+        <div className="detail-stuck-reason">
+          <div className="detail-stuck-reason-label">Stuck 原因</div>
+          <div className="detail-stuck-reason-text">{task.stuckReason}</div>
+        </div>
+      )}
+
       <div className="detail-section">
         <div className="detail-meta">
           <span className={`detail-status detail-status-${task.status.toLowerCase()}`}>

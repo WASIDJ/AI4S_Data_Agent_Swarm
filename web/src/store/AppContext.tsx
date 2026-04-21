@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import type { Agent, Task, Project, Event } from "../types";
@@ -188,6 +189,21 @@ export function useAppDispatch(): React.Dispatch<AppAction> {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Register global API error handler
+  useEffect(() => {
+    api.setApiErrorHandler((error) => {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        notification: {
+          id: crypto.randomUUID(),
+          type: "error",
+          message: error.message,
+          timestamp: Date.now(),
+        },
+      });
+    });
+  }, []);
+
   // Load initial data from API
   useEffect(() => {
     let cancelled = false;
@@ -283,11 +299,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const { connected } = useWebSocket(wsHandlers);
+  const { connected, reconnectCount } = useWebSocket(wsHandlers);
+
+  // Track previous connected state to detect reconnection
+  const prevConnectedRef = useRef(false);
 
   useEffect(() => {
     dispatch({ type: "SET_WS_CONNECTED", connected });
-  }, [connected]);
+
+    // Detect reconnection (was disconnected, now connected)
+    if (connected && prevConnectedRef.current === false && reconnectCount > 0) {
+      dispatch({
+        type: "ADD_NOTIFICATION",
+        notification: {
+          id: crypto.randomUUID(),
+          type: "info",
+          message: "连接已恢复",
+          timestamp: Date.now(),
+        },
+      });
+    }
+    prevConnectedRef.current = connected;
+  }, [connected, reconnectCount]);
 
   const value = useMemo(
     () => ({ state, dispatch }),

@@ -30,6 +30,18 @@ export class ApiError extends Error {
 }
 
 // ---------------------------------------------------------------------------
+// Global error handler — registered by AppContext
+// ---------------------------------------------------------------------------
+
+type ApiErrorHandler = (error: ApiError) => void;
+
+let globalErrorHandler: ApiErrorHandler | null = null;
+
+export function setApiErrorHandler(handler: ApiErrorHandler): void {
+  globalErrorHandler = handler;
+}
+
+// ---------------------------------------------------------------------------
 // Base request helper
 // ---------------------------------------------------------------------------
 
@@ -43,11 +55,22 @@ async function request<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    const err = new ApiError(
+      "NETWORK_ERROR",
+      networkErr instanceof Error ? networkErr.message : "网络请求失败",
+      0,
+    );
+    globalErrorHandler?.(err);
+    throw err;
+  }
 
   if (!res.ok) {
     let code = "UNKNOWN";
@@ -61,7 +84,9 @@ async function request<T>(
     } catch {
       // use defaults
     }
-    throw new ApiError(code, message, res.status);
+    const err = new ApiError(code, message, res.status);
+    globalErrorHandler?.(err);
+    throw err;
   }
 
   return res.json() as Promise<T>;
