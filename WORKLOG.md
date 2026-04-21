@@ -509,4 +509,55 @@ Task #18: 后端 — SDK messageParser — SDK 消息流转换为 Event
 
 ### 下一步
 
-Task #18: 后端 — SDK messageParser — SDK 消息流转换为 Event
+Task #19: 后端 — SDKSessionManager
+
+---
+
+## Task #18: 后端 — SDK messageParser — SDK 消息流转换为 Event
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/sdk/messageParser.ts`** — SDK 消息流 → Event 转换器
+   - `parseMessage(taskId, sessionId, message)`: 主解析函数，返回 `Event[]`
+   - SDKSystemMessage(init) → `SDKInit` Event，记录 session_id
+   - SDKAssistantMessage → 遍历 content 块：
+     - tool_use 块 → `SDKAssistant` Event（toolName、toolInput 截断至 10KB）
+     - text 块 → `SDKAssistant` Event（toolOutput 截断至 2000 字符）
+   - SDKResultMessage → `SDKResult` Event（output、duration、费用信息）
+   - 所有 Event 带 id(UUID)、taskId、sessionId、source='sdk'、timestamp、raw(截断至 10KB)
+   - `extractSessionId(message)`: 从 init 消息中提取 session_id
+   - `extractCostInfo(message)`: 从 result 消息中提取费用信息（totalCostUsd、numTurns、durationMs、subtype、isErr）
+
+2. **`server/sdk/messageParser.test.ts`** — 16 个单元测试
+   - SDKInit: 解析 init 消息、记录 session_id
+   - SDKAssistant tool_use: 解析工具调用、截断大输入
+   - SDKAssistant text: 解析文本输出、截断长文本
+   - SDKAssistant 混合内容: 多块生成多事件
+   - SDKResult: success、error、max_turns
+   - 未识别消息: stream_event、system status 返回空数组
+   - extractSessionId: init 提取、非 init 返回 undefined
+   - extractCostInfo: success/error/非 result
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| SDKInit 解析 | ✅ |
+| SDKAssistant tool_use | ✅ |
+| SDKAssistant text | ✅ |
+| 混合内容多事件 | ✅ |
+| 工具输入截断 10KB | ✅ |
+| 文本输出截断 2KB | ✅ |
+| SDKResult success | ✅ |
+| SDKResult error | ✅ |
+| 未识别消息跳过 | ✅ |
+| extractSessionId | ✅ |
+| extractCostInfo | ✅ |
+| 全部测试 (127) | ✅ |
+
+### 下一步
+
+Task #19: 后端 — SDKSessionManager
