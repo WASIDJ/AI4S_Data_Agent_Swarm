@@ -877,6 +877,20 @@ body {
   word-break: break-word;
 }
 
+.detail-completion-reason {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.detail-completion-reason-text {
+  font-size: 0.8125rem;
+  color: #92400e;
+  line-height: 1.5;
+}
+
 .detail-output {
   font-size: 0.75rem;
   background: #f5f5f7;

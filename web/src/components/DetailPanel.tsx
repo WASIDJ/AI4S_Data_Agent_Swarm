@@ -166,6 +166,14 @@ function TaskDetail({
         </div>
       )}
 
+      {task.status === "Done" && task.completedReason && task.completedReason !== "sdk_result" && task.completedReason !== "user_done" && (
+        <div className="detail-completion-reason">
+          <div className="detail-completion-reason-text">
+            {COMPLETION_REASON_LABELS[task.completedReason] ?? task.completedReason}
+          </div>
+        </div>
+      )}
+
       <div className="detail-section">
         <div className="detail-meta">
           <span className={`detail-status detail-status-${task.status.toLowerCase()}`}>
@@ -327,3 +335,10 @@ function truncate(str: string, maxLen: number): string {
   if (str.length <= maxLen) return str;
   return str.slice(0, maxLen) + "...";
 }
+
+// Completion reason display labels
+const COMPLETION_REASON_LABELS: Record<string, string> = {
+  max_budget: "已达到预算上限，任务自动停止",
+  max_turns: "已达到轮次上限，任务自动停止",
+  error: "执行过程中发生错误",
+};

@@ -1731,3 +1731,46 @@ Task #58: 后端 — 并发 Task 数限制与 Agent 单 Task 执行约束
 ### 下一步
 
 Task #59: 后端 — 预算/轮次超限自动停止 Task
+
+---
+
+## Task #59: 后端 — 预算/轮次超限自动停止 Task
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **后端已实现**（Task #19 中完成）
+   - `sdkSessionManager.handleTaskCompletion()` 已处理 `error_max_turns` → `completedReason: "max_turns"` 和 `error_max_budget_usd` → `completedReason: "max_budget"`
+   - Task 自动标记为 Done，广播 `task:update`
+
+2. **`web/src/components/DetailPanel.tsx`** — 完成原因展示
+   - Task 状态为 Done 且 `completedReason` 为 `max_budget`/`max_turns`/`error` 时显示橙色原因横幅
+   - `COMPLETION_REASON_LABELS` 映射：`max_budget` → "已达到预算上限，任务自动停止"，`max_turns` → "已达到轮次上限，任务自动停止"，`error` → "执行过程中发生错误"
+   - `sdk_result` 和 `user_done` 不显示原因横幅（正常完成）
+
+3. **`web/src/index.css`** — 完成原因样式
+   - `.detail-completion-reason`: 橙色背景 + 边框 + 圆角卡片
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `web/src/components/DetailPanel.tsx` | 完成原因横幅展示 |
+| `web/src/index.css` | 完成原因样式 |
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 后端 max_budget 处理 | ✅ 已有 (Task #19) |
+| 后端 max_turns 处理 | ✅ 已有 (Task #19) |
+| 前端完成原因展示 | ✅ 橙色横幅 |
+| TypeScript 类型检查 | ✅ 无错误 |
+| Vite 生产构建 | ✅ 643ms, 44 模块 |
+| 全部测试 (243) | ✅ |
+
+### 下一步
+
+Task #60: 后端 — JSONL 事件归档（超过 100MB 压缩为 .jsonl.gz）
