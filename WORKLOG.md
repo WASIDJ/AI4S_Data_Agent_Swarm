@@ -1335,14 +1335,87 @@ Task #52: 前端 — 加载骨架屏与按钮 Loading 状态
 
 ---
 
-## Task #51: 前端 — 通知系统（NotificationToast）
+## Task #53: 前端 — 错误状态处理（API 失败 Toast + WebSocket 断连状态栏）
+
+---
+
+## Task #52: 前端 — 加载骨架屏与按钮 Loading 状态
 
 **日期**: 2026-04-21
 **状态**: ✅ 完成
 
 ### 完成内容
 
-1. **`web/src/components/NotificationToast.tsx`** — Toast 通知队列组件
+1. **`web/src/index.css`** — 骨架屏/Spinner 样式
+   - `.skeleton` + `@keyframes shimmer`: 灰色矩形 + 流光扫描动画（200% background-position 动画）
+   - Agent 骨架屏: `.skeleton-agent`（圆形头像 + 两条文字线）
+   - Task 骨架屏: `.skeleton-task`（三条文字线 + 左边框）
+   - `.spinner`: CSS border 旋转动画（`@keyframes spin`）
+   - `.spinner-sm`: 小号 spinner（10px）
+   - `.spinner-white`: 白色边框变体（用于深色按钮）
+   - `.column-spinner`: 看板列顶部 spinner 居中容器
+   - `.detail-spinner`: 详情面板右上角 spinner
+   - `.btn-loading`: 按钮内 spinner + 文字布局
+   - `.detail-title-row`: 标题行 + spinner 并排布局
+
+2. **`web/src/components/AgentPanel.tsx`** — 首屏加载骨架屏
+   - `loading === true` 时显示 4 个 `AgentSkeleton` 占位卡片
+   - `AgentSkeletonGroup` / `AgentSkeleton` 组件：圆形头像 + 两行文字 shimmer
+   - 加载完成后正常渲染 Agent 列表
+
+3. **`web/src/components/KanbanBoard.tsx`** — 首屏骨架屏 + 列刷新 Spinner
+   - `loading === true` 时显示 4 列 `KanbanColumnSkeleton`（每列 3 张 Task 骨架卡片）
+   - `KanbanColumnSkeleton` / `TaskSkeleton` 组件
+   - WebSocket 重连后检测（`prevConnectedRef`），显示 `columnsRefreshing` spinner 1.5s
+   - 列顶部 spinner 不阻塞卡片操作
+
+4. **`web/src/components/DetailPanel.tsx`** — 切换时 Spinner
+   - 新增 `eventsLoading` / `statsLoading` 状态追踪
+   - TaskDetail: 标题行右侧显示 spinner（eventsLoading 时）
+   - AgentDetail: 面板顶部右侧显示 spinner（statsLoading 时）
+   - 内容区保持上一次数据直到新数据加载完成
+
+5. **`web/src/components/TaskCard.tsx`** — ActionButton 改进
+   - `loading` 状态显示 `<span className="btn-loading"><spinner /> + label</span>` 替代原来的 `"..."`
+
+6. **`web/src/components/ToolApproval.tsx`** — 按钮 Spinning Icon
+   - 允许/拒绝/发送按钮 loading 时显示 spinner icon + 文字
+   - 主按钮使用 `spinner-white`（蓝底白 spinner）
+
+7. **Modal 表单提交按钮** — AgentFormModal + TaskFormModal
+   - `submitting` 时显示 spinner + "创建中"/"保存中" 替代原来的 "创建中..."
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `web/src/index.css` | 新增 skeleton/spinner/btn-loading 样式 |
+| `web/src/components/AgentPanel.tsx` | 首屏骨架屏 |
+| `web/src/components/KanbanBoard.tsx` | 首屏骨架屏 + 列刷新 spinner |
+| `web/src/components/DetailPanel.tsx` | 切换 spinner + loading 状态 |
+| `web/src/components/TaskCard.tsx` | ActionButton spinner icon |
+| `web/src/components/ToolApproval.tsx` | 按钮 spinner icon |
+| `web/src/components/modals/AgentFormModal.tsx` | 提交按钮 spinner |
+| `web/src/components/modals/TaskFormModal.tsx` | 提交按钮 spinner |
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| TypeScript 类型检查 | ✅ 无错误 |
+| Vite 生产构建 | ✅ 645ms，43 模块 |
+| 后端测试 | ✅ 240/240 通过 |
+| 首屏骨架屏 Agent 面板 | ✅ 4 张 shimmer 卡片 |
+| 首屏骨架屏 Kanban 看板 | ✅ 4 列 × 3 张骨架 |
+| WS 重连列 spinner | ✅ 1.5s 后消失 |
+| DetailPanel 切换 spinner | ✅ 右上角小 spinner |
+| TaskCard 按钮 loading | ✅ spinning icon |
+| ToolApproval 按钮 loading | ✅ spinning icon |
+| Modal 提交按钮 loading | ✅ spinning icon + 文字 |
+
+### 下一步
+
+Task #53: 前端 — 错误状态处理（API 失败 Toast + WebSocket 断连状态栏）
    - 固定右上角（position: fixed, top/right, z-index: 2000）
    - 5 种通知类型及样式：
      - `success`（绿色，3s 自动消失）— 操作成功

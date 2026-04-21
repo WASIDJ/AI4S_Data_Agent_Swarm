@@ -81,14 +81,28 @@ export function ToolApproval({
           onClick={() => handleDecision("allow")}
           disabled={loading !== null}
         >
-          {loading === "allow" ? "处理中..." : "\u2705 允许"}
+          {loading === "allow" ? (
+            <span className="btn-loading">
+              <span className="spinner spinner-sm spinner-white" />
+              处理中
+            </span>
+          ) : (
+            "\u2705 允许"
+          )}
         </button>
         <button
           className="btn btn-secondary"
           onClick={() => handleDecision("deny")}
           disabled={loading !== null}
         >
-          {loading === "deny" ? "处理中..." : "\u274C 拒绝"}
+          {loading === "deny" ? (
+            <span className="btn-loading">
+              <span className="spinner spinner-sm" />
+              处理中
+            </span>
+          ) : (
+            "\u274C 拒绝"
+          )}
         </button>
       </div>
 
@@ -105,7 +119,14 @@ export function ToolApproval({
           onClick={handleSendMessage}
           disabled={loading !== null || !message.trim()}
         >
-          {loading === "message" ? "发送中..." : "发送"}
+          {loading === "message" ? (
+            <span className="btn-loading">
+              <span className="spinner spinner-sm spinner-white" />
+              发送中
+            </span>
+          ) : (
+            "发送"
+          )}
         </button>
       </div>
     </div>

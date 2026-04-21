@@ -201,7 +201,14 @@ function ActionButton({
       onClick={onClick}
       disabled={loading}
     >
-      {loading ? "..." : label}
+      {loading ? (
+        <span className="btn-loading">
+          <span className="spinner spinner-sm" />
+          {label}
+        </span>
+      ) : (
+        label
+      )}
     </button>
   );
 }

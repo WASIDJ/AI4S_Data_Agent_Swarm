@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppState, useAppDispatch } from "../store/AppContext";
 import { TaskCard } from "./TaskCard";
 import { TaskFormModal } from "./modals/TaskFormModal";
@@ -22,13 +22,77 @@ const COLUMNS: Column[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Skeleton for Task cards
+// ---------------------------------------------------------------------------
+
+function TaskSkeleton() {
+  return (
+    <div className="skeleton-task">
+      <div className="skeleton skeleton-line skeleton-line-short" style={{ height: 14 }} />
+      <div className="skeleton skeleton-line skeleton-line-long" />
+      <div className="skeleton skeleton-line skeleton-line-medium" />
+    </div>
+  );
+}
+
+function KanbanColumnSkeleton() {
+  return (
+    <div className="kanban-column">
+      <div className="kanban-column-header">
+        <span>
+          <span className="skeleton skeleton-line" style={{ width: 60, height: 12, display: "inline-block" }} />
+        </span>
+        <span className="kanban-column-count">0</span>
+      </div>
+      <div className="kanban-column-body">
+        <TaskSkeleton />
+        <TaskSkeleton />
+        <TaskSkeleton />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // KanbanBoard
 // ---------------------------------------------------------------------------
 
 export function KanbanBoard() {
-  const { tasks, activeProjectId } = useAppState();
+  const { tasks, activeProjectId, loading, wsConnected } = useAppState();
   const dispatch = useAppDispatch();
   const [modalTask, setModalTask] = useState<Task | "create" | null>(null);
+
+  // Track WS reconnect for column spinners
+  const prevConnectedRef = useRef(wsConnected);
+  const [columnsRefreshing, setColumnsRefreshing] = useState(false);
+
+  useEffect(() => {
+    // Detect reconnection — show spinner briefly
+    if (wsConnected && !prevConnectedRef.current) {
+      setColumnsRefreshing(true);
+      const timer = setTimeout(() => setColumnsRefreshing(false), 1500);
+      prevConnectedRef.current = wsConnected;
+      return () => clearTimeout(timer);
+    }
+    prevConnectedRef.current = wsConnected;
+  }, [wsConnected]);
+
+  // First-load skeleton
+  if (loading) {
+    return (
+      <div className="kanban">
+        <div className="kanban-header">
+          <span className="kanban-title">Tasks</span>
+        </div>
+        <div className="kanban-columns">
+          <KanbanColumnSkeleton />
+          <KanbanColumnSkeleton />
+          <KanbanColumnSkeleton />
+          <KanbanColumnSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   // Filter tasks by active project
   const filteredTasks = activeProjectId
@@ -67,6 +131,11 @@ export function KanbanBoard() {
                 </span>
                 <span className="kanban-column-count">{items.length}</span>
               </div>
+              {columnsRefreshing && (
+                <div className="column-spinner">
+                  <span className="spinner spinner-sm" />
+                </div>
+              )}
               <div className="kanban-column-body">
                 {items.length === 0 ? (
                   <div className="kanban-empty">

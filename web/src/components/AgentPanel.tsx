@@ -22,13 +22,52 @@ function sortAgents(agents: Agent[]): Agent[] {
 }
 
 // ---------------------------------------------------------------------------
+// Skeleton for Agent cards
+// ---------------------------------------------------------------------------
+
+function AgentSkeletonGroup() {
+  return (
+    <>
+      <AgentSkeleton />
+      <AgentSkeleton />
+      <AgentSkeleton />
+      <AgentSkeleton />
+    </>
+  );
+}
+
+function AgentSkeleton() {
+  return (
+    <div className="skeleton skeleton-agent">
+      <div className="skeleton skeleton-avatar" />
+      <div className="skeleton-lines">
+        <div className="skeleton skeleton-line skeleton-line-medium" />
+        <div className="skeleton skeleton-line skeleton-line-short" />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // AgentPanel
 // ---------------------------------------------------------------------------
 
 export function AgentPanel() {
-  const { agents, selectedAgentId } = useAppState();
+  const { agents, selectedAgentId, loading } = useAppState();
   const dispatch = useAppDispatch();
   const [modalAgent, setModalAgent] = useState<Agent | "create" | null>(null);
+
+  // First-load skeleton
+  if (loading) {
+    return (
+      <div className="agent-panel">
+        <div className="agent-panel-header">
+          <span className="agent-panel-count">加载中...</span>
+        </div>
+        <AgentSkeletonGroup />
+      </div>
+    );
+  }
 
   const agentList = sortAgents([...agents.values()]);
 

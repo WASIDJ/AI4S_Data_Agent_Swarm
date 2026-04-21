@@ -392,9 +392,14 @@ export function AgentFormModal({ agent, onClose }: AgentFormModalProps) {
               onClick={handleSubmit}
               disabled={submitting || hasErrors}
             >
-              {submitting
-                ? (isEdit ? "保存中..." : "创建中...")
-                : (isEdit ? "保存" : "创建")}
+              {submitting ? (
+                <span className="btn-loading">
+                  <span className="spinner spinner-sm spinner-white" />
+                  {isEdit ? "保存中" : "创建中"}
+                </span>
+              ) : (
+                isEdit ? "保存" : "创建"
+              )}
             </button>
           </div>
         </div>

@@ -17,6 +17,8 @@ export function DetailPanel() {
   // Task detail state
   const [events, setEvents] = useState<Event[]>([]);
   const [agentStats, setAgentStats] = useState<AgentStats | null>(null);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const selectedTask = selectedTaskId ? tasks.get(selectedTaskId) : undefined;
   const selectedAgent = selectedAgentId
@@ -29,19 +31,23 @@ export function DetailPanel() {
   useEffect(() => {
     if (!selectedTaskId) {
       setEvents([]);
+      setEventsLoading(false);
       return;
     }
 
     let cancelled = false;
+    setEventsLoading(true);
     api
       .getTaskEvents(selectedTaskId, { limit: 50 })
       .then((res) => {
         if (cancelled) return;
         setEvents(res.events ?? res.items ?? []);
+        setEventsLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
         setEvents([]);
+        setEventsLoading(false);
       });
 
     return () => {
@@ -53,19 +59,23 @@ export function DetailPanel() {
   useEffect(() => {
     if (!selectedAgentId) {
       setAgentStats(null);
+      setStatsLoading(false);
       return;
     }
 
     let cancelled = false;
+    setStatsLoading(true);
     api
       .getAgentStats(selectedAgentId)
       .then((res) => {
         if (cancelled) return;
         setAgentStats(res.stats);
+        setStatsLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
         setAgentStats(null);
+        setStatsLoading(false);
       });
 
     return () => {
@@ -101,7 +111,7 @@ export function DetailPanel() {
 
   // Agent detail view
   if (selectedAgent && !selectedTask) {
-    return <AgentDetail agent={selectedAgent} stats={agentStats} />;
+    return <AgentDetail agent={selectedAgent} stats={agentStats} statsLoading={statsLoading} />;
   }
 
   // Task detail view
@@ -111,6 +121,7 @@ export function DetailPanel() {
         task={selectedTask}
         agent={selectedAgent}
         events={events}
+        eventsLoading={eventsLoading}
       />
     );
   }
@@ -126,14 +137,19 @@ function TaskDetail({
   task,
   agent,
   events,
+  eventsLoading,
 }: {
   task: import("../types").Task;
   agent?: Agent;
   events: Event[];
+  eventsLoading: boolean;
 }) {
   return (
     <div className="detail-content">
-      <h2 className="detail-title">{task.title}</h2>
+      <div className="detail-title-row">
+        <h2 className="detail-title">{task.title}</h2>
+        {eventsLoading && <span className="spinner spinner-sm" />}
+      </div>
 
       {task.status === "Stuck" && (
         <ToolApproval
@@ -199,11 +215,14 @@ function TaskDetail({
 // AgentDetail
 // ---------------------------------------------------------------------------
 
-function AgentDetail({ agent, stats }: { agent: Agent; stats: AgentStats | null }) {
+function AgentDetail({ agent, stats, statsLoading }: { agent: Agent; stats: AgentStats | null; statsLoading: boolean }) {
   const [showPrompt, setShowPrompt] = useState(false);
 
   return (
     <div className="detail-content">
+      <div className="detail-spinner">
+        {statsLoading && <span className="spinner spinner-sm" />}
+      </div>
       <div className="detail-agent-header">
         <span className="detail-agent-avatar">{agent.avatar}</span>
         <div>
