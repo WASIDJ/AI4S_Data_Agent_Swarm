@@ -189,6 +189,66 @@ describe("Agent API", () => {
     });
   });
 
+  describe("GET /api/agents/:id/stats", () => {
+    it("returns zero stats for new agent", async () => {
+      const createRes = await request(app)
+        .post("/api/agents")
+        .send(validAgent);
+      const id = createRes.body.agent.id;
+
+      const statsRes = await request(app).get(`/api/agents/${id}/stats`);
+      expect(statsRes.status).toBe(200);
+      expect(statsRes.body).toMatchObject({
+        totalTasksCompleted: 0,
+        totalTasksCancelled: 0,
+        totalCostUsd: 0,
+        avgDurationMs: 0,
+        recentTasks: [],
+      });
+    });
+
+    it("returns 404 for nonexistent agent", async () => {
+      const res = await request(app).get("/api/agents/nonexistent-id/stats");
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe("AGENT_NOT_FOUND");
+    });
+
+    it("includes recent completed tasks", async () => {
+      const createRes = await request(app)
+        .post("/api/agents")
+        .send(validAgent);
+      const agentId = createRes.body.agent.id;
+
+      // Create a completed task
+      taskStore.createTask({
+        id: "stats-task-1",
+        title: "Done Task",
+        description: "test",
+        status: "Done",
+        agentId,
+        projectId: "proj-1",
+        priority: 1,
+        tags: [],
+        eventCount: 0,
+        turnCount: 0,
+        budgetUsed: 0.5,
+        maxTurns: 100,
+        maxBudgetUsd: 5.0,
+        createdAt: Date.now() - 1000,
+        completedAt: Date.now(),
+        completedReason: "sdk_result",
+      });
+
+      const statsRes = await request(app).get(`/api/agents/${agentId}/stats`);
+      expect(statsRes.body.recentTasks).toHaveLength(1);
+      expect(statsRes.body.recentTasks[0].title).toBe("Done Task");
+
+      // Clean up
+      taskStore.deleteTask("stats-task-1");
+      agentStore.deleteAgent(agentId);
+    });
+  });
+
   describe("DELETE /api/agents/:id", () => {
     it("deletes an idle agent", async () => {
       const createRes = await request(app)

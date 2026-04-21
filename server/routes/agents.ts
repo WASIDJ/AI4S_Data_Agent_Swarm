@@ -190,6 +190,33 @@ agentsRouter.put("/:id", (req, res) => {
   res.json({ agent: updated });
 });
 
+// GET /api/agents/:id/stats
+agentsRouter.get("/:id/stats", (req, res) => {
+  const agent = agentStore.getAgentById(req.params.id);
+  if (!agent) {
+    return res.status(404).json({
+      error: { code: "AGENT_NOT_FOUND", message: "Agent not found" },
+    });
+  }
+
+  // Get recent completed/cancelled tasks (last 10, sorted by completedAt desc)
+  const recentTasks = taskStore
+    .getAllTasks()
+    .filter(
+      (t) =>
+        t.agentId === req.params.id &&
+        (t.status === "Done" || t.status === "Cancelled") &&
+        t.completedAt !== undefined,
+    )
+    .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+    .slice(0, 10);
+
+  res.json({
+    ...agent.stats,
+    recentTasks,
+  });
+});
+
 // DELETE /api/agents/:id
 agentsRouter.delete("/:id", (req, res) => {
   const existing = agentStore.getAgentById(req.params.id);

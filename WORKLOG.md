@@ -384,3 +384,34 @@ Task #8-#11: 后端 — Agent 管理 API（完整 CRUD）
 ### 下一步
 
 Task #12: 后端 — Agent 统计 API
+
+---
+
+## Task #12: 后端 — Agent 统计 API
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/routes/agents.ts`** 新增 `GET /api/agents/:id/stats`
+   - 返回 `agent.stats`（totalTasksCompleted, totalTasksCancelled, totalCostUsd, avgDurationMs）
+   - 查询该 Agent 最近 10 条已完成的 Task（按 completedAt 降序）作为 `recentTasks`
+
+2. **`server/routes/agents.test.ts`** 新增 3 个测试
+   - 新 Agent 返回全 0 统计
+   - 不存在的 Agent 返回 404
+   - 包含最近已完成 Task
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 新 Agent 统计全 0 | ✅ |
+| 404 不存在 | ✅ |
+| recentTasks 包含已完成 | ✅ |
+| 全部测试 (66) | ✅ |
+
+### 下一步
+
+Task #13: 后端 — Task 管理 API（创建）
