@@ -343,4 +343,44 @@ Task #7: 后端 — Project 管理 API（CRUD）
 
 ### 下一步
 
-Task #8: 后端 — Agent 管理 API（GET）
+Task #8-#11: 后端 — Agent 管理 API（完整 CRUD）
+
+---
+
+## Task #8-#11: 后端 — Agent 管理 API（完整 CRUD）
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **`server/routes/agents.ts`** — Agent 完整 CRUD REST API
+   - `GET /api/agents` → `{ agents: Agent[] }`
+   - `GET /api/agents/:id` → `{ agent }` / 404 AGENT_NOT_FOUND
+   - `POST /api/agents` → 校验 name(1-50)/avatar(非空)/role(1-200)/prompt(10-5000) → 201 创建
+     - 默认值: maxTurns=200, maxBudgetUsd=5.0, allowedTools=[Bash,Read,Write,Edit,Grep,Glob,WebFetch]
+     - 生成: id(UUID), status="idle", isEnabled=true, taskCount=0, stats(全0)
+   - `PUT /api/agents/:id` → 部分更新 + isEnabled→status 联动（false→offline, true→idle）
+   - `DELETE /api/agents/:id` → 检查活跃 Task → 409 RESOURCE_HAS_DEPENDENTS 保护
+   - 每次变更后 WebSocket 广播
+
+2. **`server/routes/agents.test.ts`** — 16 个集成测试
+   - GET: 空列表、按 ID 查找、404
+   - POST: 创建成功、自定义配置、缺少 name、短 prompt、空 avatar
+   - PUT: 更新 prompt、404、isEnabled→offline、offline→idle、无效 prompt
+   - DELETE: 成功、404、有活跃 Task 时 409
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| GET /api/agents | ✅ |
+| GET /api/agents/:id | ✅ |
+| POST 创建 + 校验 | ✅ 5 项 |
+| PUT 更新 + 状态联动 | ✅ 5 项 |
+| DELETE + 保护 | ✅ 3 项 |
+| 全部测试 (63) | ✅ |
+
+### 下一步
+
+Task #12: 后端 — Agent 统计 API

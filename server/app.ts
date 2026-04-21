@@ -7,6 +7,7 @@ import { loadAllStores } from "./store/index.js";
 import * as taskStore from "./store/taskStore.js";
 import { initWebSocket, getConnectedClientCount } from "./services/wsBroadcaster.js";
 import { projectsRouter } from "./routes/projects.js";
+import { agentsRouter } from "./routes/agents.js";
 
 // ---------------------------------------------------------------------------
 // Environment
@@ -46,6 +47,7 @@ app.use(express.json({ limit: "10mb" }));
 // ---------------------------------------------------------------------------
 
 app.use("/api/projects", projectsRouter);
+app.use("/api/agents", agentsRouter);
 
 // ---------------------------------------------------------------------------
 // Health check
