@@ -2204,3 +2204,67 @@ Task #97: 前端 — Agent 状态警告
 ### 下一步
 
 项目可正常进行 `tsc` 编译，生产构建已无障碍。
+
+---
+
+## Task: 能源电力系统 AI4S 数据生成示例 + README 重写
+
+**日期**: 2026-04-21
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **示例知识库创建**
+   - 创建 `examples/energy_power_knowledge.md`，包含能源与电力系统五大领域知识：
+     - 智能电网技术（AMI、配电自动化）
+     - 新能源发电技术（光伏、风电、储能）
+     - 电力系统优化与控制（经济调度、最优潮流、需求响应）
+     - 电力市场（现货市场、LMP 定价机制）
+     - 碳中和与能源转型（VPP、综合能源系统）
+   - 文档包含表格、公式、技术指标等结构化信息
+
+2. **AI4S 数据生成任务执行**
+   - 通过"流程编排专家" Agent 执行数据合成任务
+   - 成功生成 4 个输出文件：
+     - `examples/output/qa_pairs.jsonl` — 15 条问答对（5 简单 + 5 中等 + 5 困难）
+     - `examples/output/knowledge_triples.jsonl` — 30 条知识三元组
+     - `examples/output/summaries.json` — 5 个章节摘要
+     - `examples/output/quality_report.json` — 质量评分 100%
+   - 执行统计：15 轮对话，$0.40 预算消耗
+
+3. **截图记录**
+   - `screenshots/01-homepage.png` — 平台首页
+   - `screenshots/02-empty-board.png` — 清空看板
+   - `screenshots/03-task-created.png` — 任务创建后
+   - `screenshots/04-task-running.png` — 任务执行中
+   - `screenshots/05-task-done.png` — 任务完成
+   - `screenshots/06-task-detail.png` — 任务详情面板
+   - `screenshots/07-events-timeline.png` — 事件时间线
+   - `screenshots/08-agent-detail.png` — Agent 详情面板
+
+4. **example.md 编写**
+   - 完整记录从启动平台到获取 AI4S 训练数据的全流程
+   - 包含每个步骤的截图说明
+   - 展示输出文件内容和格式
+   - 包含常见问题解答
+
+5. **README.md 重写**
+   - 重构为完整的项目介绍文档
+   - 包含平台预览、功能特性、核心概念等章节
+   - 所有命令均为可执行的复现命令
+   - 包含 API 参考、环境变量、技术栈等详细内容
+   - 链接到 example.md 示例文档
+
+### 验证结果
+
+| 检查项 | 结果 |
+|--------|------|
+| 平台启动 | ✅ 前端 + 后端正常启动 |
+| 任务创建 | ✅ 通过 Web/API 均可创建 |
+| 任务执行 | ✅ SDK 会话正常，15 轮完成 |
+| 输出文件 | ✅ 4 个文件，50 条数据样本 |
+| 质量报告 | ✅ 100% 质量评分，0 个问题 |
+
+### 下一步
+
+项目文档和示例已完备，可进行对外展示和发布。
