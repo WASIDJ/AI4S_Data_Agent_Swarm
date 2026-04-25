@@ -2430,3 +2430,50 @@ Task #97: 前端 — Agent 状态警告
 3. 数据合成专家：基于 examples/output 数据验证输出质量
 4. 质检专家：对数据合成输出执行质检
 5. 流程编排专家：从关键词出发完成端到端流水线
+
+---
+
+## Task: Agent 1 论文爬取专家 — Prompt 修复 + 测试规范
+
+**日期**: 2026-04-25
+**状态**: ✅ 完成
+
+### 变更内容
+
+1. **P1 修复**：补充 Semantic Scholar API `externalIds` 嵌套对象路径说明
+   - 明确 `doi` 和 `arxiv_id` 在 `paper.externalIds.DOI` 和 `paper.externalIds.ArXiv` 中
+   - 添加 JSON 示例说明嵌套结构
+   - 标注这两个字段可能为 null
+
+2. **P2 修复**：补充 arXiv API XML 解析的具体命令示例
+   - 添加 `python3 -c` 一行命令解析 arXiv XML 响应
+   - 使用 `xml.etree.ElementTree` 处理 Atom 命名空间
+   - 输出格式与 `papers.json` schema 一致
+
+3. **P3 修复**：添加 `source` 字段标注逻辑
+   - 使用 Semantic Scholar API → `semanticscholar`
+   - 使用 arXiv API → `arxiv`
+   - 使用 DBLP API → `dblp`
+   - 合并记录时 → `semanticscholar+arxiv`
+
+4. **P5 修复**：添加跨 API 去重逻辑
+   - DOI 相同或标题高度相似的论文合并为一条记录
+   - 保留最完整的元数据
+
+5. **P4 修复**：统一 PDF 文件命名规则
+   - arXiv ID 中的点替换为下划线（`2401.12345` → `2401_12345.pdf`）
+
+### 新增文件
+
+- `test/agent1.md` — 论文爬取专家端到端测试规范（470 行）
+  - 8 个步骤的完整测试流程（启动→创建→执行→验证）
+  - 6 项验收检查清单（C1-C6，含 Python 验证脚本）
+  - 一键测试脚本 `quick_test.sh`
+  - 参考输出格式和字段说明
+  - 故障排查表
+
+### 验证结果
+
+- TypeScript 类型检查通过
+- 后端 249 测试全部通过
+- 前端 24 测试全部通过

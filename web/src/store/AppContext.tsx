@@ -199,6 +199,17 @@ const PRESET_AGENTS: {
 curl -s "https://api.semanticscholar.org/graph/v1/paper/search?query=KEYWORD&limit=N&fields=title,authors,abstract,year,externalIds,citationCount,url"
 \`\`\`
 
+注意：\`doi\` 和 \`arxiv_id\` 在返回 JSON 的 \`externalIds\` 嵌套对象中：
+\`\`\`json
+{
+  "externalIds": {
+    "DOI": "10.3390/en17164128",
+    "ArXiv": "2401.12345"
+  }
+}
+\`\`\`
+提取时使用 \`paper.externalIds?.DOI\` 和 \`paper.externalIds?.ArXiv\`，注意这两个字段可能为 null。
+
 **arXiv API**（返回 XML，需解析）：
 \`\`\`bash
 curl -s "http://export.arxiv.org/api/query?search_query=all:KEYWORD&max_results=N&sortBy=submittedDate&sortOrder=descending"
@@ -210,14 +221,30 @@ curl -s "https://dblp.org/search/publ/api?q=KEYWORD&format=json&h=N"
 \`\`\`
 
 ### 3. 解析与去重
-- Semantic Scholar 返回 JSON，直接解析提取字段
-- arXiv 返回 XML，使用 Bash 工具解析提取 title、author、summary、id 等字段
-- 基于 DOI 或 arXiv ID 去重
+- Semantic Scholar 返回 JSON，直接解析提取字段（注意 doi 和 arxiv_id 从 externalIds 嵌套对象中取）
+- arXiv 返回 XML，使用以下命令解析提取字段：
+\`\`\`bash
+curl -s "http://export.arxiv.org/api/query?search_query=all:KEYWORD&max_results=N" | python3 -c "
+import sys, json, xml.etree.ElementTree as ET
+ns = {'atom': 'http://www.w3.org/2005/Atom', 'arxiv': 'http://arxiv.org/schemas/atom'}
+root = ET.parse(sys.stdin).getroot()
+for entry in root.findall('atom:entry', ns):
+    print(json.dumps({
+        'title': entry.find('atom:title', ns).text.strip(),
+        'authors': [a.find('atom:name', ns).text for a in entry.findall('atom:author', ns)],
+        'abstract': entry.find('atom:summary', ns).text.strip(),
+        'arxiv_id': entry.find('atom:id', ns).text.split('/')[-1],
+        'published': entry.find('atom:published', ns).text[:10]
+    }, ensure_ascii=False))
+"
+\`\`\`
+- 基于 DOI 或 arXiv ID 去重；如果同一篇论文被多个 API 返回（DOI 相同或标题高度相似），合并为一条记录，保留最完整的元数据
+- \`source\` 字段标注数据来源：使用 Semantic Scholar API 获取填 \`semanticscholar\`，arXiv API 填 \`arxiv\`，DBLP API 填 \`dblp\`；合并记录时填多个来源（如 \`semanticscholar+arxiv\`）
 - 优先选引用量高、年份新的论文
 - 去重后数量不足时，换 API 或扩展关键词继续搜索
 
 ### 4. 下载 PDF（可选）
-- arXiv 论文：\`curl -L -o papers/XXXX.pdf https://arxiv.org/pdf/XXXX.pdf\`
+- arXiv 论文：\`curl -L -o papers/2401_12345.pdf https://arxiv.org/pdf/2401.12345.pdf\`（arXiv ID 中的点替换为下划线作为文件名）
 - 其他来源：使用 WebFetch 获取 PDF 链接后下载
 - 下载失败时记录原因，不中断流程
 - 如果 PDF 下载不需要，可以只收集元数据
