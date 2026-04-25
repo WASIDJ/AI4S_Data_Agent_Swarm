@@ -55,7 +55,7 @@ function validateAgentFields(body: Record<string, unknown>): string | null {
     if (err) return err;
   }
   if (body.prompt !== undefined) {
-    const err = validateString(body.prompt, "prompt", 10, 5000);
+    const err = validateString(body.prompt, "prompt", 10, 15000);
     if (err) return err;
   }
   return null;
@@ -108,7 +108,7 @@ agentsRouter.post("/", (req, res) => {
     });
   }
 
-  const promptError = validateString(prompt, "prompt", 10, 5000);
+  const promptError = validateString(prompt, "prompt", 10, 15000);
   if (promptError) {
     return res.status(400).json({
       error: { code: "VALIDATION_ERROR", message: promptError },

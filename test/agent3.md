@@ -2,6 +2,11 @@
 ### 1. 复用 Project
 ### 2. 添加task
 ![alt text](images/image-13.png)
+```plaintext
+标题：test_agent3-数据合成专家
+描述：基于论文解析结果（JSON）生成 Q&A 对、知识三元组、摘要等训练数据。
+Agent：数据合成专家
+```
 ### 3. 结果
 - 问题 1:
 ```plaintext
