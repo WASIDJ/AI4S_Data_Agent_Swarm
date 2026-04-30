@@ -31,6 +31,18 @@ node start.js
 
 Windows 用户需在 `.env` 中配置 `CLAUDE_CODE_GIT_BASH_PATH=D:\Git\bin\bash.exe`
 
+## Docker 部署
+
+```bash
+cp .env.example .env
+mkdir -p workspace
+docker compose up --build -d
+```
+
+访问 `http://localhost:3456`
+
+评测部署、验证步骤、日志和 API 说明见 [docs/系统部署与运行说明.md](/home/ryou/myworkspace/develop/PROJECT/competiton/AI4S_Data_Agent_Swarm/docs/系统部署与运行说明.md)。
+
 ---
 
 ## 系统要求

@@ -1,0 +1,17 @@
+.git
+.omx
+.codex
+node_modules
+server/node_modules
+server/dist
+web/node_modules
+web/dist
+coverage
+*.log
+data
+workspace
+docs/screenshots
+screenshots
+test/images
+papers/markdown
+exmaples/output

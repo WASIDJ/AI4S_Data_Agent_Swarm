@@ -1,0 +1,25 @@
+services:
+  ai4s-data-agent-swarm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai4s-data-agent-swarm
+    ports:
+      - "${PORT:-3456}:3456"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3456
+      MAX_CONCURRENT_TASKS: ${MAX_CONCURRENT_TASKS:-10}
+      MAX_WS_CLIENTS: ${MAX_WS_CLIENTS:-10}
+      TOOL_APPROVAL_TIMEOUT_MS: ${TOOL_APPROVAL_TIMEOUT_MS:-300000}
+      USER_MESSAGE_TIMEOUT_MS: ${USER_MESSAGE_TIMEOUT_MS:-1800000}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      COPILOT_MODEL: ${COPILOT_MODEL:-}
+      MINERU_TOKEN: ${MINERU_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+      - ./workspace:/workspace
+    restart: unless-stopped

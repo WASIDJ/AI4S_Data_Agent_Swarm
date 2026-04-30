@@ -271,17 +271,19 @@ export async function startServer(overridePort?: number): Promise<void> {
   // Initialise WebSocket on the same HTTP server
   initWebSocket(server, MAX_WS_CLIENTS);
 
+  const host = process.env.HOST || "127.0.0.1";
   return new Promise((resolve) => {
-    server.listen(port, "127.0.0.1", () => {
+    server.listen(port, host, () => {
       const addr = server.address() as { port: number };
+      const displayHost = host === "0.0.0.0" ? "127.0.0.1" : host;
       console.log(
-        `[Agent Swarm] Server listening on http://127.0.0.1:${addr.port}`,
+        `[Agent Swarm] Server listening on http://${displayHost}:${addr.port}`,
       );
       console.log(
-        `[Agent Swarm] WebSocket: ws://127.0.0.1:${addr.port}/ws`,
+        `[Agent Swarm] WebSocket: ws://${displayHost}:${addr.port}/ws`,
       );
       console.log(
-        `[Agent Swarm] Health check: http://127.0.0.1:${addr.port}/api/health`,
+        `[Agent Swarm] Health check: http://${displayHost}:${addr.port}/api/health`,
       );
 
       // Disk space check
