@@ -1,0 +1,673 @@
+--- Page 1 ---
+IEEETRANSACTIONSONSMARTGRID,VOL.11,NO.3,MAY2020 2487
+Distributed Secondary Control for Current Sharing
+and Voltage Restoration in DC Microgrid
+Lantao Xing , Yateendra Mishra , Member, IEEE, Fanghong Guo , Member, IEEE,
+Pengfeng Lin , Student Member, IEEE, Yang Yang , Gerard Ledwich , Senior Member, IEEE,
+and Yu-Chu Tian , Senior Member, IEEE
+Abstract—Direct current (DC) microgrid is being increasingly efficiency [1]–[3]. A large number of renewable energy
+investigated in modern power grid. An important issue in DC sources, such as photovoltaic panels, have DC characteristics
+microgrid operation is to ensure proper current sharing among
+in nature. Thus, it is more convenient and efficient to con-
+converters.Whilethishasbeenaddressedthroughdroopcontrol,
+nect the DC sources and DC loads directly to form a DC
+the resulting voltage deviation in DC bus has to be compen-
+sated.Tosolvethisproblem,anewdistributedsecondarycontrol microgrid rather than an alternating current (AC) microgrid.
+scheme is presented in this paper for both current sharing ComparedwithACmicrogridin[4]–[7],DCmicrogridhasno
+and voltage restoration. A key part of the presented scheme reactive power and harmonics. Therefore, it provides higher
+is the integration of a new parameter ‘virtual voltage drop’
+power quality and is also easier to control [8]–[10].
+defined from droop gain and line resistance. Since the DC bus
+In DC microgrid, it is an important control requirement to
+voltage is not required as a feedback signal, the proposed sec-
+ondary control is simple and easy to design and implement. In ensurepropercurrentsharingforpowerdispatch.Tomeetthis
+addition, as the proposed scheme has no requirement for the requirement,droopcontrolhasbeenwidelyadopted[11]–[14].
+loads, it can handle both resistance loads and constant power By setting the droop gain as a ‘virtual resistance’, which is
+loads (CPLs). Simulations as well as experimental studies are
+sufficiently larger than the line resistance, droop control can
+carried out to demonstrate the effectiveness of the proposed
+ensure the current outputs from the DC sources to be pro-
+scheme.
+portional to each other as designed. Moreover, droop control
+IndexTerms—DCmicrogrid,currentsharing,voltagerestora-
+is implemented in a fully decentralized way, and thus no
+tion, distributed secondary control.
+communication is required among the DC sources.
+However, as pointed out in [15], when a high droop gain is
+set in droop control, the DC bus voltage will deviate largely
+I. INTRODUCTION fromitsnominalvalue.Thisindicatesthatthereexistsatrade-
+IN RECENT years, the concept of direct current (DC) off between the current sharing accuracy and DC bus voltage
+microgrid is being increasingly investigated in mod- violationifonlydroopcontrolisused.Therefore,complemen-
+ern power grid due to its simplicity, reliability and tarymethodshavetobedesignedtosolvethevoltageviolation
+problem caused by droop control.
+Manuscript received August 9, 2019; revised October 22, 2019; accepted The idea of secondary control is proposed to complement
+November 21, 2019. Date of publication November 28, 2019; date of cur-
+droop control for both current sharing and voltage restoration
+rent version April 21, 2020. This work was supported in part by the
+Australian Research Council through the Discovery Project Scheme under in [16]. By integrating secondary control into droop con-
+GrantDP160102571andGrantDP170103305,inpartbytheNTUPresidential trol, proper current sharing and bus voltage regulation can be
+Post-Doctoral Fellowship Program, in part by the National Natural Science
+achieved simultaneously. In [16], a framework is presented
+Foundation of China under Grant 61873130 and Grant 61903333, and
+in part by the Natural Science Foundation of Jiangsu Province under for centralized proportional and integral secondary control.
+Grant BK20191377. Paper no. TSG-01160-2019. (Corresponding author: Thoughcentralizedcontrolworkswellinensuringsatisfactory
+Yu-ChuTian.)
+control performance, it has inherent limitations such as being
+L. Xing and Y.-C. Tian are with the School of Computer Science,
+QueenslandUniversityofTechnology,Brisbane,QLD4001,Australia(e-mail: sensitive to single-point failures [17]. References [18]–[19]
+xlt_zju@sina.com;y.tian@qut.edu.au). have proposed decentralized output constrained control algo-
+Y. Mishra and G. Ledwich are with the School of Electrical Engineering
+rithms for single-bus DC microgrids. They can guarantee not
+and Robotics, Queensland University of Technology, Brisbane, QLD 4001,
+Australia. only DC voltage convergence but also a bounded transient
+F. Guo is with the Department of Automation, Zhejiang University of tracking error. However, these algorithms require each DC
+Technology,Hangzhou310032,China.
+converter to have access to the DC bus voltage, and thus may
+P. Lin is with the Energy Research Institute, Nanyang Technological
+University,Singapore. fail to work when this requirement is not met.
+Y. Yang is with the School of Computer Science, Queensland University Toaddresstheabovechallenges,distributedsecondarycon-
+of Technology, Brisbane, QLD 4001, Australia, also with the College of
+trol has been presented in the existing literature. In [20], the
+Automation, Nanjing University of Posts and Telecommunications, Nanjing
+210023, China, and also with the College of Artificial Intelligence, Nanjing average value of the current from all DC sources is used to
+UniversityofPostsandTelecommunications,Nanjing210023,China. designthesecondarycontrolsignal.Similarly,theworkin[15]
+Color versions of one or more of the figures in this article are available
+uses the average value of voltage for mitigating voltage vio-
+onlineathttp://ieeexplore.ieee.org.
+DigitalObjectIdentifier10.1109/TSG.2019.2956515 lation. However, how to compute the average value is not
+1949-3053(cid:2)c 2019IEEE.Personaluseispermitted,butrepublication/redistributionrequiresIEEEpermission.
+Seehttp://www.ieee.org/publications_standards/publications/rights/index.htmlformoreinformation.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 2 ---
+2488 IEEETRANSACTIONSONSMARTGRID,VOL.11,NO.3,MAY2020
+TABLEI
+discussed, and the controller is designed in a feed-forward
+NOTATIONSANDSYMBOLS
+manner.In[21]–[22],aframeworkinvolvingdesigningavolt-
+ageandacurrentregulatorisusedtoensurevoltagecorrection
+and load sharing. However, it fails to guarantee exact DC bus
+voltagerestoration.In[23],ahybriddistributedsecondarycon-
+troller is proposed which consists of both a continuous-time
+partandadiscrete-timepart.Thisstrategyensuresbothcurrent
+sharingandDCvoltageregulationwithareducedcommunica-
+tion burden. In [24] a distributed control strategy is proposed
+with the DC bus voltage as the feedback signal. Moreover, by
+adopting the idea of pinning control, the controller in [24]
+can be applied to the case where only one DC converter
+has access to the DC bus voltage signal. Then, the results
+are extended to the scenarios with communication limitations
+in[25].However,thecontrolstrategiesin[23]–[25]allrequire
+the DC bus voltage as a feedback signal, and it is not easy to
+set the control parameters because some complicated stability
+conditions are involved. In addition, they can only deal with
+resistance loads and the constant power loads (CPLs) are not
+considered.
+In this paper, a new distributed secondary control scheme
+ispresentedforDCmicrogrid.Itisabletonotonlyguarantee
+proper current sharing, but also maintain the DC bus voltage
+at the nominal value. The contributions of this paper mainly
+lie in the following aspects:
+• A new parameter ‘virtual voltage drop’ is defined from
+the droop gain and line resistance. It is shown that the
+average value of this new parameter plays a key role in
+proper current sharing and voltage restoration;
+• For each converter, by only exchanging information with
+its neighbours, a new algorithm is designed to enable
+eachconvertertoestimatetheaveragevalueofthenewly
+defined parameter. This forms our proposed distributed
+secondary control scheme;
+• Itisprovedtheoreticallythattheproposeddistributedsec-
+ondary control scheme can ensure both current sharing
+and voltage restoration. Compared with existing results,
+theproposedschemehastwoadvantageousfeatures:1)It
+is simpler and easier to implement as it does not require
+the DC bus voltage as the feedback signal. 2) It is able
+to handle both resistance loads and CPLs.
+Both simulations and experiments are conducted to illustrate
+the effectiveness of the proposed control scheme.
+The rest of this paper is organized as follows. The nota-
+Fig.1. Decentralizeddroopcontrol.
+tions and symbols used in this paper are listed in Table I.
+Section II formulates the problem. Then, Section III presents
+our new distributed secondary control scheme. After that, five
+and point out its limitations in voltage restoration. After that,
+case studies are provided in Section IV. Experimental results
+we will present our control objective.
+are also presented in Section V. Finally, Section VI concludes
+the paper.
+A. Droop Control
+For converter #i, i = 1,...,N, by properly designing its
+II. PROBLEMFORMULATIONANDCONTROLOBJECTIVE
+voltage and current control loops, its output voltage V can
+i
+As shown in Fig. 1, this paper considers a DC microgrid well track its reference voltage V ref [24], i.e., V = V ref .
+i i i
+with N parallel DC/DC converters connected to a DC To achieve proper current sharing among the converters, the
+bus [23], [24]. Traditionally, the load current sharing among voltagereferenceV ref isgeneratedbyadroopcontrolfunction
+i
+the DC sources is achieved by decentralized droop control. In
+this section, we will briefly review the droop control method V ref =V ∗−kI (1)
+i i i
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 3 ---
+XINGetal.:DISTRIBUTEDSECONDARYCONTROLFORCURRENTSHARINGANDVOLTAGERESTORATIONINDCMICROGRID 2489
+where V
+∗
+is the nominal DC voltage in open-loop, k denotes
+ofgenerality,wedenote0=λˆ <λˆ ≤λˆ ≤···≤λˆ
+,where
+i 1 2 3 N
+the droop gain, and I is the output current of converter #i.
+λˆ
+is the ith eigenvalue.
+i i
+The DC bus voltage V is computed as V = V − RI In this paper, the communication graph among the convert-
+B B i i i
+where R is the resistance of power transmission line i. Then ers is assumed to be strongly connected and weight-balanced.
+i
+we obtain Since the communication channel between two converters is
+two-directional,thisrequirementiseasytomeetaslongasall
+V =V ∗−(R +k)I (2)
+B i i i converters are connected.
+From (2), it can be obtained that
+(cid:2) (cid:3) III. DISTRIBUTEDSECONDARYCONTROL
+(R +k)I = R +k I, ∀i,j=1,...,N (3)
+i i i j j j This section presents a new distributed secondary control
+scheme to achieve the control objective (4)-(5). As shown in
+Therefore, the current sharing ratio among the converters is
+Fig. 1, each converter is directly controlled by a droop con-
+related to the sum of the droop gain k and line resistance R,
+i i
+i.e., I/I =(R +k)/(R +k). Typically, the droop gain k is trol function. Then, a secondary control signal u i is to be
+i j j j i i i
+set much larger than the line resistance R, i.e., k (cid:5)R, thus designed to add into the droop function (1) in the primary
+i i i
+we have I/I =k/k. control layer, i.e.,
+i j j i
+Asdiscussedabove,bysettingaproperdroopgain,propor- V ref =V ∗−kI +u (6)
+i i i i
+tional current sharing among the converters can be achieved.
+The droop gain can be seen as a “virtual resistance” [26]. Then, we have
+V =V ∗−(k +R)I +u (7)
+B i i i i
+B. Control Objective
+Now we are ready to deign the secondary controller u.
+i
+For proper current sharing, the droop gain k should be set
+i
+much larger than the line resistance R. However, as shown
+i A. Secondary Controller With Global Information
+in (2), a larger k gives a larger deviation between the bus
+i
+voltage V and its nominal voltage V ∗ . Before giving the distributed secondary controller, we will
+B
+Therefore, the control objective of this paper is to tackle first present a secondary controller when global information
+the droop control limitations by introducing a distributed sec- of the converters is available. This facilitates our develop-
+ondary control layer. Specifically, the new control scheme ment later for distributed secondary controller without global
+shouldensurebothpropercurrentsharingandvoltagerestora- information.
+tion, i.e., Firstly, a new parameter ‘virtual voltage drop’ is defined as
+lim I/I =k/k (4) V ¯ i =(k i +R i )I i , i=1,...,N (8)
+t→∞ i j j i
+¯
+lim e=V −V ∗ =0. (5) which is time-varying. When V i is globally available, the
+t→∞ B secondary controller can be designed as
+Remark 1: The considered DC system in this paper has a (cid:5)N
+typicalDCmicrogridstructure.Ithasbeenwidelyinvestigated u = 1 V ¯ =V ¯ , i=1,...,N (9)
+i i avg
+N
+in the existing literature [18]–[25]. Due to its simplicity, this i=1
+structure has also been applied in practical systems such as
+It is seen from (9) that the secondary control signal u is
+i
+the More Electric Aircraft [27]. the average value of V ¯ , i=1,...,N. With this controller, we
+i
+have the following results in Theorem 1.
+C. Data Communication Network Theorem 1: With the controller (8) and (9), the control
+As part of the fundamental infrastructure in power objective (4)-(5) can be achieved.
+systems, communication networks play an important role in Proof: By substituting (8) and (9) into (7) gives
+system monitoring and control. The distributed control to be e=V −V ∗ =V ¯ −V ¯ , i=1,...,N (10)
+B avg i
+developedinthispaperforcurrentsharingandvoltagerestora- (cid:4)
+tion in DC microgrid relies on communications among DC From (10), we have Ne = NV ¯ − N V ¯ = 0.
+avg i=1 i
+converters. Therefore, (5) is achieved. Meanwhile, since e=0, from (10)
+A communication network is denoted as a graph G = it is obtained that
+(V,E,A), where V denotes the set of the converters, E ⊆
+V × V is the communication edge set, and A ∈ RN×N is V ¯ i =V ¯ j =V ¯ avg , ∀i,j=1,...,N (11)
+the adjacency matrix. Let a ij denote the entities of A. Then, Since k i (cid:5) R i , from (8) and (11) we have I i /I j = k j /k i .
+a ij =1 if (υ j ,υ i )∈E, and a ij =0 if (υ j ,υ i )∈/ E. Thus, (4) is ensured. This completes the proof.
+The(cid:4)LaplacianmatrixLofgraphG isformedwithelements Remark 2: As in [18], [23], [24], it is assumed that the
+L ii = i(cid:10)=j a ij , and L ij = −a ij for i (cid:10)= j. Define Sym(L) = line resistances are known. When there exists a line resis-
+1 2 (L + LT), and let λˆ 1 ,...,λˆ N denote the eigenvalues of tance measurement error (cid:4)R i = R i − R i,real , it is easy to
+Sym(L).Then,ifG isstronglyconnectedandweight-balanced, obtain that in(cid:4)the steady state the voltage violation error is
+zeroisasimpleeigenvalueofbothLandSym(L).Withoutloss V −V ∗ = 1 N I(cid:4)R. Since the measurement error (cid:4)R
+B N i=1 i i i
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 4 ---
+2490 IEEETRANSACTIONSONSMARTGRID,VOL.11,NO.3,MAY2020
+Proof: From (7), we have
+e=u −V ¯ , i=1,...,N (13)
+i i
+Adding (13) together yields
+(cid:5)N (cid:5)N (cid:5)N (cid:2) (cid:3) (cid:5)N
+Ne= u − V ¯ = u −V ¯ = e˜ (14)
+i i i avg i
+i=1 i=1 i=1 i=1
+where e˜ =u −V ¯ . Then, from (12) and (13), we have
+i i avg
+(cid:2) (cid:3) (cid:2) (cid:3)
+e ˙˜ i =V ˙¯ i −
+(cid:2)
+V ˙¯ avg −α
+(cid:3)
+u i −V ¯ i −β(cid:7) j∈Ni a ij e˜ i −e˜ j
+=−α u −V ¯ +V ˙¯ −V ˙¯ +αV ¯ −αV ¯
+i av(cid:2)g i(cid:3) avg i avg
+− β(cid:7) j∈Ni a ij e˜ i −e˜ j (15)
+Define e˜ = [e˜ ,...,e˜ ]T, V ¯ = [V ¯ ,...,V ¯ ]T, and (cid:8) =
+1 N 1 N N
+Fig.2. Distributedsecondarycontroldiagram. I − 11 1T. We have
+N N N N (cid:7) (cid:8)
+e ˙˜ =−αe˜−βLe˜+(cid:8) V ˙¯ +αV ¯ (16)
+N i i
+issmall,theeffectsoftheselineresistancemeasurementerrors
+Now, consider the following coordination transformation
+on the control performance are negligible. (cid:9) (cid:10) (cid:9) (cid:10)
+Remark3:Itisseenfrom(8)thatthenewlydefinedparam- e˜ =
+e˜
+T1 =
+χT
+e˜ (17)
+eter V ¯ i has a clear physical meaning. It represents the ‘virtual T e˜ T2 (cid:11) S (cid:12) T (cid:13) (cid:14)
+voltage drop’ caused by the droop gain k and line resistance
+i B
+R. As shown in Theorem 1, by compensating for this part
+i
+in the secondary control layer, both voltage restoration and where χ = √1 1 N×1 , S is a matrix making [√1 1 N×1 S] an
+N N
+current sharing can be achieved. orthonormal matrix. We have STS = I N−1 , SST = (cid:8) N and
+Remark 4: The secondary controller (8)-(9) requires the BBT =I N .
+global information of V ¯ i in the computation of V ¯ avg . While Since χTL = 0 and χT(cid:8) N = 0, from (17) and (16), we
+such global information may be accessible in small-scale have e ˙˜ T1 =−α (cid:2) e˜ T1 and (cid:3) (cid:7) (cid:8)
+s a y l s a t r e g m e s n , u i m ti b s e g r e o n f er c a o l n ly ve u r n te a r v s a , i c la a b u l s e in i g n d la if r fi ge c - u s l c ti a e l s e i s n ys im te p m le s m w e i n th - e ˙˜ T2 =− βSTLS+αI N−1 e˜ T2 +ST(cid:8) N V ˙¯ i +αV ¯ i (18)
+tation of the controller. This motivates our work in this paper Thus, we obtain |e˜ |≤|e˜ (0)|e −αt and
+T1 T1
+on distributed secondary control scheme. (cid:15) (cid:7) (cid:8)
+e˜ =(cid:10)(t,0)e˜ (0)+ t (cid:10)(t,s)ST(cid:8) V ˙¯ +αV ¯ ds (19)
+T2 T2 N i i
+0
+B. Distributed Secondary Controller
+where (cid:10)(t,s)=e −(βSTLS+αIN−1 )(t−s) . Define A=−(βSTLS+
+The key idea of the secondary controller with global
+information is to use the average value V ¯ avg as the control αI N−1 ). λ A is (cid:16) the eigenvalue of 1 2 (A (cid:16) +AT). Then,
+(cid:16) (cid:2) (cid:3)(cid:16)
+s V ¯ i i g , n i a = l, a 1 s ,. s . e . e , n N i , n is (9 n ). ot H a o v w ai e l v a e b r l , e, w ( h 9 e ) n ca th n e no g t lo b b e a i l m in p f le o m rm e a n t t i e o d n . (cid:16) (cid:16) λ A I N− (cid:16) 1 − 2 1 A+AT (cid:16) (cid:16) (cid:16)
+To solve this problem, we design ¯ a distributed method to =(cid:16)(λ A +α)I N−1 +βSTLS (cid:16)=0 (20)
+enable each converter to estimate V by only exchanging
+avg
+informationwithitsneighbours.Inspiredbythedynamicaver- Since the eigenvalues of STLS are λˆ ,i = 2,...,N, it has
+i
+ageconsensusalgorithmsin[29],[30],adistributedsecondary λ A = −α −βλˆ i . From [31], (cid:10)(t,s) ≤ e (−α−βλˆ 2 )(t−s) . Since
+controller is designed as both V ˙¯ and V ¯ are bounded, we have (cid:13)ST(cid:8) (V ˙¯ +αV ¯ )(cid:13) ≤
+i i N i i
+(cid:6) (cid:2) (cid:3) (cid:13)(cid:8) (V ˙¯ +αV ¯ )(cid:13)=γ, where γ is a bounded constant.
+x u ˙ i i = = − x i α + x i V ¯ − i , β(cid:7) i j∈ = Ni 1 a , ij .. u . i , − N u j (12) (cid:13) T N e˜ her ( e i t f ) o (cid:13) re ≤ , w i e (cid:7) e − h α a − v β e λˆ 2 (cid:8) t(cid:13)e˜ (0)(cid:13)+ γ (cid:17) 1−e (cid:7) −α−βλˆ 2 (cid:8) t (cid:18)
+The control structure for the i-th converter is shown in T2 T2 βλˆ
+2
+F ex ig c . ha 2 n . ge A d s a s m ee o n ng in th F e ig. D 2 C , t c h o e nv i e n r f t o e r r m s a i t s ion on r ly equ th ir e ed co to ntr b o e l Thus,lim t→∞ (cid:13)e˜ T2 (t)(cid:13)≤ β γ λˆ .Since(cid:13)e˜(cid:13)=e˜T T BBTe˜T T =(cid:13)e˜ T (cid:13),
+2
+we obtain
+input signal u. Moreover, the proposed secondary controller
+i γ
+does not require the DC bus voltage as the feedback signal. lim(cid:13)e˜(cid:13)≤ lim|e˜ |+ lim(cid:13)e˜ (cid:13)≤ (21)
+Therefore, it is simple and easy to implement. We have the
+t→∞ t→∞ T1 t→∞ T2 βλˆ
+2
+following results in Theorem 2. As can be seen from (21), by increasing β, the bound of
+Theorem 2: With the controller (12), when the communi- (cid:13)e˜(cid:13) can be made arbitrarily small, i.e.,
+cation graph among the converters is strongly connected and
+lim|e˜ |≤ lim(cid:13)e˜(cid:13)≈0, i=1,...,N (22)
+weight-balanced,thecontrolobjective(4)-(5)canbeachieved. t→∞ i t→∞
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 5 ---
+XINGetal.:DISTRIBUTEDSECONDARYCONTROLFORCURRENTSHARINGANDVOLTAGERESTORATIONINDCMICROGRID 2491
+TABLEII
+SYSTEMANDPRIMARYCONTROLPARAMETERS[24]
+Fig.3. Casestudysetup. the voltage control loop and current control loop, respec-
+tively. To protect the electronic interfaces of the converters
+from abrupt damages, a filter is added to the secondary con-
+From (13), (14) and (22), it is obtained that lim t→∞e=0.
+trol output and the local voltage set point. Following [24],
+Thus, (5) is achieved. Meanwhile, it can also be obtained that
+the system parameters and the droop control parameters
+lim V ¯ =V ¯ =V ¯ , ∀i,j=1,...,N (23) are given in Table II. The nominal DC bus voltage is set
+t→∞ i j avg as V ∗ =48V.
+Therefore, (4) is achieved. This completes the proof.
+Remark 5: A pioneer work in [24] proposes a distributed
+A. Case Study 1: Resistance Load
+secondary control scheme for both power allocation and volt-
+agerestorationinDCmicrogrid.However,thecontrolscheme Thiscasestudyexaminesthecontroleffectsoftheproposed
+in [24] requires to measure both current I and bus voltage V schemewithresistanceload.Thesecondarycontrolparameters
+i B
+as feedback signals. In comparison, the proposed scheme in in (12) are set as α = 50 and β = 50. It is assumed that the
+this paper only needs to measure I. Thus, less measurement DC system goes through the following 4 stages:
+i
+and communication support is required. Moreover, it is not Stage 1 (0-2s): A resistance load R L1 =5(cid:12) is connected at
+easy to set the control parameters in [24] as these param- t=0s but only primary control is activated;
+eters need to satisfy some specific stability conditions (see
+Stage2(2-4s):Secondarycontrolisimplementedatt=2s;
+Lemma2andTheorem1in[24]),whicharedifficulttocheck. Stage 3 (4-6s): Another resistance load R L2 = 5(cid:12) is
+Therefore, the control scheme in this paper is simpler and connected to the grid at t=4s;
+easier to implement. Stage 4 (6-8s): R L2 is disconnected from the grid at t=6s;
+Remark 6: As can be seen from Theorem 2 and its proof, Case study results are shown in Fig. 4. From Fig. 4(b), it
+by increasing α and β, the control performance will become is observed that in the first two seconds only droop control is
+better. However, a bigger α and β will make the algorithm employed,theDCbusvoltagewilldroptoaround42V,deviat-
+more sensitive to measurement errors, disturbances or time ing severely from the desired value 48V. After the distributed
+delay. Therefore, there exists a trade-off between the con- secondary controller is activated at t = 2s, the bus voltage is
+trol performance and algorithm robustness in setting α and β. quicklyrestoredto48V.Moreover,whentheloadconnectedto
+Moreover, in contrast to [24], the proposed controller (12) in the bus changes, the bus voltage can still be well maintained.
+this paper poses no requirement for the loads. Therefore, it From Fig. 4(a), it is observed that the presented scheme can
+is able to deal with different types of loads including resis- also ensure proper current sharing as desired, regardless of
+tance loads and CPLs. This will be illustrated later through the load changes. These case study results illustrate that the
+case studies and experiments in Sections IV and V. proposed scheme guarantees both proper current sharing and
+voltage restoration.
+IV. CASESTUDIES
+B. Case Study 2: Constant Power Loads
+Theeffectivenessoftheproposeddistributedsecondarycon-
+trol scheme is demonstrated through five case studies in this ThiscasetestsourproposedschemewithCPLs.Theparam-
+section.Thefirstcasestudyexaminesthecontrolschemewith eters are set the same as in Case 1, while the system goes
+resistance load, while the second case tests the CPLs. The through the following five stages:
+plug-in and plug-out capability of the proposed scheme is Stage1(0−2s):ACPLP =500W isconnectedandonly
+L1
+tested in Case study 3. A comparison between the proposed primary control is activated at t=0s;
+schemeandtheschemesin[22]and[24]isconductedinCase Stage2(2−4s):Secondarycontrolisimplementedatt=2s;
+study 4. After that, the effects of our scheme on controlling Stage 3 (4−6s): Another CPL P =200W is connected to
+L2
+multiple buses are tested in Case study 5. the grid at t=4s;
+Our case study model is built in MATLAB Simulink envi- Stage4(6−8s):P isdisconnectedfromthegridatt=6s;
+L2
+ronment. As shown in Fig. 3, in these case studies, four Our case study results are shown in Fig. 5. It is seen
+DC/DC bulk converters are connected to a DC bus. In the from Fig. 5 that with a CPL the primary droop control can-
+droop control layer, two standard PI controllers are used in not maintain the bus voltage at the nominal value. While
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 6 ---
+2492 IEEETRANSACTIONSONSMARTGRID,VOL.11,NO.3,MAY2020
+Fig.4. Resistanceload. Fig.5. Constantpowerload.
+with our proposed secondary control scheme, though the shared quickly as desired among the remaining three convert-
+CPL keeps changing, the DC bus voltage is well maintained ers. When converter #4 is re-connected to the grid again, the
+with proper current sharing among all inverters. This case currentisproperlysharedagainamongallthefourconverters.
+study shows the capability of the proposed scheme in dealing Moreover, regardless of the connection and disconnection, the
+with CPLs. DC bus voltage can be well maintained at the nominal value.
+This demonstrates the plug-in and plug-out capability of the
+proposed control scheme.
+C. Case Study 3: Plug-In and Plug-Out Capability
+In this case, the plug-in and plug-out capability of the
+D. Case Study 4: Comparison With the Existing Schemes
+proposed control scheme is tested. The design parameters are
+set the same as in Case 1. This case study goes through the This case study compares the proposed control scheme in
+following 3 stages: this paper with the ones presented in [22] and [24]. It is
+Stage 1 (0-2s): At t=0s, R =5(cid:12) is connected, and both assumed that this case study goes through the same stages
+L1
+primary and secondary control are activated; as in Case 1. The parameters for our scheme is set as α =5,
+Stage 2 (2-4s): Converter #4 is disconnected from the grid β =10.Theparametersfor[22]issetasK =2andK =0.1.
+p i
+at t=2s; The parameters for [24] are set as α =1, β =1, K =1 and
+p
+Stage 3 (4-6s): Converter #4 is connected to the grid again K = 40. In this case study, we assume that no converter is
+I
+at t=4s; able to access to the DC bus voltage.
+The case study results are shown in Fig. 6. Fig. 6(a) shows The case study results are shown in Fig. 7 and Fig. 8. It is
+thecurrentperformance,whiletheDCbusvoltageandthesec- seen that when no converter has access to the bus voltage, the
+ondary control signal for each converter is shown in Fig. 6(b) control scheme in [24] fails to maintain the bus voltage, and
+and Fig. 6(c), respectively. It is observed that when con- thereexistsastablevoltageviolationerrorfor[22].Moreover,
+verter #4 is disconnected from the grid, the current can be before the secondary is implemented, the scheme in [22] fails
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 7 ---
+XINGetal.:DISTRIBUTEDSECONDARYCONTROLFORCURRENTSHARINGANDVOLTAGERESTORATIONINDCMICROGRID 2493
+Fig.6. Plug-inandplug-outcapability.
+Fig.7. DCbusvoltage.
+TABLEIII
+PARAMETERSOFTHEEXPERIMENTALSETUP
+to ensure the desired current sharing. In contrast, our control
+scheme maintains the bus voltage and current sharing very
+well. This clearly illustrates the advantages of our scheme
+compared with the ones in [22] and [24].
+E. Case Study 5: Control Performance With Multiple Buses
+In this case, we test our scheme for a DC microgrid with
+two buses, as shown in Fig. 9. We consider an extreme case
+wheretheloadisonlyconnectedtoBus#1.Itisassumedthat
+this system goes through the same stages as in Case study 1.
+The resistance of the transmission line connecting these two
+buses is set as R =0.05(cid:12). V. EXPERIMENTALRESULTS
+L
+Our case study results are shown in Fig. 10. When the load In this section, the proposed scheme is verified by experi-
+is connected, the current will flow from Bus #2 to Bus #1, mentsoveraDCMGwiththreeDC/DCboostconvertersbuilt
+causing a voltage violation between V and V . However, it in the laboratory. The experiment setup is shown in Fig. 11.
+B1 B2
+is observed from Fig. 10 that, with our control scheme, both The control scheme is implemented into a dSPACE1006
+V and V stay close to the reference value 48V, and their control platform to generate PWM signals for the three con-
+B1 B2
+average value equals to 48V. Moreover, the desired current verters. The sampling and PWM frequency are set the same
+sharingisalsoguaranteed.Thisdemonstratesthecapabilityof as 20KHz. The secondary control parameters are set as α =5
+our propsoed scheme in controlling DC microgrid with more and β =10. The other control parameters for the experiment
+complicated topologies. setup are summarized in Table III.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 8 ---
+2494 IEEETRANSACTIONSONSMARTGRID,VOL.11,NO.3,MAY2020
+Fig.10. Controlperformancewithtwobuses.
+Fig.8. Currentoutput.
+Fig.11. Experimentsetup.
+Fig.9. Casestudysetupwithtwobuses.
+Fig.12. Resistanceloadchange.
+A. Experimental Results With Resistance Load
+In this case, initially only a resistance load R = 25(cid:12) is
+connected to the bus and the secondary control scheme is not the resistance load changes from 25(cid:12) to 50(cid:12) and then goes
+activated. As can be observed in Fig. 12, the DC bus voltage back to 25(cid:12). It is observed from Fig. 12 that, despite the
+drops to 96V, deviating from the nominal voltage reference. change of loads, the bus voltage is well maintained at the
+After our proposed secondary control scheme is activated, the nominal value. The current among the three converters are
+DCbusvoltagequicklygoesbacktothereferencevalue100V. also properly shared as designed. These experimental results
+In order to test our control scheme under changing load files, are consistent with our theoretical analyses.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 9 ---
+XINGetal.:DISTRIBUTEDSECONDARYCONTROLFORCURRENTSHARINGANDVOLTAGERESTORATIONINDCMICROGRID 2495
+Fig.13. Constantpowerloadchange.
+Fig.14. Plug-and-playcapability.
+B. Experimental Results With CPLs
+In this case, we test our control scheme with CPLs. For
+experiment, initially a resistance load R = 50(cid:12) is connected
+and the secondary control scheme is also activated. A CPL
+load P = 300W is connected and then disconnected to the
+bus.OurexperimentresultsareshowninFig.13.Itisobserved Fig.15. Controlperformancewithdifferenttimedelays.
+that, when the CPL is added, the bus voltage can quickly go
+back to the reference value, and the proper current sharing is
+also guaranteed. After the disconnection of the CPL, both the time delays, i.e., 1ms, 10ms and 50ms, are shown in
+voltage and current return to their previous values before Fig. 15. It is observed that, with a time delay up to
+the CPL is added. Again, these experiment results illustrate 50ms,thecontrolperformancearestillsatisfactory.Therefore,
+the effectiveness of our proposed scheme. it can be concluded that satisfactory control performance
+can be guaranteed with a time delay less than 50ms for
+C. Experimental Results With Plug-and-Play this test example. Since for long-range low-delay network
+such as cellular communication network, the time delay is
+This case tests the plug-and-play capability of our control
+scheme. In experiment setup, a resistance load R = 25(cid:12) is almost negligible, thus it is safe to implement our control
+scheme.
+connected and the secondary control scheme is also activated.
+Initially, only one DC converter is connected to the bus, and
+then the second one is connected, and at last the third is con- VI. CONCLUSIONANDFUTUREWORK
+nected. Our experiment results are shown in Fig. 14. It is
+A new distributed secondary control scheme has been
+shown that, when new DC converters are connected to the
+presented in this paper for a DC microgrid. It not only
+DC bus, both the bus voltage and proper current sharing can
+guarantees proper current sharing but also maintains the DC
+be guaranteed.
+bus voltage at the nominal value. In implementation of the
+proposed scheme, the DC bus voltage is not required. Also,
+D. Experimental Results With Time Delay
+theproposedschemeisabletohandledifferenttypesofloads.
+In this case, the time delay effects on our control scheme Casestudiesandexperimentshavedemonstratedtheeffective-
+is tested. In this setup, initially a resistance load R = ness of the proposed scheme. Possible future work includes
+25(cid:12) is connected and the secondary control scheme is extendingtheresultstosystemswithmorecomplicatedtopolo-
+also activated. A CPL load P = 300W is then connected gies, and theoretically analyzing the effects of time delay on
+to the bus. The experiment results with three different the control performance.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 10 ---
+2496 IEEETRANSACTIONSONSMARTGRID,VOL.11,NO.3,MAY2020
+REFERENCES [21] V. Nasirian, S. Moayedi, A. Davoudi, and F. L. Lewis, “Distributed
+cooperative control of DC microgrids,” IEEE Trans. Power Electron.,
+[1] R. Lasseter et al., “White paper on integration of distributed energy vol.30,no.4,pp.2288–2303,Apr.2014.
+resources:TheCERTSmicrogridconcept,”inProc.ConsortiumElect. [22] M.Dong,L.Li,Y.Nie,D.Song,andJ.Yang,“Stabilityanalysisofa
+Rel.Technol.Solutions,2002,pp.1–27. noveldistributedsecondarycontrolconsideringcommunicationdelayin
+[2] L.Xingetal.,“Dual-consensus-baseddistributedfrequencycontrolfor DCmicrogrids,”IEEETrans.SmartGrid,vol.10,no.6,pp.6690–6700,
+multiple energy storage systems,” IEEE Trans. Smart Grid, vol. 10, Nov.2019,doi:10.1109/TSG.2019.2910190.
+no.6,pp.6396–6403,Nov.2019,doi:10.1109/TSG.2019.2904075. [23] X.-K.Liu,H.He,Y.-W.Wang,Q.Xu,andF.Guo,“Distributedhybrid
+[3] P. Lin, T. Zhao, B. Wang, Y. Wang, and P. Wang, “A semi- secondary control for a DC microgrid via discrete-time interaction,”
+consensusstrategytowardmulti-functionalhybridenergystoragesystem IEEE Trans. Energy Convers., vol. 33, no. 4, pp.1865–1875,
+in DC microgrids,” IEEE Trans. Energy Convers., to be published, Dec.2018.
+doi:10.1109/TEC.2019.2936120. [24] F.Guo,Q.Xu,C.Wen,L.Wang,andP.Wang,“Distributedsecondary
+[4] H. Cai and G. Hu, “Distributed nonlinear hierarchical control of AC control for power allocation and voltage restoration in islanded DC
+microgrid via unreliable communication,” IEEE Trans. Smart Grid, microgrids,”IEEETrans.Sustain.Energy,vol.9,no.4,pp.1857–1869,
+vol.9,no.4,pp.2429–2441,Jul.2018. Oct.2018.
+[5] F.Guo,C.Wen,J.Mao,andY.-D.Song,“Distributedsecondaryvolt- [25] F. Guo, L. Wang, C. Wen, D. Zhang, and Q. Xu, “Distributed voltage
+ageandfrequencyrestorationcontrolofdroop-controlledinverter-based restorationandcurrentsharingcontrolinislandedDCmicrogridsystems
+microgrids,”IEEETrans.Ind.Electron.,vol.62,no.7,pp.4355–4364, without continuous communication,” IEEE Trans. Ind. Electron., to be
+Jul.2015. published,doi:10.1109/TIE.2019.2907507.
+[26] X.Lu,J.M.Guerrero,K.Sun,andJ.C.Vasquez,“Animproveddroop
+[6] Q.-C. Zhong, “Robust droop controller for accurate proportional load
+control method for DC microgrids based on low bandwidth communi-
+sharingamonginvertersoperatedinparallel,”IEEETrans.Ind.Electron.,
+cation with DC bus voltage restoration and enhanced current sharing
+vol.60,no.4,pp.1281–1290,Apr.2013.
+accuracy,”IEEETrans.PowerElectron.,vol.29,no.4,pp.1800–1812,
+[7] C. Peng, J. Li, and M. Fei, “Resilient event-triggering H∞ load
+Apr.2014.
+frequency control for multi-area power systems with energy-limited
+[27] F. Gao, S. Bozhko, G. Asher, P. Wheeler, and C. Patel, “An improved
+DoSattacks,”IEEETrans.PowerSyst.,vol.32,no.5,pp.4110–4118,
+voltagecompensationapproachinadroop-controlledDCpowersystem
+Sep.2017.
+for the more electric aircraft,” IEEE Trans. Power Electron., vol. 31,
+[8] Q.Xuetal.,“Adecentralizeddynamicpowersharingstrategyforhybrid
+no.10,pp.7369–7383,Oct.2016.
+energystoragesysteminautonomousDCmicrogrid,”IEEETrans.Ind.
+[28] B. Fan, J. Peng, J. Duan, Q. Yang, and W. Liu, “Distributed con-
+Electron.,vol.64,no.7,pp.5930–5941,Jul.2017.
+trol of multiple-bus microgrid with paralleled distributed genera-
+[9] R.Han,L.Meng,J.M.Guerrero,andJ.C.Vasquez,“Distributednon- tors,” IEEE/CAA J. Automatica Sinica, vol. 6, no. 3, pp.676–684,
+linear control with event-triggered communication to achieve current- May2019.
+sharing and voltage regulation in DC microgrids,” IEEE Trans. Power [29] L.Xingetal.,“Distributedstate-of-chargebalancecontrolwithevent-
+Electron.,vol.33,no.7,pp.6416–6433,Jul.2018. triggered signal transmissions for multiple energy storage systems in
+[10] Q.Xu,C.Zhang,C.Wen,andP.Wang,“Anovelcompositenonlinear smart grid,” IEEE Trans. Syst., Man, Cybern., Syst., vol. 49, no. 8,
+controller for stabilization of constant power load in DC microgrid,” pp.1601–1611,Aug.2019,doi:10.1109/TSMC.2019.2916152.
+IEEETrans.SmartGrid,vol.10,no.1,pp.752–761,Jan.2019. [30] R.A.Freeman,P.Yang,andK.M.Lynch,“Stabilityandconvergence
+[11] A.Khorsandi,M.Ashourloo,andH.Mokhtari,“Adecentralizedcontrol propertiesofdynamicaverageconsensusestimators,”inProc.45thIEEE
+methodforalow-voltageDCmicrogrid,”IEEETrans.EnergyConvers., Conf.Decis.Control,2006,pp.338–343.
+vol.29,no.4,pp.793–801,Dec.2014. [31] D. S. Bernstein, Matrix Mathematics: Theory, Facts, and Formulas.
+[12] M. A. Setiawan, A. Abu-Siada, and F. Shahnia, “A new technique Princeton,NY,USA:PrincetonUniv.Press,2009.
+for simultaneous load current sharing and voltage regulation in DC
+microgrids,” IEEE Trans. Ind. Inform., vol. 14, no. 4, pp.1403–1414,
+Apr.2018.
+[13] S. Augustine, M. K. Mishra, and N. Lakshminarasamma, “Adaptive
+droop control strategy for load sharing and circulating cur-
+rent minimization in low-voltage standalone DC microgrid,”
+IEEE Trans. Sustain. Energy, vol. 6, no. 1, pp.132–141,
+Lantao Xing received the Ph.D. degree in control
+Jan.2015.
+science and engineering from Zhejiang University,
+[14] S. Peyghami, H. Mokhtari, and F. Blaabjerg, “Decentralized load
+China, in 2018. He joined the School of Computer
+sharing in a low-voltage direct current microgrid with an adaptive
+Science, Queensland University of Technology,
+droop approach based on a superimposed frequency,” IEEE Trans.
+Australia, where he is a Research Fellow. He is
+Emerg. Sel. Topics Power Electron., vol. 5, no. 3, pp.1205–1215,
+also a winner of the Presidential Post-Doctoral
+Sep.2017.
+Fellowship Program with the School of Electrical
+[15] X. Lu, K. Sun, J. M. Guerrero, J. C. Vasquez, and L. Huang,
+andElectronicEngineering,NanyangTechnological
+“State-of-charge balance using adaptive droop control for dis-
+University,Singapore.Hisresearchinterestsinclude
+tributed energy storage systems in DC microgrid applications,”
+nonlinear system control, event-triggered con-
+IEEE Trans. Ind. Electron., vol. 61, no. 6, pp.2804–2815,
+trol, and distributed control with applications in
+Jun.2014.
+smartgrid.
+[16] J. M. Guerrero, J. C. Vasquez, J. Matas, L. G. De Vicuña, and
+M. Castilla, “Hierarchical control of droop-controlled AC and DC
+microgrids—A general approach toward standardization,” IEEE Trans.
+Ind.Electron.,vol.58,no.1,pp.158–172,Jan.2011.
+[17] A.A.Hamad,M.A.Azzouz,andE.F.El-Saadany,“Multiagentsuper-
+visorycontrolforpowermanagementinDCmicrogrids,”IEEETrans.
+SmartGrid,vol.7,no.2,pp.1057–1068,Mar.2016.
+[18] C. Wang, J. Duan, B. Fan, Q. Yang, and W. Liu, “Decentralized YateendraMishra(S’06–M’09)receivedthePh.D.
+high-performancecontrolofDCmicrogrids,”IEEETrans.SmartGrid, degreefromtheUniversityofQueensland,Brisbane,
+vol.10,no.3,pp.3355–3363,May2019. QLD, Australia, in 2009. He is currently a Senior
+LecturerandAdvancedQLDResearchFellowwith
+[19] J.Peng,B.Fan,J.Duan,Q.Yang,andW.Liu,“Adaptivedecentralized
+the School of Electrical Engineering and Robotics,
+output-constrainedcontrolofsingle-busDCmicrogrids,”IEEE/CAAJ.
+QueenslandUniversityofTechnology,Brisbane.His
+AutomaticaSinica,vol.6,no.2,pp.424–432,Mar.2019.
+researchinterestsincludedistributedgenerationand
+[20] S. Anand, B. G. Fernandes, and J. Guerrero, “Distributed control to
+distributed energy storage, and power system sta-
+ensureproportionalloadsharingandimprovevoltageregulationinlow-
+bility and control and their applications in smart
+voltage DC microgrids,” IEEE Trans. Power Electron., vol. 28, no. 4,
+grid.
+pp.1900–1913,Apr.2013.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 11 ---
+XINGetal.:DISTRIBUTEDSECONDARYCONTROLFORCURRENTSHARINGANDVOLTAGERESTORATIONINDCMICROGRID 2497
+Fanghong Guo (M’16) received the Ph.D. GerardLedwich(SM’89)receivedthePh.D.degree
+degree in sustainable earth from Energy Research in electrical engineering from the University of
+Institute@NTU,NanyangTechnologicalUniversity Newcastle, Newcastle, Australia, in 1976. He is a
+(NTU), Singapore, in 2016. He was a Research ChairProfessorofelectricalassetmanagementwith
+Associate/Fellow with NTU from May 2016 to the School of Electrical Engineering and Robotics,
+April2017.FromMay2017toJuly2018,hewasa Queensland University of Technology, Brisbane,
+Scientist with A*STAR, Singapore. He is currently QLD, Australia. His research interests are in the
+with the Department of Automation, Zhejiang areasofpowersystems,powerelectronics,andwide
+University of Technology, China. His current areacontrolofsmartgrid.
+research interests include distributed cooperative
+controlandoptimizationonmicrogridsystems,and
+smartgrid.
+Pengfeng Lin (S’16) received the B.Sc. and
+M.Sc. degrees in electrical engineering from
+Southwest Jiaotong University, China, in 2013
+and 2015, respectively. He is currently pursuing
+the Ph.D. degree with Interdisciplinary Graduate
+School, Eri@n, Nanyang Technological University,
+Singapore. His research interests include energy
+storage systems, hybrid AC/DC microgrids, and
+electricalpowersystemstabilityanalyses.
+Yu-Chu Tian (SM’19) received the Ph.D. degree
+Yang Yang received the B.E., M.E., and Ph.D.
+in computer and software engineering from the
+degrees in automatic control from Dalian Maritime
+University of Sydney, Sydney, NSW, Australia, in
+University,Dalian,China,in2008,2010,and2013,
+2009, and the Ph.D. degree in industrial automa-
+respectively.HeiscurrentlyanAssociateProfessor
+tion from Zhejiang University, Hangzhou, China,
+withtheCollegeofAutomation,NanjingUniversity
+in 1993. He is currently a Professor of com-
+of Posts and Telecommunications, Nanjing, China.
+putersciencewiththeSchoolofComputerScience,
+Hiscurrentresearchinterestsincludenonlinearcon-
+Queensland University of Technology, Brisbane,
+troltheoryandintelligentcontrol.
+QLD, Australia. His research interests include big
+data computing, distributed computing, cloud com-
+puting,computernetworks,andcontrolsystems.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:37:10 UTC from IEEE Xplore. Restrictions apply.

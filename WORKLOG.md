@@ -2656,3 +2656,68 @@ Task #97: 前端 — Agent 状态警告
 - 点击"开始使用"正确切换到主工作区
 - 主工作区 TopBar 显示 `AI4S_Data_Agent_Swarm`
 - 7 个 Agent 全部就绪
+
+---
+
+## Task: Sci-Evo 科学演化数据第一批生产 + 说明书编写
+
+**日期**: 2026-04-30
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **PDF 论文筛选与解析**
+   - 从 `papers/pdf/` 目录 141 篇 PDF 中，通过关键词匹配筛选出 32 篇能源电力系统相关论文
+   - 使用 PyMuPDF 解析前 10 篇 PDF 为 Markdown 文本，输出到 `papers/markdown/`
+   - 最终选取 5 篇最相关的电力系统控制论文作为第一批 Sci-Evo 数据源
+
+2. **Sci-Evo 数据生成（5 份）**
+   - 使用 5 个并行 Agent 同时生成，每篇论文生成一份三段式 Sci-Evo JSON
+   - 每份数据包含 7 个 trajectory 步骤，thought 含 [Background][Gap][Decision] 三段结构
+   - 所有数据通过格式验证（三段结构、字段完整性、action 类型合法性、metrics 格式）
+
+   | 文件 | 论文主题 | 步骤 | 指标 | 大小 |
+   |------|----------|------|------|------|
+   | Sci-Evo_Microgrid_Restoration_Sync_Safety.json | 同步安全微电网恢复 | 7 | 6 | 23.2KB |
+   | Sci-Evo_Volt_Var_Power_Flow_Solvability.json | Volt-Var 潮流可解性 | 7 | 6 | 27.4KB |
+   | Sci-Evo_Decentralized_Stability_OPF.json | 分散式稳定性约束OPF | 7 | 5 | 20.6KB |
+   | Sci-Evo_Stiffness_Aware_DSE_IBR.json | 刚性感知动态状态估计 | 7 | 6 | 22.8KB |
+   | Sci-Evo_Frequency_Security_Assessment.json | 频率安全评估 | 7 | 6 | 25.9KB |
+
+3. **说明书编写**
+   - 编写 `docs/Sci-Evo数据生产说明书.md`，包含 8 个章节：
+     - 目标与背景（Sci-Evo 数据格式）
+     - 系统架构（三层结构）
+     - Agent 配置（7 个预配置 Agent）
+     - 生产流水线（4 阶段详细操作）
+     - 操作步骤（分步指南）
+     - 关键文件说明（目录结构 + 数据概要）
+     - 批量扩展指南（从 5 份扩展到 141 篇）
+     - 注意事项（Token 消耗、并发控制等）
+   - 附带 13 张操作截图
+
+4. **操作截图采集**
+   - 使用 Python Playwright 截取平台 UI 共 13 张
+   - 涵盖：入口页、主界面、Agent 列表、Agent 详情、任务创建、看板视图等
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `sci_evo_data/Sci-Evo_*.json` × 5 | Sci-Evo 科学演化数据 |
+| `papers/markdown/*.md` × 10 | PDF 解析后的 Markdown |
+| `docs/Sci-Evo数据生产说明书.md` | 数据生产操作说明书 |
+| `docs/screenshots/*.png` × 13 | UI 操作截图 |
+
+### 验证结果
+
+- 5 份 Sci-Evo JSON 全部通过格式验证
+- 三段式结构完整（01_initial_request + 02_agent_trajectory + 03_success_verification）
+- 所有 trajectory 步骤 thought 含 [Background][Gap][Decision]
+- 所有 action 类型合法（theoretical_derivation / algorithm_design / simulation / parameter_tuning）
+- 所有 metrics 包含 value / unit / interpretation 字段
+
+### 下一步
+
+- 从剩余 27 篇电力系统论文继续分批生成 Sci-Evo 数据
+- 编写自动化调度脚本实现不间断运行

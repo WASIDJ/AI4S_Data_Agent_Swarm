@@ -1,0 +1,867 @@
+--- Page 1 ---
+1
+Two-Stage Active Distribution Network Voltage Control
+via LLM-RL Collaboration: A Hybrid Knowledge-Data-
+Driven Approach
+Xu Yang, Graduate Student Member, IEEE, Chenhui Lin, Senior Member, IEEE
+Xiang Ma, Dong Liu, Ran Zheng, Haotian Liu, Member, IEEE, and Wenchuan Wu, Fellow, IEEE
+Abstract—The growing integration of distributed photovoltaics PV has introduced significant operational challenges, notably
+(PVs) into active distribution networks (ADNs) has exacerbated voltage violations at the network extremities. Also, the inherent
+operational challenges, making it imperative to coordinate diverse intermittency and stochastic nature of PV generation further
+equipment to mitigate voltage violations and enhance power
+exacerbate voltage fluctuations, power imbalances, and overall
+quality. Although existing data-driven approaches have
+power quality degradation, posing serious threats to ADN
+demonstrated effectiveness in the voltage control problem, they
+often require extensive trial-and-error exploration and struggle to stability and security [3], [4].
+incorporate heterogeneous information, such as day-ahead In this context, traditional passive voltage control methods
+forecasts and semantic-based grid codes. Considering the are no longer sufficient to meet the demands of ADN operation.
+operational scenarios and requirements in real-world ADNs, in The ADN operators must adopt proactive voltage control
+this paper, we propose a hybrid knowledge-data-driven approach
+approaches that jointly utilize mechanical assets such as on-
+that leverages dynamic collaboration between a large language
+load tap changer (OLTC) and shunt capacitors (SCs), as well as
+model (LLM) agent and a reinforcement learning (RL) agent to
+achieve two-stage voltage control. In the day-ahead stage, the flexible resources like PV inverters capable of dynamic reactive
+LLM agent receives coarse region-level forecasts and generates support. Due to temporal coupling constraints and the
+scheduling strategies for on-load tap changer (OLTC) and shunt requirements for manual on-site intervention, OLTC and SCs
+capacitors (SCs) to regulate the overall voltage profile. Then in the usually necessitate day-ahead scheduling based on the
+intra-day stage, based on accurate node-level measurements, the
+forecasted information or historical records. In contrast, during
+RL agent refines terminal voltages by deriving reactive power
+intra-day operation, the fast reactive power regulation
+generation strategies for PV inverters. On top of the LLM-RL
+collaboration framework, we further propose a self-evolution capability of PV inverters can be leveraged to enable rapid
+mechanism for the LLM agent and a pretrain-finetune pipeline for control based on real-time measurements.
+the RL agent, effectively enhancing and coordinating the policies A variety of data-driven approaches, primarily based on deep
+for both agents. The proposed approach not only aligns more reinforcement learning (RL), have been developed to enable
+closely with practical operational characteristics but also
+efficient resolution of the aforementioned voltage control
+effectively utilizes the inherent knowledge and reasoning
+problem [5]-[14]. These methods fundamentally operate by
+capabilities of the LLM agent, significantly improving training
+efficiency and voltage control performance. Comprehensive allowing an intelligent RL agent to iteratively interact with the
+comparisons and ablation studies demonstrate the effectiveness of external environment and enhance its policy based on the
+the proposed method. received feedback. For example, researchers in [5]-[7] proposed
+RL-based voltage control methods for ADNs, optimizing
+Index Terms—Active distribution network, two-stage voltage
+voltage profiles by utilizing internal distributed energy
+control, large language model, reinforcement learning,
+resources. Researchers in [8]-[11] extended this paradigm into
+knowledge-data-driven.
+multi-agent settings, where different system regions or resource
+clusters are assigned to individual RL agents that collaborate to
+I. INTRODUCTION achieve overall voltage optimization. Additionally, researchers
+R SPONDING to climate emergencies, pollution from fossil in [12]-[14] addressed the coordination of different equipment
+operating on two timescales, enabling hierarchical voltage
+fuels, and carbon neutrality commitments, renewable
+regulation across various temporal horizons.
+energy resources, particularly distributed photovoltaics (PVs),
+Although the above RL-based data-driven methods have
+are being increasingly integrated into distribution networks,
+demonstrated effective and promising performance, their
+transforming them into active distribution networks (ADNs)
+practical application to real-world ADN voltage control,
+[1], [2]. While this integration substantially reduces carbon
+especially in the day-ahead stage, still faces four key
+emissions at the distribution level, the growing penetration of
+This work was supported in part by the State Grid Zhejiang Electric Power Xu Yang, Chenhui Lin, Haotian Liu, and Wenchuan Wu are with the
+Company Limited Science and Technology Project “Research on Key Sichuan Energy Internet Research Institute, Tsinghua University, Chengdu
+Technologies for Cooperative Regulation of Flexible Resources in Active 610213, China.
+Distribution Networks Based on Highly Safe and Scalable Artificial Xiang Ma, Dong Liu, and Ran Zheng are with the State Grid Zhejiang
+Intelligence” under Grant 5211JH250006 (Corresponding author: Wenchuan Electric Power Co., Ltd., Jinhua Power Supply Company, Jinhua 321017,
+Wu). China.
+
+--- Page 2 ---
+2
+challenges: have investigated how LLMs can assist the training process of
+1) Incomplete and heterogeneous information. The RL agents [22]-[24]. In these studies, LLMs are generally
+effectiveness of data-driven methods typically hinges on the limited to auxiliary subtasks such as code programming or
+availability of complete and high-quality data, which function synthesis and are primarily treated as a natural-
+corresponds to accurate node-level measurements in the context language interface, rather than being used for policy
+of voltage control problem. However, limited by the resolution formulation. Furthermore, research on how to improve LLM
+of current meteorological forecasts and the accuracy of PV/load policies remains comparatively scarce.
+predictions, only coarse-grained information, i.e., hourly
+region-level forecasts are available in the day-ahead stage.
+Moreover, some unstructured and heterogeneous information
+such as historical records and voltage reports, may also be
+provided in the day-ahead stage. Processing and integrating
+such incomplete and heterogeneous data pose significant
+challenges for existing RL algorithms.
+2) Semantics-based operational constraints. The scheduling
+of ADN mechanical assets usually involves numerous
+semantic-based grid codes, such as: “The number of daily
+adjustments of an OLTC is subject to an upper limit,” or “SCs
+can only be committed during a specific time window each day
+due to the requirement for manual switching.” These grid codes
+are essentially operational constraints on the agent’s action
+space. However, incorporating such constraints into an RL
+policy typically requires elaborate techniques, such as penalty Fig. 1. Overall scheme of the proposed approach.
+mechanism [14] or action masking [15], which reduces the
+training efficiency of the RL agent. Considering practical requirements and operational scenarios
+3) Instructions adapted to long-tail requirements. Since in ADN voltage control, we propose a hybrid knowledge-data-
+mechanical assets may encounter unforeseen events such as driven approach that combines respective advantages of LLM
+faults or maintenance, ADN operators may occasionally issue and RL. As shown in Fig. 1, in the day-ahead stage, the ADN
+operational instructions described in natural language. operator receives hourly region-level forecasts and utilizes an
+Therefore, the agent’s policy must be capable of adapting to LLM agent to generate scheduling strategies for the OLTC and
+such instructions. However, RL agents are inherently unable to SCs. Then in the intra-day stage, the ADN operator receives
+process emergent natural-language instructions and exhibit accurate node-level measurements and utilizes an RL agent to
+poor generalization to unseen scenarios, which can result in generate real-time reactive power generation strategies for PV
+performance degradation or even infeasible control actions. inverters. On the one hand, this setup aligns well with the two-
+4) Ambiguous policy improvement direction. Finally, the RL stage nature of voltage control problem: in the day-ahead stage,
+agent relies solely on a scalar reward signal to guide its training coarse information is used to dispatch mechanical assets for
+process. However, such a scalar reward carries very limited regulating the overall voltage profile, while in the intra-day
+information and fails to provide a clear direction for policy stage, fine-grained information enables PV inverters to refine
+evolution. For example, when the overall voltage is low, the terminal voltages. On the other hand, the proposed approach
+optimal action, such as raising the OLTC tap position, is synergistically leverages the complementary advantages of
+intuitively straightforward. Yet, the RL agent must undergo LLM and RL, which not only exploit the LLM’s information
+extensive exploration to discover this simple rule, resulting in processing capabilities and embedded knowledge to enhance
+lower training efficiency or worse performance. policy learning efficiency but also RL’s precise computation
+The rapid advancement of large language models (LLMs) in and rapid response to optimize control performance.
+recent years has initiated widespread applications across In essence, different from the existing LLM-assisted RL
+various domains [16]-[18] and offered innovative solutions to paradigm, the proposed approach addresses a complex multi-
+the above challenges. On the one hand, LLMs possess inherent stage constrained optimization problem through LLM-RL
+natural-language processing and strong information integration collaboration using different aspects of information. From the
+abilities, enabling them to receive, analyze, and process LLM’s perspective, the RL agent serves as a callable
+incomplete and heterogeneous information. On the other hand, specialized tool capable of performing inverter reactive control
+LLMs embed a vast amount of prior knowledge and exhibit tasks, thereby extending the LLM’s capability boundaries.
+powerful reasoning capabilities, allowing them to comprehend Conversely, from the RL’s perspective, the LLM agent
+semantic-based operational constraints and instructions and constitutes an integral part of the external environment that
+generate valid responses accordingly. Building on these processes heterogeneous or semantic information, effectively
+strengths, some pioneering studies have begun applying LLMs reducing problem complexity and shrinking the action space
+to the power system dispatch domain [19]-[21], while others that needs to be explored, thus accelerating RL policy
+
+--- Page 3 ---
+3
+convergence. installed at the root node; a set of SCs distributed across the
+Building upon the proposed LLM-RL collaboration network, whose set of nodes is denoted as  ; and several PV
+framework, the key challenge lies in how to improve and inverters installed at terminal nodes of the n𝑆𝑆e𝑆𝑆twork, whose set
+coordinate the policies of the LLM agent and the RL agent. To
+of nodes is denoted as  . We also assume that SCs are not
+this end, we propose a Reflexion [25]-based self-evolution
+deployed at PV user node𝑃𝑃s𝑃𝑃, i.e.,   .
+mechanism for the LLM policy, which continuously enhances
+The OLTC serves to raise or low𝑆𝑆e𝑆𝑆r the o𝑃𝑃v𝑃𝑃erall system voltage
+its decision-making through environmental feedback and
+through adjustment of its tap position∩: =∅
+knowledge base updates. Meanwhile, we also propose a
+(2)
+pretrain-finetune pipeline for the RL agent to quickly conform
+where is the root node voltage a𝑂𝑂t𝑂𝑂 𝑇𝑇ti𝑆𝑆me ; is the voltage
+to the LLM policy and thereby strengthen the coordination 𝑉𝑉0,𝑡𝑡 =𝑉𝑉𝑟𝑟𝑟𝑟𝑟𝑟+𝛽𝛽𝑡𝑡 𝑉𝑉𝑡𝑡𝑡𝑡𝑡𝑡
+between two agents. The main contributions of this paper can difference between two adjacent tap positions; and is an
+𝑉𝑉0,𝑡𝑡 𝑡𝑡 𝑉𝑉𝑡𝑡𝑡𝑡𝑡𝑡
+be summarized as follows: integer indicating the tap position of the OLTC at ti𝑂𝑂m𝑂𝑂𝑇𝑇e𝑆𝑆 . For
+𝛽𝛽𝑡𝑡
+1) Comprehensive problem formulation. We present a example, for an OLTC with 11 tap positions,
+𝑡𝑡
+more comprehensive formulation of the two-stage voltage . 𝑂𝑂𝑂𝑂𝑇𝑇𝑆𝑆
+𝛽𝛽𝑡𝑡 ∈
+control problem in ADNs. Compared to existing studies, we The SCs serve to provide reactive power compensation
+explicitly account for the differences in available information { th−ro5u,−gh4 ,c…om,−m1i,t0m,1e,n…t ,d4u,r5i } ng periods of peak load, thereby
+between the day-ahead and intra-day stages: in the day-ahead raising the voltage in corresponding local regions:
+stage, only hourly region-level forecasts are accessible, whereas  (3)
+accurate node-level measurements become available only where is the reacti𝑆𝑆v𝑆𝑆e in𝑆𝑆𝑆𝑆jection𝑂𝑂𝑂𝑂 a𝐿𝐿t𝐿𝐿 node , ti𝑆𝑆m𝑆𝑆e ; is the
+during the intra-day stage. This setup better reflects the 𝑄𝑄𝑖𝑖,𝑡𝑡 =𝛽𝛽𝑖𝑖,𝑡𝑡𝑄𝑄 −𝑄𝑄𝑖𝑖,𝑡𝑡 ,∀𝑖𝑖 ∈
+SC capacity; is the reactive load at node , tim𝑆𝑆e𝑆𝑆 ; and
+operational conditions of real-world ADNs. 𝑄𝑄𝑖𝑖,𝑡𝑡 𝑖𝑖 𝑡𝑡 𝑄𝑄
+is t𝑂𝑂h𝑂𝑂e𝐿𝐿 𝐿𝐿commitment status of the SC at node , time
+2) LLM-RL collaboration framework. To optimize the 𝑄𝑄𝑖𝑖,𝑡𝑡 𝑖𝑖 𝑡𝑡
+.𝑆𝑆 𝑆𝑆
+formulated problem, we propose an LLM-RL collaboration 𝛽𝛽𝑖𝑖,𝑡𝑡 ∈{0,1} 𝑖𝑖
+The PV inverters leverage their spare capacity to generate
+framework that assigns day-ahead OLTC and SCs scheduling
+𝑡𝑡reactive power, thereby refining terminal voltages:
+to the LLM agent and intra-day PV inverter reactive control to
+the RL agent. The proposed framework is essentially a hybrid  (4)
+knowledge-data-driven approach that effectively combines the 𝑃𝑃𝑃𝑃 𝑂𝑂𝑂𝑂𝐿𝐿𝐿𝐿 𝑃𝑃𝑃𝑃
+𝑄𝑄𝑖𝑖,𝑡𝑡 =𝑄𝑄𝑖𝑖,𝑡𝑡 −𝑄𝑄𝑖𝑖,𝑡𝑡 ,∀𝑖𝑖 ∈  (5)
+strengths of LLM and RL, not only exploiting the LLM’s
+𝑃𝑃𝑃𝑃 𝑃𝑃𝑃𝑃 𝑃𝑃𝑃𝑃 2 𝑃𝑃𝑃𝑃 2 𝑃𝑃𝑃𝑃
+information processing capabilities and embedded domain where �𝑄𝑄 is𝑖𝑖 ,𝑡𝑡th � e ≤ re 𝜆𝜆 acti � ve ( 𝑆𝑆 gen ) era − tio � n 𝑃𝑃 𝑖𝑖o,𝑡𝑡f � the , ∀ P 𝑖𝑖 V ∈ inverter at node
+knowledge, but also leveraging RL’s precise computation and , time 𝑃𝑃;𝑃𝑃 is the PV installed capacity; is the active
+rapid response. generat 𝑄𝑄 io 𝑖𝑖, n 𝑡𝑡 o𝑃𝑃f𝑃𝑃 the PV inverter at node , time ; 𝑃𝑃a𝑃𝑃nd
+3) Policy improvement mechanism for LLM and RL. To i 𝑖𝑖 s the re 𝑡𝑡 ac 𝑆𝑆 tive capacity factor of the inverter 𝑃𝑃 , 𝑖𝑖 w ,𝑡𝑡 hich𝑃𝑃 𝑃𝑃is jointly
+enable policy improvement and coordination within the LLM- determined by the inverter configurati𝑖𝑖ons and𝑡𝑡 ancilla𝜆𝜆ry s∈erv[0ic,1es]
+RL collaboration framework, we also propose dedicated provided by the PV user.
+enhancement methods, including a Reflexion-based self- In addition to the above equipment constraints, the ADN
+evolution mechanism for the LLM policy and a pretrain- voltage control problem must also satisfy power flow
+finetune pipeline for the RL policy, enabling efficient constraints (6)-(9) and voltage limits (10):
+adaptation and joint convergence toward optimal performance.
+
+Comprehensive comparisons and ablation studies validate the (6)
+𝑃𝑃𝑃𝑃 𝑂𝑂𝑂𝑂𝐿𝐿𝐿𝐿 𝑃𝑃𝑃𝑃
+effectiveness and superiority of the proposed method. 𝑃𝑃𝑖𝑖,𝑡𝑡 −𝑃𝑃𝑖𝑖,𝑡𝑡 ,∀  𝑖𝑖 ∈ 
+𝑃𝑃𝑖𝑖,𝑡𝑡 =� 𝑂𝑂𝑂𝑂𝐿𝐿𝐿𝐿   𝑃𝑃𝑃𝑃  (7)
+−𝑃𝑃𝑖𝑖,𝑡𝑡 ,∀𝑖𝑖 ∈ \
+II. PRELIMINARIES 𝑂𝑂𝑂𝑂𝐿𝐿𝐿𝐿 𝑆𝑆𝑆𝑆 𝑃𝑃𝑃𝑃  (8)
+𝑄𝑄𝑖𝑖,𝑡𝑡 =  −𝑄𝑄𝑖𝑖,𝑡𝑡 ,∀𝑖𝑖 ∈ \� ∪ �
+A. Two-Stage Voltage Control Problem Formulation  (9)
+𝑃𝑃𝑖𝑖,𝑡𝑡 =𝑉𝑉𝑖𝑖,𝑡𝑡∑𝑗𝑗∈𝑉𝑉𝑗𝑗,𝑡𝑡�𝐺𝐺𝑖𝑖𝑗𝑗cos𝜃𝜃𝑖𝑖𝑗𝑗,𝑡𝑡+𝐵𝐵𝑖𝑖𝑗𝑗sin𝜃𝜃𝑖𝑖𝑗𝑗,𝑡𝑡�,∀𝑖𝑖 ∈
+In this paper, we consider an ADN whose set of nodes is  (10)
+𝑄𝑄𝑖𝑖,𝑡𝑡 =𝑉𝑉𝑖𝑖,𝑡𝑡∑𝑗𝑗∈ 𝑉𝑉𝑗𝑗,𝑡𝑡�𝐺𝐺𝑖𝑖𝑗𝑗sin𝜃𝜃𝑖𝑖𝑗𝑗,𝑡𝑡−𝐵𝐵𝑖𝑖𝑗𝑗cos𝜃𝜃𝑖𝑖𝑗𝑗,𝑡𝑡�,∀𝑖𝑖 ∈
+denoted by . Based on the spatial boundaries defined by where is the active injection at node , time ; is the
+𝑉𝑉𝑚𝑚𝑖𝑖𝑚𝑚 ≤𝑉𝑉𝑖𝑖,𝑡𝑡 ≤𝑉𝑉𝑚𝑚𝑡𝑡𝑚𝑚,∀𝑖𝑖 ∈
+weather forecasts or PV/load predictions, this ADN can be active load at node , time ; and are the𝑂𝑂𝑂𝑂 𝐿𝐿re𝐿𝐿al and
+partitioned into regions. The objective of the two-stage imagin 𝑃𝑃 a 𝑖𝑖 r , y 𝑡𝑡 parts of the admittance elemen 𝑖𝑖 t betwe 𝑡𝑡 en 𝑃𝑃 n 𝑖𝑖, o 𝑡𝑡 des and
+voltage control problem is to minimize voltage deviations , respectively; i 𝑖𝑖 s the vo 𝑡𝑡 lta 𝐺𝐺 ge 𝑖𝑖𝑗𝑗 phase 𝐵𝐵 𝑖𝑖 d 𝑗𝑗 ifference between
+across the system𝑀𝑀 and eliminate violations as much as possible: 𝑖𝑖
+nodes and ; and and are the lower limit and upper
+(1) 𝑗𝑗 𝜃𝜃𝑖𝑖𝑗𝑗,𝑡𝑡
+ limit of the voltage magnitude, respectively.
+where is the voltage magn𝑇𝑇it−u1de at node , time ; is the Eqs.𝑖𝑖 (1)-(𝑗𝑗10) re𝑉𝑉p 𝑚𝑚 re 𝑖𝑖𝑚𝑚 sent th𝑉𝑉𝑚𝑚 e 𝑡𝑡 m 𝑚𝑚 athematical modeling of the
+min∑𝑖𝑖∈ ∑𝑡𝑡=0�𝑉𝑉𝑖𝑖,𝑡𝑡−𝑉𝑉𝑟𝑟𝑟𝑟𝑟𝑟�
+voltage reference value; and is the length of the voltage two-stage voltage control problem adopted by most existing
+𝑉𝑉𝑖𝑖,𝑡𝑡 𝑖𝑖 𝑡𝑡 𝑉𝑉𝑟𝑟𝑟𝑟𝑟𝑟
+control process, which is set to one day in this study. studies. However, in real-world ADN operations, particularly
+In order to achieve this ob𝑇𝑇jective, the ADN operator can in scheduling mechanical assets, a series of grid codes must be
+dispatch the following controllable equipment: an OLTC followed, as the control of these devices often involves
+
+--- Page 4 ---
+4
+temporal coupling constraints and requirements for manual on- C. MDP and RL
+site intervention. In this paper, we consider two common grid The intra-day strategies are provided by the RL agent. In RL,
+code requirements for OLTC and SCs, i.e., “The number of the sequential decision-making process is usually modeled as a
+daily OLTC adjustments is capped by an upper limit,” and “SCs Markov decision process (MDP) [35], which can be described
+can only be committed during a specific time window each by a tuple  , where  is the state space of the
+day.” As can be seen, these grid code requirements can be easily environment;  is the action space of the RL agent; is the
+expressed in natural language, yet effectively embedding them state transitio ( n , fun ,𝑝𝑝 ct , i 𝑟𝑟 o , n 𝛾𝛾 ; ) is the reward function; and
+into a data-driven RL policy requires complicated design. This is the discount factor for future rewards. 𝑝𝑝
+is one of the main motivations for introducing LLMs, as LLMs At time , the RL agen𝑟𝑟t receives the state observatio𝛾𝛾n∈ [0,1  )
+can readily comprehend such operational constraints and
+of the current environment and decides its control action
+generate compliant scheduling strategies. 𝑡𝑡 𝑠𝑠𝑡𝑡 ∈
+ based on its policy   , i.e., .
+The solution to the above constrained optimization problem 𝑎𝑎𝑡𝑡 ∈
+Then the environment transfers to the next state  based
+is usually carried out in two stages, i.e., the day-ahead stage and 𝜋𝜋: × →[0,∞) 𝑎𝑎𝑡𝑡~𝜋𝜋(⋅|𝑠𝑠𝑡𝑡)
+on    and gives the RL agent a reward
+the intra-day stage. In the day-ahead stage, the ADN operator 𝑠𝑠𝑡𝑡+1 ∈
+as feedback. Using the feedback information from the
+obtains hourly region-level forecasts and determines scheduling env𝑝𝑝ir:on×ment×, the→ ob [0je,c∞tiv ) e of the RL agent is to optimize its
+strategies for OLTC and SCs to proactively regulate the overall 𝑟𝑟p 𝑡𝑡 o ( l𝑠𝑠ic 𝑡𝑡,y𝑎𝑎 𝑡𝑡) so that the expected cumulative rewards can be
+voltage profile for the following day, preventing severe voltage
+maximized, i.e.,
+violations. Then in the intra-day stage, real-time accurate node- 𝜋𝜋 𝐽𝐽(𝜋𝜋) (11)
+level measurements become accessible, and the ADN operator
+leverages the fast response capability of PV inverters to further Detailed MDP se m tt 𝜋𝜋 i a n x gs 𝐽𝐽 ( o 𝜋𝜋 f ) th = e 𝔼𝔼 v𝑡𝑡o,l𝜋𝜋t [ a ∑ ge 𝑡𝑡 𝑇𝑇 = −c 0 1o 𝛾𝛾 nt𝑡𝑡r 𝑟𝑟 o𝑡𝑡l ] problem and RL
+training mechanism will be described in the next section.
+refine terminal voltages.
+B. LLM as Decision-Making Models
+III. METHODS
+In recent years, the rapid development of LLMs has become
+A. LLM-RL Collaboration Framework
+one of the most transformative and significant developments in
+artificial intelligence, bringing profound impacts to numerous
+specialized domains. Built upon the transformer architecture
+[26] and trained on vast amounts of pretraining data, existing
+LLMs have acquired powerful information processing
+capabilities and embedded domain knowledge, making it
+possible to employ them as decision-making models. Some
+advanced research in artificial intelligence has begun to apply
+LLMs as decision-making models in autonomous driving [27],
+[28] and robotic control [29], [30]. These models take text-
+based or multimodal environmental descriptions as input and
+generate corresponding control strategies in an end-to-end
+manner, offering a novel pathway for solving complex
+decision-making problems.
+In power systems, dispatch problems, such as ADN voltage
+control, are quintessential decision-making problems.
+However, existing applications of LLMs in the power domain
+have largely focused on tasks like simulation setup [31], [32],
+document analysis [33], and scenario generation [34]. The few
+studies related to dispatching typically assign LLMs subtasks
+such as code programming and function synthesis, which
+remain fundamentally natural-language processing problems
+and do not fully exploit the capabilities of existing LLMs.
+Fig. 2. Illustrative prompts for LLM strategies generation.
+Therefore, in this paper, we innovatively introduce the LLMs
+as decision-making models and apply them to the ADN voltage
+As shown in Fig. 1, the proposed LLM-RL collaboration
+control problem. Through the proposed input and output
+framework employs an LLM agent and an RL agent to handle
+formulation, LLM-RL collaboration framework, and policy
+day-ahead and intra-day decision-making, respectively,
+improvement mechanisms, the LLM agent successfully
+achieving voltage optimization through their collaborative
+addresses the challenge of coordinating mechanical assets
+interaction. In the day-ahead stage, the input to the LLM agent
+under grid code constraints and enhances voltage control
+consists of hourly region-level forecasts, specifically the net
+performance in ADNs.
+load forecasts for the regions and the overall ADN system.
+These inputs are characterized by coarse granularity and may
+𝑀𝑀
+
+--- Page 5 ---
+5
+exhibit certain deviations due to the limited accuracy of current reward and voltage profiles. When making decisions, the LLM
+PV/load predictions. Based on this information, the LLM agent agent retrieves the historical day most similar to the current
+outputs scheduling strategies for the OLTC and SCs that scenario from the knowledge base and embeds it as a few-shot
+comply with grid code requirements. Then in the intra-day example in the prompts for reference during reasoning. This
+stage, the input to the RL agent consists of accurate node-level prevents the LLM agent’s decision-making from being arbitrary
+measurements, specifically the real-time loads and PV and enables continuous policy optimization through iterative
+generation. These inputs are characterized by high resolution updates of the knowledge base. Complete prompts for the LLM
+and relatively high accuracy. Based on this information, the RL agent are provided in an online supplementary file [37]. And
+agent outputs reactive control strategies for the PV inverters the details of LLM policy improvement, historical knowledge
+that comply with reactive capacity constraints. The key retrieval, and knowledge base update will be elaborated in the
+innovation of this collaboration framework lies in the following subsections.
+introduction of the LLM agent, which enables the exploitation On the other hand, the role of the RL agent is to adapt the
+of its advantages in information processing and knowledge OLTC and SCs settings prescribed by the LLM agent in the
+integration. day-ahead stage and further optimize the terminal voltages
+To adapt an existing general-purpose LLM into the required during the intra-day stage by adjusting the reactive power
+domain-specific LLM agent, that is, one capable of accurately generation of PV inverters. Although the RL policy can be
+understanding the voltage control problem and generating day- readily improved using off-the-shelf RL algorithms, rapidly
+ahead OLTC and SCs scheduling strategies that satisfy adapting it to the LLM policy within the proposed LLM-RL
+operational constraints, we propose the tailored prompts. As collaboration framework poses a significant challenge. Because
+illustrated in Fig. 2, the prompts consist of the following when the statuses of the OLTC and SCs change, the RL agent
+components: actually faces a different environment. Therefore, the training
+1) Environment and task description: This component mechanism of the RL agent should be carefully designed to
+provides a detailed description of the environment and task, enhance its learning capability and adaptation rate.
+including the system overview, descriptions of the OLTC and As shown in Fig. 3, to address this issue, we further propose
+SCs, and a clear specification of the day-ahead scheduling task, a pretrain-finetune pipeline for the RL agent. Specifically, the
+which requires the LLM agent to generate day-ahead strategies RL agent first undergoes extensive exploration in a pretraining
+based on the hourly forecasts for the following day. environment to learn a general control policy for PV inverters.
+2) Output format: A standardized output format can Subsequently, the pretrained RL agent is transferred to a
+effectively reduce the occurrence of hallucinations or internal finetuning environment, where it adapts to the current LLM
+errors. In this component, we specify the required output format policy. Notably, in the pretraining environment, the actions of
+for the LLM agent, namely, the timing and corresponding tap OLTC and SCs are randomly assigned, whereas in the
+positions for OLTC adjustments, as well as the commitment finetuning environment, these actions are provided by the well-
+statuses and time windows for SCs. Once the LLM agent improved LLM agent. This design enables the RL agent to
+generates the content, we apply regular expressions to extract acquire versatile control strategies across diverse settings
+structured scheduling strategies from the response and validate during pretraining, thereby facilitating rapid adaptation to the
+their compliance with grid code requirements. If the strategies LLM policy during finetuning.
+satisfy these operational constraints, the policy is deemed valid;
+otherwise, the LLM agent is prompted to regenerate the day-
+ahead scheduling strategies in another dialogue.
+3) Chain-of-Thought (CoT) guidance: CoT reasoning refers
+to decomposing a complex problem into a sequence of simple,
+executable inference steps [36]. For domain-specific problems,
+CoT can effectively assist in generating reliable outputs.
+Specifically, in the context of voltage control, the LLM agent is
+first instructed to analyze the trend and magnitude of net load
+forecasts; based on which it determines the commitment actions
+for SCs in each region and the tap positions for the OLTC; and
+finally, it organizes these decisions into a formal final answer
+which returns to the ADN operator.
+Fig. 3. Pretrain-finetune pipeline for RL agent.
+4) Few-shot examples as knowledge embedding: The above
+approach only ensures that the generated strategies are feasible, B. Intra-Day PV Reactive Control Policy Improvement
+but it does not enable improvement of the LLM policy. To Within the pretrain-finetune pipeline, in order to leverage RL
+realize policy improvement, we further construct a knowledge algorithms to improve the intra-day PV reactive control policy,
+base  that stores information from several historical days. the intra-day voltage control problem should first be formulated
+For a specific historical day, we store its day-ahead forecasting as an MDP. Corresponding definitions are designed as follows:
+𝑂𝑂𝑂𝑂𝐿𝐿
+data, generated OLTC and SCs actions, and the resulting total 1) State space: The state  of the MDP consists of two
+𝑠𝑠𝑡𝑡 ∈
+
+--- Page 6 ---
+6
+components, i.e., the real-time node-level measurements evaluation, reflection, memory, and iterative refinement.
+from the ADN monitoring For the voltage control problem discussed in this paper, a
+sys𝑂𝑂t𝑂𝑂e𝐿𝐿m𝐿𝐿 an𝑂𝑂d𝑂𝑂 𝐿𝐿O𝐿𝐿LTC a𝑃𝑃n𝑃𝑃d S𝑃𝑃C𝑃𝑃s actions previously knowledge base  is firstly maintained for the LLM agent,
+d (𝑷𝑷 ec 𝑡𝑡 ided , 𝑸𝑸 by 𝑡𝑡 the , 𝑽𝑽 L 𝑡𝑡 L ,𝑷𝑷 M 𝑡𝑡 a , g 𝑸𝑸 e 𝑡𝑡 nt, ) where 𝑂𝑂𝑂𝑂𝑇𝑇𝑆𝑆 𝑆𝑆𝑆𝑆 are the storing data from several historical days. When a decision is
+vectors of the ADN’s active loads, rea ( c𝑂𝑂 𝛽𝛽 𝑂𝑂ti 𝑡𝑡 𝐿𝐿v𝐿𝐿e lo ,𝜷𝜷 a𝑂𝑂𝑂𝑂d 𝑡𝑡 𝐿𝐿s,𝐿𝐿 ) and voltage required for a ne 𝑂𝑂 w 𝑂𝑂𝐿𝐿 day , the LLM agent queries the
+magnitudes; are the vectors 𝑷𝑷 𝑡𝑡 of th , e 𝑸𝑸 P 𝑡𝑡 Vs’ , 𝑽𝑽 ac 𝑡𝑡 tive and knowledge base and retrieves the historical scenario most
+reactive gener𝑃𝑃a𝑃𝑃tion𝑃𝑃;𝑃𝑃 and is the vector of the SCs’ similar to current situation
+(w𝑑𝑑𝑖𝑖
+ith the highest similarity ), which
+commitment 𝑷𝑷 s 𝑡𝑡 tat , u 𝑸𝑸 se 𝑡𝑡 s. Specif𝑆𝑆i𝑆𝑆cally, OLTC and SCs actions is then embedded as a few-shot example into the prompts
+are embedded 𝜷𝜷 in 𝑡𝑡 to the state space using one-hot provided to the LLM agent. Specifically, for the new da𝜀𝜀ŷ and
+enc𝑂𝑂o𝑂𝑂d𝑇𝑇𝑆𝑆ing.𝑆𝑆 I𝑆𝑆ncorporating the LLM agent’s actions into the state a historical day , their similarity is calculated as follows:
+( sp𝛽𝛽a 𝑡𝑡 ce e,n𝜷𝜷h 𝑡𝑡 an ) ces the RL agent’s environmental awareness and 𝑑𝑑𝑖𝑖 (15)
+𝑑𝑑𝑗𝑗 𝜀𝜀𝑖𝑖𝑗𝑗
+improves its adaptation to the LLM policy. where captures the temporal similarity between and ;
+𝜀𝜀𝑖𝑖𝑗𝑗 =𝑇𝑇𝑆𝑆𝑖𝑖𝑗𝑗×𝑀𝑀𝑆𝑆𝑖𝑖𝑗𝑗
+2) Action space: The action  of the MDP is and captures the magnitude similarity between and .
+constructed with the reactive generation of all controllable
+𝑇𝑇𝑆𝑆𝑖𝑖𝑗𝑗 𝑑𝑑𝑖𝑖 𝑑𝑑𝑗𝑗
+and are designed as follows:
+PV inverters in the ADN. Specificall
+𝑎𝑎
+y
+𝑡𝑡
+,
+∈
+we𝑃𝑃 c𝑃𝑃onstrain the action
+𝑀𝑀𝑆𝑆𝑖𝑖𝑗𝑗 𝑑𝑑𝑖𝑖 𝑑𝑑𝑗𝑗
+of the RL agent in so that𝑸𝑸 t 𝑡𝑡 he reactive capacity 𝑇𝑇𝑆𝑆𝑖𝑖𝑗𝑗 𝑀𝑀𝑆𝑆𝑖𝑖𝑗𝑗 (16)
+23
+∑𝑡𝑡=0𝑂𝑂�𝑂𝑂𝐿𝐿𝐿𝐿𝑖𝑖,𝑡𝑡×𝑂𝑂�𝑂𝑂𝐿𝐿𝐿𝐿𝑗𝑗,𝑡𝑡
+constraint eq. (5) is alway𝑃𝑃𝑃𝑃s sa𝑃𝑃ti𝑃𝑃sfied.
+3) Reward function [−: T𝜆𝜆he, r𝜆𝜆ewa ] rd function of the MDP aligns 𝑇𝑇𝑆𝑆𝑖𝑖𝑗𝑗 = �∑ 2 𝑡𝑡= 3 0�𝑂𝑂�𝑂𝑂𝐿𝐿𝐿𝐿𝑖𝑖,𝑡𝑡� 2 ×�∑ 2 𝑡𝑡= 3 0�𝑂𝑂�𝑂𝑂𝐿𝐿𝐿𝐿𝑗𝑗,𝑡𝑡� 2 (17)
+with the objective of the voltage control problem: min��∑ 2 𝑡𝑡= 3 0𝑂𝑂�𝑂𝑂𝐿𝐿𝐿𝐿𝑖𝑖,𝑡𝑡�,�∑ 2 𝑡𝑡= 3 0𝑂𝑂�𝑂𝑂𝐿𝐿𝐿𝐿𝑗𝑗,𝑡𝑡��
+ (12) where 𝑀𝑀𝑆𝑆𝑖𝑖𝑗𝑗 =max��∑ 2 𝑡𝑡 = 3i 0 s 𝑂𝑂 t�𝑂𝑂 h 𝐿𝐿 e 𝐿𝐿 h 𝑖𝑖,𝑡𝑡 o �, u �∑ r2 𝑡𝑡 l = 3y 0 n 𝑂𝑂�𝑂𝑂 e 𝐿𝐿 t 𝐿𝐿 lo 𝑗𝑗,𝑡𝑡 a � d � forecast for
+ the overall ADN system in .
+The RL algorithm
+𝑟𝑟
+u𝑡𝑡t
+=
+iliz
+−
+ed ∑ 𝑖𝑖 i ∈ n �𝑃𝑃 t
+|
+h 𝑖𝑖,𝑡𝑡 i
+|
+s − 𝑃𝑃 p 𝑟𝑟 a 𝑟𝑟𝑟𝑟 p � er is proximal policy Afte 𝐿𝐿 r � 𝐿𝐿 th 𝐴𝐴 e 𝐿𝐿 O 𝑖𝑖,𝑡𝑡 L ( T 𝑡𝑡 C ∈ an [0 d , 2 S 3 C ] s ) actions are executed in the training
+optimization (PPO) proposed in [38]. In PPO, the RL agent’s environment, the LLM age𝑑𝑑n 𝑖𝑖 t then receives the corresponding
+policy is approximated by a neural network with results and feedback, including the total reward of the day and
+parameters . After completing one episode of iteration hourly voltage profiles, i.e., average voltage for each region and
+𝜋𝜋 𝜋𝜋𝜃𝜃
+between the old policy and the external environment, the the overall ADN system. Based on the feedback and following
+𝜃𝜃
+objective function for ca′n be expressed as: the Reflexion paradigm, we instruct the LLM agent to refine its
+𝜋𝜋𝜃𝜃
+(13) original actions. For example, if the overall voltage is too low
+𝜋𝜋𝜃𝜃
+during a specific time period, the LLM agent will increase the
+where ′ is the batch of iteration da′ta generated from
+𝐽𝐽𝜃𝜃 (𝜃𝜃)=𝔼𝔼(𝑠𝑠𝑡𝑡,𝑡𝑡𝑡𝑡)~𝜋𝜋𝜃𝜃′�𝜌𝜌𝑡𝑡(𝜃𝜃)𝐴𝐴𝜃𝜃 ,𝑡𝑡�
+OLTC tap position for the corresponding period. After
+the old policy ′ ; is the
+(𝑠𝑠𝑡𝑡,𝑎𝑎𝑡𝑡)~𝜋𝜋𝜃𝜃 performing rounds of Reflexion, we obtain
+importance samplin′g ratio; and is an e′stimator of the
+𝜋𝜋𝜃𝜃 𝜌𝜌𝑡𝑡(𝜃𝜃)=𝜋𝜋𝜃𝜃(𝑎𝑎𝑡𝑡|𝑠𝑠𝑡𝑡)/𝜋𝜋𝜃𝜃 (𝑎𝑎𝑡𝑡|𝑠𝑠𝑡𝑡) candidate rewards for the new day , and we denote the highest
+advantage function using gener
+𝐴𝐴
+al
+𝜃𝜃
+i′z
+,𝑡𝑡
+ed advantage estimator
+one as .
+𝑛𝑛𝑂𝑂𝑂𝑂𝐿𝐿 𝑛𝑛𝑂𝑂𝑂𝑂𝐿𝐿+1
+(GAE) technique. 𝑑𝑑𝑖𝑖
+In order to constrain the updated policy within a trust region 𝑅𝑅𝑖𝑖
+and ensure more stable training, a common practice in PPO is
+to use gradient clipping, i.e.,
+𝑆𝑆𝑂𝑂𝐶𝐶𝑃𝑃
+𝐽𝐽𝜃𝜃 ′ (𝜃𝜃)=𝔼𝔼(𝑠𝑠𝑡𝑡,𝑡𝑡𝑡𝑡)~𝜋𝜋𝜃𝜃′ (14)
+where the clip′ function confines to the inte′rval
+�min�𝜌𝜌𝑡𝑡(𝜃𝜃)𝐴𝐴𝜃𝜃 ,𝑡𝑡,𝑐𝑐𝑐𝑐𝑖𝑖𝑝𝑝(𝜌𝜌𝑡𝑡(𝜃𝜃),1−𝜀𝜀𝑃𝑃𝑃𝑃𝑂𝑂,1+𝜀𝜀𝑃𝑃𝑃𝑃𝑂𝑂)𝐴𝐴𝜃𝜃 ,𝑡𝑡��
+so that the updated policy does not deviate
+𝜌𝜌𝑡𝑡(𝜃𝜃) [1−
+excessively from the old policy. Then based on the calculated
+𝜀𝜀𝑃𝑃𝑃𝑃𝑂𝑂,1+𝜀𝜀𝑃𝑃𝑃𝑃𝑂𝑂]
+, the policy network is optimized times by
+u𝑆𝑆p𝑂𝑂d𝐶𝐶𝑃𝑃ating its parameters.
+𝐽𝐽𝜃𝜃 ′ (𝜃𝜃) 𝜋𝜋𝜃𝜃 𝑛𝑛𝑃𝑃𝑃𝑃𝑂𝑂
+C. Day-Ahead OLTC and SCs Scheduling Policy Improvement
+After ensuring that the LLM agent can comprehend the
+problem and generate day-ahead strategies that comply with
+operational constraints, the next consideration is how to
+improve the LLM policy accordingly. In this paper, we propose
+a Reflexion-based self-evolution mechanism for the LLM
+agent. Similar to RL algorithms, Reflexion enhances the agent’s
+policy through interaction with an environment and feedback Fig. 4. Knowledge base updating process for LLM agent.
+from it. Specifically, Reflexion aims to improve the model’s
+reasoning and decision-making capabilities on complex tasks After Reflexion concludes, the next step is to update the
+via a self-reflection process that encompasses execution, knowledge base  , where we set an updating threshold
+𝑂𝑂𝑂𝑂𝐿𝐿
+
+--- Page 7 ---
+7
+. Then the update process should be handled in two cases: TABLE I
+If , it indicates that the new day is a novel situation CONFIGURATIONS OF THE TEST SYSTEMS
+w
+𝜀𝜀𝑂𝑂
+h
+𝑂𝑂𝐿𝐿
+ich have not been encountered before, then the new day , Parameter Value
+the 𝜀𝜀 ̂ r < ew 𝜀𝜀 a 𝑂𝑂 r 𝑂𝑂 d 𝐿𝐿 , and its corresponding OLT 𝑑𝑑 C 𝑖𝑖 and SCs actions are No. Region 3, 5
+𝑑𝑑𝑖𝑖 No. SC 3, 5
+directly appended into  . If , it indicates that
+has been en𝑅𝑅co 𝑖𝑖 untered before and can be partially represented by N N o o . . P O V L TC Position 6 1 , 1 1 0
+a historical day . We th 𝑂𝑂 e 𝑂𝑂 n 𝐿𝐿 com𝜀𝜀p̂a≥re𝜀𝜀 t 𝑂𝑂 h 𝑂𝑂 e 𝐿𝐿 total rewards an𝑑𝑑d 𝑖𝑖 OLTC Adjustment Limits 4
+OLTC Step 0.6%
+to examine their performance. If , it means the LLM
+𝑑𝑑𝑗𝑗 𝑅𝑅𝑖𝑖 SC Capacity 0.15MVAR, 0.4MVAR
+agent has discovered a better set of actions for this situation, 0.3, 0.15
+𝑅𝑅𝑗𝑗 𝑅𝑅𝑖𝑖 >𝑅𝑅𝑗𝑗
+and we replace in  with . Conversely, if , it 𝑃𝑃𝑃𝑃
+𝜆𝜆
+implies that the previously stored day corresponds to a For comparison and ablation studies, in order to demonstrate the
+𝑑𝑑𝑗𝑗 𝑂𝑂𝑂𝑂𝐿𝐿 𝑑𝑑𝑖𝑖 𝑅𝑅𝑖𝑖 ≤𝑅𝑅𝑗𝑗
+superior strategy, thus is retained in  and is effectiveness of the proposed approach, in the offline training
+𝑑𝑑𝑗𝑗
+phase, we set the proposed method against three baselines: 1) Pure-
+discarded. This updating process is also illustrated in Fig. 4.
+𝑑𝑑𝑗𝑗 𝑂𝑂𝑂𝑂𝐿𝐿 𝑑𝑑𝑖𝑖
+RL, in which the day-ahead and intra-day policies are optimized
+Drawing an intuitive analogy between the proposed
+by two separate RL agents, is designed to validate the effectiveness
+Reflexion-based self-evolution method and RL algorithms, the
+of the LLM-RL collaboration framework. To ensure compliance
+knowledge base  and the retrieved historical day serves
+with grid code requirements, we further incorporate a soft
+as the policy parameters , instructing the agent to generate
+𝑂𝑂𝑂𝑂𝐿𝐿 𝑑𝑑𝑗𝑗 constraint and a hard constraint into the day-ahead scheduling
+corresponding actions; the Reflexion process is analogous to
+𝜃𝜃 strategies of Pure-RL, following established practices in the
+the optimization process of , where the agent identifies
+literature. The soft constraint refers to the penalty mechanism:
+directions for policy impro
+𝐽𝐽
+v
+𝜃𝜃
+𝑆𝑆e′ 𝑂𝑂m𝐶𝐶𝑃𝑃e
+(
+n
+𝜃𝜃
+t
+)
+s; is like , which
+when the RL agent proposes an action that violates grid code limits,
+constrains differences between the old policy and the updated
+one; and is like , which den𝜀𝜀o 𝑂𝑂 t 𝑂𝑂 e 𝐿𝐿 s the num𝜀𝜀b 𝑃𝑃 e 𝑃𝑃 r 𝑂𝑂 of times it receives a corresponding negative penalty; while the hard
+constraint refers to action masking, which enforces that the states
+an episode of data can be reused. Through the iterative
+Reflexion𝑛𝑛 p 𝑂𝑂𝑂𝑂 ro 𝐿𝐿 cess and𝑛𝑛 u 𝑃𝑃 p 𝑃𝑃 d 𝑂𝑂 ates of the knowledge base, the LLM of the OLTC and SCs remain unchanged once their maximum
+allowable switching counts are reached. It should be noted that
+policy can be progressively refined. In addition, it should be
+although Pure-RL receives a penalty term as feedback during
+noted that Reflexion is essentially a “training” process based on
+training, this penalty term is excluded from the reward metrics
+iterative experiences, and thus it occurs only in an offline
+presented in the following results to ensure a fair comparison. 2)
+manner. During online execution, the knowledge base is frozen
+No-PT, in which the RL agent is not pretrained and is directly
+and the LLM directly retrieves the most similar historical
+finetuned in the environment defined by the LLM policy, is
+scenario from the knowledge base for inference, as it is
+designed to validate the necessity of the proposed pretrain-finetune
+infeasible and impractical for online Reflexion.
+pipeline. 3) No-Reflexion: in which the Reflexion process is
+omitted, is designed to demonstrate the effectiveness of the
+IV. NUMERICAL STUDIES
+proposed Reflexion-based mechanism in complex tasks.
+A. Cases and Methods Setup
+TABLE II
+In this section, numerical simulations are conducted on IEEE
+33-bus [39] and 141-bus [40] distribution systems. OLTC at root HYPERPARAMETERS OF THE LLM AGENT AND THE RL AGENT
+node has a total of 11 tap positions, each corresponding to a voltage Agent Parameter Value
+Model Qwen-Plus
+regulation step of 0.6%. Voltage limitations are set at [0.95, 1.05]
+Version “2025-12-01”
+p.u. The 33-bus system is partitioned into three regions, and the Temperature (Training) 0.7
+141-bus system is partitioned into five regions, in which each Top-P (Training) 0.8
+LLM
+region is equipped with one SC and two PV inverters. We use one Temperature (Test) 0.2
+Top-P (Test) 0.6
+year of PV and load data to simulate power flow in the distribution
+0.7
+systems. In the day-ahead stage, the LLM agent receives hourly 3
+region-level forecasts, to which we add 5% white noise to emulate 𝜀𝜀M 𝑂𝑂𝑂𝑂 in 𝐿𝐿 i Batch Size 32
+the prediction errors in current PV and load predictions. For the RL 𝑛𝑛H 𝑂𝑂 i 𝑂𝑂 d 𝐿𝐿 den Layers 2
+Hidden Units 256
+agent, intra-day control interval is 15 minutes and the length of the
+0.9
+control process is 96 steps. Corresponding configurations are listed RL
+Learning Rate (Pretrain) 1e-4 → 1e-5 (Linear Decay)
+in Table I, and more detailed specifications and topologies are 𝛾𝛾Learning Rate (Finetune) 1e-5
+provided in the online supplementary file [37]. 0.3
+4
+As for the LLM and RL used in this paper, considering the 𝜀𝜀𝑃𝑃𝑃𝑃𝑂𝑂
+randomness in LLM responses and the PPO algorithm, we use 3 𝑛𝑛𝑃𝑃𝑃𝑃𝑂𝑂
+Then, in the online execution phase, in addition to the
+independent random seeds for each experiment. All experiments
+aforementioned methods, we also design another three baselines:
+are run on a computer with a 2.2GHz Intel Core i9-14900HX CPU
+1) Original, in which the OLTC is fixed at the reference voltage
+and a 32GB RAM. Hyperparameters for the LLM agent and the
+position, SC commitment is disabled, and PV inverters are
+RL agent are presented in Table II.
+
+--- Page 8 ---
+8
+prohibited from participating reactive control, and this baseline is episodes. In the 141-bus system, the LLM agent’s improvement
+used to demonstrate the necessity of proactive voltage control spans 250 episodes, and the RL agent is pretrained for 2500
+measures in ADNs. 2) No-LLM, in which the mechanical assets episodes and finetuned for 200 episodes. In addition, for better
+OLTC and SCs are disabled, is designed to validate their capability visualization and comparison, we present the complete training
+of regulating the overall voltage profile. 3) No-RL, in which the curves of Proposed and Pure-RL in the figures, but only show
+PV reactive generation is disabled, is designed to validate its the first half of the training curve for No-Reflexion and the
+capability of refining terminal voltages. second half for No-PT. However, it should be noted that all
+these four methods undergo the complete LLM improvement
+B. Training Performance of Proposed and Baseline Methods
+and RL finetuning procedures, and their converged
+To compare the performance of Proposed, Pure-RL, No-PT,
+performance will be compared in the next subsection.
+and No-Reflexion during the offline training phase, we plot
+First, examining the training curve of Proposed reveals that,
+their training curves in Figs. 5-6. Solid lines in the figures
+during the first half, the LLM policy progressively improves
+represent the mean values across multiple random seeds, while
+and converges steadily through interaction with the
+the shaded areas indicate the corresponding error bounds. Also,
+environment and continuous updates of the knowledge base,
+considering that voltage control performance may vary
+demonstrating the effectiveness of the proposed Reflexion-
+significantly over the course of a year, we apply a moving
+based self-evolution mechanism. In the second half of the curve,
+average with a window length of 25 episodes to smooth these
+after the RL agent is introduced, the reward further improves
+curves.
+using the PV reactive generation capacity. Moreover, since the
+RL agent has been well-pretrained beforehand, it can quickly
+adapt to the day-ahead strategies provided by the LLM agent,
+leading to stable convergence and enabling efficient
+coordination between day-ahead and intra-day operations.
+Second, we compare the performance of Pure-RL. It can be
+observed that, even without iteration and improvement, the
+initial LLM policy already outperforms the RL policy on the
+day-ahead voltage scheduling task. This is because the LLM
+possesses extensive embedded knowledge and, guided by the
+proposed prompts, can generate compliant and reasonable
+strategies. For example, it lowers the OLTC tap position when
+PV generation is high and dispatches SCs during peak load
+periods. Such intuitive operational knowledge is largely absent
+in the RL agent, resulting in an initial policy that is relatively
+Fig. 5. Training performance in IEEE 33-bus system. random and ineffective. And even after interacting with the
+environment, Pure-RL shows no obvious performance
+improvement. On the one hand, the RL agent must handle
+operational constraints and a large action space, requiring
+substantially more exploration than the LLM agent to develop
+an effective understanding of the environment. On the other
+hand, the feedback received by the RL agent is a simple scalar
+reward, whereas the LLM agent can process heterogeneous
+information, such as voltage profiles and system states, which
+provides much richer contextual cues. Compared to a scalar
+reward, this diverse information offers the LLM agent clear
+directions for policy improvement, while the RL policy remains
+largely stochastic.
+In summary, on the day-ahead voltage scheduling task, the
+LLM demonstrates at least three advantages over RL, i.e.,
+embedded knowledge driven strategy generation, semantic
+Fig. 6. Training performance in IEEE 141-bus system. comprehension enhanced constraint handling, and reasoning
+backed policy improvement. These advantages underscore both
+As can be seen, the training phase begins with the LLM the superiority and necessity of applying LLMs to specialized
+improvement; once the LLM policy stabilizes, we freeze its dispatch tasks, as well as the effectiveness of the proposed
+knowledge base and introduce a pretrained RL agent into the LLM-RL collaboration framework.
+environment for RL finetuning. In the 33-bus system, the LLM Third, we observe the training curve of No-PT. Since the
+agent undergoes improvement over 200 episodes, while the RL only difference between No-PT and Proposed is whether the
+agent is pretrained for 1500 episodes and finetuned for 150 introduced RL agent has undergone pretraining, and both
+
+--- Page 9 ---
+9
+methods share the same LLM agent, their curves are identical TABLE IV
+in the first half and diverge only in the second half. It can be EXECUTION PERFORMANCE OF IEEE 141-BUS SYSTEM
+found that, due to the absence of pretraining, the RL agent in Voltage Deviation (p.u.) Violation Rate (%)
+Method
+No-PT learns and converges more slowly than that in Proposed Mean Std. Mean Std.
+Original 2.16e-02 3.35e-03 3.74 4.82
+in the 33-bus system. And in the 141-bus system, it even
+No-LLM 1.21e-02 3.23e-03 1.46 2.87
+converges to a suboptimal policy. This demonstrates the
+No-RL 1.21e-02 3.26e-03 1.35e-01 3.64e-01
+effectiveness of the proposed pretrain-finetune pipeline. The Proposed 8.37e-03 2.21e-03 1.58e-02 8.48e-02
+pretraining process not only provides the RL agent with a high- Pure-RL 2.30e-02 6.30e-03 2.89 3.46
+No-PT 1.11e-02 2.89e-03 7.67e-01 1.59
+quality warm start policy but also enhances its ability to adapt
+No-Reflexion 1.00e-02 2.33e-03 4.70e-02 3.20e-01
+to diverse OLTC and SCs settings. Therefore, pretraining the
+* Mean and Std. denote mean values and standard deviations across 75 episodes.
+RL agent is essential within the proposed LLM-RL
+collaboration framework. As shown in Tables III and IV, Original exhibits the worst
+Finally, an analysis of No-Reflexion reveals that, although it performance on the voltage control problem, resulting in large
+is also capable of self-evolution through interaction with the voltage deviations and frequent voltage violations, which
+environment, its improvement rate is significantly lower than demonstrate the necessity of proactive control in ADNs.
+that of Proposed. This is because No-Reflexion does not Although No-LLM and No-RL show significant improvements
+perform in-depth reasoning and reflection on environmental over Original, their performance still falls short of that of
+feedback and instead relies on trial-and-error learning. We still Proposed. This not only confirms the effectiveness of the
+use RL algorithms by analogy, which in fact indicates that the proposed method but also underscores the importance of
+interaction samples of No-Reflexion are not fully utilized, coordinating mechanical assets with flexible resources.
+thereby reducing “sample efficiency” and degrading training Especially in the context of widespread integration of
+performance. distributed energy resources into ADNs, coordinated control of
+multiple equipment has become a critical approach for
+C. Execution Performance of Proposed and Baseline Methods
+addressing voltage challenges.
+After the LLM agent and the RL agent are fully trained and
+The test results of Pure-RL show that, even at the final stage
+converged, the system enters the online execution phase.
+of training, it still fails to discover a high-quality control policy
+During this phase, the LLM agent’s knowledge base and the RL
+and performs worse than Original in certain scenarios. This
+agent’s policy parameters are no longer updated, and Reflexion
+again validates the effectiveness of incorporating the LLM
+is disabled. Instead, day-ahead and intra-day strategies are
+agent, which can significantly improve both optimization
+generated directly. In real-world ADNs, the latest knowledge
+efficiency and solution quality on specific problems. As for No-
+base and policy parameters are stored and maintained by the
+PT and No-Reflexion, their performance is consistent with their
+ADN operator. In the day-ahead stage, the LLM agent
+training behavior, i.e., the absence of pretraining and Reflexion
+determines the scheduling of OLTC and SCs based on forecast
+process leads to performance degradation compared to
+information, whose strategies are generated within minutes.
+Proposed. These comparisons also demonstrate the
+Then during the intra-day operation, the RL agent determines
+effectiveness of the proposed pretrain-finetune pipeline and the
+the reactive power generation based on real-time measurements,
+Reflexion-based self-evolution mechanism.
+with strategy generation occurring in milliseconds, which is
+totally sufficient to meet the requirements of real-time control.
+V. CONCLUSION
+To evaluate the execution performance of the proposed and
+baseline methods, we select 25 additional episodes for each To address voltage challenges in ADNs caused by high PV
+random seed to test their converged policies, resulting in a total penetration and the inability of existing data-driven methods to
+of 75 test episodes per method. We present the tested average effectively handle heterogeneous information, semantic
+nodal voltage deviations and the nodal voltage violation rates constraints, and dynamic instructions, we propose a hybrid
+in Tables III and IV, in which the best performance is marked LLM-RL collaboration framework for two-stage voltage
+in bold. control: the LLM agent schedules OLTCs and SCs using day-
+ahead forecasts and historical records, while the RL agent
+TABLE III adjusts PV inverter reactive power based on real-time
+EXECUTION PERFORMANCE OF IEEE 33-BUS SYSTEM measurements. Building upon this framework, we further
+Voltage Deviation (p.u.) Violation Rate (%) introduce a Reflexion-based self-evolution mechanism tailored
+Method
+Mean Std. Mean Std. for the LLM agent and a pretrain-finetune pipeline designed for
+Original 2.50e-02 4.95e-03 10.7 6.06 the RL agent, enabling effective policy enhancement and
+No-LLM 1.14e-02 2.48e-03 3.65e-02 1.62e-01
+efficient coordination between these two agents. Experimental
+No-RL 1.69e-02 3.18e-03 1.21 2.79
+results show that our approach significantly outperforms
+Proposed 8.22e-03 2.08e-03 2.60e-03 1.38e-02
+Pure-RL 2.06e-02 7.09e-03 3.24 5.31 baseline methods in both voltage regulation performance and
+No-PT 1.02e-02 2.28e-03 1.26 1.53 training efficiency, demonstrating the effectiveness and
+No-Reflexion 8.60e-03 1.97e-03 6.08e-03 2.42e-02
+necessity of synergizing knowledge-driven reasoning with
+* Mean and Std. denote mean values and standard deviations across 75 episodes.
+data-driven control.
+
+--- Page 10 ---
+10
+Drawing from our research and operational experience, we [18] S. Yue, W. Chen, S. Wang et al., “DISC-LawLLM: Fine-tuning Large
+Language Models for Intelligent Legal Services,” arXiv: 2309.11325, Sep.
+found that LLMs excel at knowledge-based reasoning and
+2023.
+generation but are less capable in precise numerical [19] X. Yang et al., “Large Language Model Powered Automated Modeling and
+computation. This is also one of the key motivations for Optimization of Active Distribution Network Dispatch Problems,” IEEE
+proposing the LLM-RL collaboration framework. In future Trans. Smart Grid, early access.
+[20] A. Jena, F. Ding, J. Wang, Y. Yao and L. Xie, “LLM-Based Adaptive
+work, how to fully leverage the strengths of LLMs and achieve
+Distribution Voltage Regulation Under Frequent Topology Changes: An
+deeper integration with various domain-specific models In-Context MPC Framework,” IEEE Trans. Smart Grid, vol. 16, no. 5, pp.
+represents an important and promising research direction. 4297-4300, Sep. 2025.
+[21] F. Bernier, J. Cao, M. Cordy and S. Ghamizi, “PowerGraph-LLM: Novel
+Power Grid Graph Embedding and Optimization With Large Language
+REFERENCES Models,” IEEE Trans. Power Systems, vol. 40, no. 6, pp. 5483-5486, Nov.
+2025.
+[1] X. Su, L. Fang, J. Yang, F. Shahnia, Y. Fu and Z. Y. Dong, “Spatial-
+[22] X. Yang, C. Lin, H. Liu and W. Wu, “RL2: Reinforce Large Language
+Temporal Coordinated Volt/VAR Control for Active Distribution Systems,”
+Model to Assist Safe Reinforcement Learning for Energy Management of
+IEEE Trans. Power Systems, vol. 39, no. 6, pp. 7077-7088, Nov. 2024.
+Active Distribution Networks,” IEEE Trans. Smart Grid, vol. 16, no. 4, pp.
+[2] S. S. Al Kaabi, H. H. Zeineldin and V. Khadkikar, “Planning Active
+3419-3431, Jul. 2025.
+Distribution Networks Considering Multi-DG Configurations,” IEEE
+[23] Z. Yan and Y. Xu, “Real-Time Optimal Power Flow With Linguistic
+Trans. Power Systems, vol. 29, no. 2, pp. 785-793, Mar. 2014.
+Stipulations: Integrating GPT-Agent and Deep Reinforcement Learning,”
+[3] X. Xu, Y. Li, Z. Yan, H. Ma and M. Shahidehpour, “Hierarchical Central-
+IEEE Trans. Power Systems, vol. 39, no. 2, pp. 4747-4750, Mar. 2024.
+Local Inverter-Based Voltage Control in Distribution Networks
+[24] Y. Cao et al., “Survey on Large Language Model-Enhanced Reinforcement
+Considering Stochastic PV Power Admissible Range,” IEEE Trans. Smart
+Learning: Concept, Taxonomy, and Methods,” IEEE Trans. Neural
+Grid, vol. 14, no. 3, pp. 1868-1879, May 2023.
+Networks and Learning Systems, vol. 36, no. 6, pp. 9737-9757, Jun. 2025.
+[4] R. Yan, Q. Xing and Y. Xu, “Multi-Agent Safe Graph Reinforcement
+[25] N. Shinn, F. Cassano, A. Gopinath, K. Narasimhan, and S. Yao, “Reflexion:
+Learning for PV Inverters-Based Real-Time Decentralized Volt/Var
+Language agents with verbal reinforcement learning,” Advances in Neural
+Control in Zoned Distribution Networks,” IEEE Trans. Smart Grid, vol. 15,
+Information Processing Systems, vol. 36, 2024.
+no. 1, pp. 299-311, Jan. 2024.
+[26] A. Vaswani, N. Shazeer, N. Parmar et al., “Attention is all you need,”
+[5] L. Ge, J. Li, L. Hou and J. Lai, “Autonomous Voltage Regulation for Smart
+Advances in neural information processing systems, 2017, no. 30.
+Distribution Network With High-Proportion PVs: A Graph Meta-
+[27] Z. Xu et al., “DriveGPT4: Interpretable End-to-End Autonomous Driving
+Reinforcement Learning Approach,” IEEE Trans. Sustainable Energy, vol.
+Via Large Language Model,” IEEE Robotics and Automation Letters, vol.
+16, no. 4, pp. 2768-2781, Oct. 2025.
+9, no. 10, pp. 8186-8193, Oct. 2024.
+[6] H. Liu and W. Wu, “Two-Stage Deep Reinforcement Learning for Inverter-
+[28] L. Wen, D. Fu, X. Li et al., “DiLu: A Knowledge-Driven Approach to
+Based Volt-VAR Control in Active Distribution Networks,” IEEE Trans.
+Autonomous Driving with Large Language Models,” arXiv: 2309.16292,
+Smart Grid, vol. 12, no. 3, pp. 2037-2047, May 2021.
+Feb. 2024.
+[7] R. Wang, X. Bi and S. Bu, “Real-Time Coordination of Dynamic Network
+[29] A. Brohan, Y. Chebotar, C. Finn et al., “Do as I can, not as I say: Grounding
+Reconfiguration and Volt-VAR Control in Active Distribution Network: A
+language in robotic affordances,” in Conference on robot learning, 2023,
+Graph-Aware Deep Reinforcement Learning Approach,” IEEE Trans.
+pp. 287-318.
+Smart Grid, vol. 15, no. 3, pp. 3288-3302, May 2024.
+[30] W. Huang, F. Xia, T. Xiao et al., “Inner Monologue: Embodied Reasoning
+[8] X. Yang, H. Liu and W. Wu, “Attention-Enhanced Multi-Agent
+through Planning with Language Models,” in Conference on Robot
+Reinforcement Learning Against Observation Perturbations for Distributed
+Learning, 2023, pp. 1769-1782.
+Volt-VAR Control,” IEEE Trans. Smart Grid, vol. 15, no. 6, pp. 5761-5772,
+[31] M. Jia, Z. Cui and G. Hug, “Enhancing LLMs for Power System
+Nov. 2024.
+Simulations: A Feedback-Driven Multi-Agent Framework,” IEEE Trans.
+[9] H. Liu and W. Wu, “Online Multi-Agent Reinforcement Learning for
+Smart Grid, vol. 16, no. 6, pp. 5556-5572, Nov. 2025.
+Decentralized Inverter-Based Volt-VAR Control,” IEEE Trans. Smart
+[32] R. S. Bonadia, F. C. L. Trindade, W. Freitas and B. Venkatesh, “On the
+Grid, vol. 12, no. 4, pp. 2980-2990, Jul. 2021.
+Potential of ChatGPT to Generate Distribution Systems for Load Flow
+[10] X. Zheng, S. Yu, H. Cao, T. Shi, S. Xue and T. Ding, “Sensitivity-Based
+Studies Using OpenDSS,” IEEE Trans. Power Systems, vol. 38, no. 6, pp.
+Heterogeneous Ordered Multi-Agent Reinforcement Learning for
+5965-5968, Nov. 2023.
+Distributed Volt-Var Control in Active Distribution Network,” IEEE Trans.
+[33] S. Majumder, L. Dong, F. Doudi et al., “Exploring the capabilities and
+Smart Grid, vol. 16, no. 3, pp. 2115-2126, May 2025.
+limitations of large language models in the electric energy sector,” Joule,
+[11] C. Mu, Z. Liu, J. Yan, H. Jia and X. Zhang, “Graph Multi-Agent
+vol. 8, no. 6, pp. 1544-1549, Jun. 2024.
+Reinforcement Learning for Inverter-Based Active Voltage Control,” IEEE
+[34] K. Deng, Y. Zhou, H. Zeng, Z. Wang and Q. Guo, “Power Grid Model
+Trans. Smart Grid, vol. 15, no. 2, pp. 1399-1409, Mar. 2024.
+Generation Based on the Tool-Augmented Large Language Model,” IEEE
+[12] H. Liu, W. Wu and Y. Wang, “Bi-Level Off-Policy Reinforcement
+Trans. Power Systems, vol. 40, no. 6, pp. 5487-5490, Nov. 2025.
+Learning for Two-Timescale Volt/VAR Control in Active Distribution
+[35] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction,
+Networks,” IEEE Trans. Power Systems, vol. 38, no. 1, pp. 385-395, Jan.
+vol. 1. Cambridge, MA, USA: MIT Press, 1998.
+2023.
+[36] J. Wei, X. Wang, D. Schuurmans et al., “Chain-of-Thought Prompting
+[13] T. Zhang, L. Yu, D. Yue, C. Dou, X. Xie and G. P. Hancke, “Two-
+Elicits Reasoning in Large Language Models,” Advances in neural
+Timescale Coordinated Voltage Regulation for High Renewable-
+information processing systems, vol. 35, pp. 24824-24837, 2022.
+Penetrated Active Distribution Networks Considering Hybrid Devices,”
+[37] X. Yang et al., “Supplementary files for Two-Stage Active Distribution
+IEEE Trans. Industrial Informatics, vol. 20, no. 3, pp. 3456-3467, Mar.
+Network Voltage Control via LLM-RL Collaboration: A Hybrid
+2024.
+Knowledge-Data-Driven Approach,” Feb. 2026, [Online]. Available:
+[14] D. Cao et al., “Deep Reinforcement Learning Enabled Physical-Model-
+https://github.com/YangXuSteve/Knowledge-Data-Driven.
+Free Two-Timescale Voltage Control Method for Active Distribution
+[38] J. Schulman, F. Wolski, P. Dhariwal, A. Radford and O. Klimov, “Proximal
+Systems,” IEEE Trans. Smart Grid, vol. 13, no. 1, pp. 149-165, Jan. 2022.
+policy optimization algorithms,” arXiv:1707.06347, Aug. 2017.
+[15] J. -Y. Oh, S. Oh, G. -S. Lee, Y. T. Yoon and S. Jo, “Sequential Control of
+[39] M. E. Baran and F. F. Wu, “Network reconfiguration in distribution
+Individual Switches for Real-Time Distribution Network Reconfiguration
+systems for loss reduction and load balancing,” IEEE Trans. Power
+Using Deep Reinforcement Learning,” IEEE Trans. Smart Grid, vol. 16,
+Delivery, vol. 4, no. 2, pp. 1401–1407, Apr. 1989.
+no. 5, pp. 3666-3683, Sep. 2025.
+[40] H. M. Khodr, F. G. Olsina, P. M. De Oliveira-De Jesus, and J. M. Yusta,
+[16] Y. Nie, Y. Kong, X. Dong et al., “A Survey of Large Language Models for
+“Maximum savings approach for location and sizing of capacitors in
+Financial Applications: Progress, Prospects and Challenges,” arXiv:
+distribution systems,” Electric Power Systems Research, vol. 78, no. 7, pp.
+2406.11903, Jun. 2024.
+1192-1203, Jul. 2008.
+[17] J. Qiu, K. Lam, G. Li et al., “LLM-based agentic systems in medicine and
+healthcare,” Nature Machine Intelligence, vol. 6, no. 12, pp. 1418-1420,
+2024.

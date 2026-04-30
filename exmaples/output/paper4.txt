@@ -1,0 +1,624 @@
+--- Page 1 ---
+6396 IEEETRANSACTIONSONSMARTGRID,VOL.10,NO.6,NOVEMBER2019
+Dual-Consensus-Based Distributed Frequency
+Control for Multiple Energy Storage Systems
+Lantao Xing , Yateendra Mishra , Member, IEEE, Yu-Chu Tian , Member, IEEE,
+Gerard Ledwich , Senior Member, IEEE, Hongye Su , Senior Member, IEEE,
+Chen Peng , Senior Member, IEEE, and Minrui Fei
+Abstract—Intermittent renewable energy sources are being
+increasingly integrated into modern power networks. This leads
+to severe frequency fluctuations in the networks. Energy stor-
+age systems can be used for frequency restoration due to their
+capability to provide in-time active power compensations. This
+paperexaminesthefrequencycontrolproblemforpowersystems
+withmultipledistributedbatteryenergystoragesystems(BESSs).
+A dual-consensus-based approach is presented for distributed
+frequency control. It consists of three main components: 1) tun-
+ing of the BESS control gain; 2) design of control signals as
+inputstoBESSsforproportionaluseofthepreservedenergy;and
+3) estimation of BESS parameters for control implementation.
+A static parameter and a time-varying parameter are defined,
+and their average values are estimated through static average
+consensus (SAC) and dynamic average consensus (DAC) algo-
+rithms, respectively. Case studies are conducted to demonstrate Fig.1. Powergridwithdistributedenergystoragesystems.
+our dual-consensus control approach.
+Index Terms—Frequency control, distributed control, battery
+energy storage systems (BESSs), state-of-charge, consensus.
+responsible for maintaining the frequency stability. An impor-
+tant technique for this purpose is Primary Frequency Control
+(PFC) aiming to reduce the maximum frequency deviation.
+I. INTRODUCTION Modern power systems are undergoing transformational
+FREQUENCY regulation is crucially important for ensur- changes with the increasing integration levels of traditional
+ing quality power supply and maintaining the power centralized power generation, renewable energy sources and
+system stability. In practice, the threshold of frequency devia- energy storage systems. They tend to be distributed in nature
+tionfromitsnormalvalue is±0.2 Hzunder normaloperating with diverse energy sources and storages, as shown in Fig. 1.
+conditions. For a sudden loss of power generation of up to As renewable energy sources are crucially dependent on envi-
+1,800 MW, the maximum drop of the frequency should be ronment conditions, they are intermittent and unstable. As a
+limited to −0.8 Hz. Such a −0.8 Hz drop is required to be result,thepowersystemswithhighlevelsofrenewableenergy
+restoredtothelevelof−0.5Hzwithin60seconds[1].Intradi- sources tend to endure severe frequency fluctuations.
+tionalpowersystems,independentsystemoperators(ISOs)are Therefore, the frequency regulation becomes more impor-
+tant yet increasingly challenging in modern power systems.
+ForISOstomeetPFCrequirements,boththerequiredvolume
+Manuscript received September 16, 2018; revised December 11, 2018
+and associated cost of PFC would be significantly increased
+and January 24, 2019; accepted March 4, 2019. Date of publication
+March 11, 2019; date of current version October 30, 2019. This work was due to the limited inertia capability of, say, wind plants. For
+supportedinpartbytheAustralianResearchCouncilthroughtheDiscovery a power demand of 30 GW, the required primary frequency
+Project Scheme under Grant DP160102571 and Grant DP170103305, the
+response is around 1.5 GW in a system without wind gener-
+NationalNaturalScienceFoundationofChinaunderGrant61833011,andthe
+MinistryofEducationofChinathroughthe111ProjectSchemeunderGrant ation, but jumps up to more than 3.5 GW in a system with
+D18003.Paperno.TSG-01359-2018.(Correspondingauthor:Yu-ChuTian.) 20 GW absorbed wind generation [2].
+L. Xing, Y. Mishra, Y.-C. Tian, and G. Ledwich are with the School
+Battery Energy Storage Systems (BESSs) integrated in
+of Electrical Engineering and Computer Science, Queensland University of
+Technology,Brisbane,QLD4001,Australia(e-mail:y.tian@qut.edu.au). modern low-inertia energy systems are considered to be a
+H.SuiswiththeStateKeyLaboratoryofIndustrialControlTechnology, potentially effective solution to the improvement of frequency
+ZhejiangUniversity,Hangzhou310027,China.
+stability [3], [4]. They can provide a fast frequency regu-
+C.PengandM.FeiarewiththeShanghaiKeyLaboratoryofPowerStation
+AutomationTechnology,SchoolofMechatronicEngineeringandAutomation, lation response and share the load burden of conventional
+ShanghaiUniversity,Shanghai200072,China. power generation units. With integration of electric vehicles,
+Color versions of one or more of the figures in this paper are available
+the volume and cost of PFC can be significantly reduced [2].
+onlineathttp://ieeexplore.ieee.org.
+DigitalObjectIdentifier10.1109/TSG.2019.2904075 A few ISOs, such as Pennsylvania New Jersey Maryland
+1949-3053(cid:2)c 2019IEEE.Personaluseispermitted,butrepublication/redistributionrequiresIEEEpermission.
+Seehttp://www.ieee.org/publications_standards/publications/rights/index.htmlformoreinformation.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 2 ---
+XINGetal.:DUAL-CONSENSUS-BASEDDISTRIBUTEDFREQUENCYCONTROLFORMULTIPLEENERGYSTORAGESYSTEMS 6397
+ISO (PJM), New York ISO (NYISO), Midwest ISO (MISO), shouldbecontrolledwiththeconsiderationofallotherBESSs.
+ERCOT and California ISO (CAISO), have tried to adopt the Thus, our work in this paper proposes an operating model for
+proportionalautomaticgenerationcontrol(AGC)participation multiple BESSs to work collaboratively in frequency regula-
+strategy,whichdividestheAGCburdenequallyamongenergy tion. BESS owners reach an agreement with the grid operator
+storage sources on a per-MW basis [5]. The management of onhowtousetheenergyoftheirBESSs:eachBESSreserves
+short-term energy resources and dynamic calculation of AGC a certain (same or different) percentage of its capacity to the
+signals are investigated for frequency regulation enhancement gridoperatorforfrequencyregulation.Forexample,theowner
+in [6] and [7]. of the i-th BESS agrees to reserve 10% of the BESS capac-
+Typically, there are two main approaches for BESS deploy- ity to the grid operator, requiring that the BESS guarantee its
+ment: centralized bulk BESSs with large storage capacity in SoC to stay in the range [SoC min,i +10%,SoC max,i −10%].
+a few facilities, and distributed BESSs with flexible storage Then,theoperatorcandischargeorchargetheBESSbyupto
+capacity in a large number of facilities. The bulk BESSs have 10% of the BESS’ capacity whenever frequency regulation is
+been widely studied for maintaining the power frequency sta- needed.Duringfrequencyregulation,allBESSsarechargedor
+bility. Typical scenarios include power quality enhancement discharged in proportion to their respective preserved percent-
+andcongestionrelief[8],penetrationratesandsizingconfigu- ages of capacity. The proportional BESS operation ensures no
+ration [9]. Recently, distributed BESSs are being increasingly BESSwillrunoutofenergyorbefullychargedaheadofoth-
+integrated into the power grid. This is due to the follow- ers, thus always maintaining the maximum possible capacity
+ing main reasons: (1) Distributed BESSs are more efficient for frequency regulation from all BESSs.
+than the bulk BESSs as the energy can be stored or con- To ensure our proposed proportional operation of BESSs,
+sumed locally rather than transmitted to a remote destination; thispaperfurtherdesignsadistributedBESScontrolapproach
+(2) More and more companies are offering BESSs services. for frequency regulation. The contributions of this paper
+In 2016, about 37 companies placed bids for the tender of mainly lie in the following two aspects:
+enhanced frequency response proposed by the U.K. National • A dual-consensus-based distributed control of multiple
+Grid; and (3) More and more residential consumers are BESSs is designed for frequency regulation. It not only
+installing batteries combining with solar panels. improves the frequency response, but also ensures the
+Therefore, distributed BESSs are expected to play a signifi- proportional use of the preserved capacity of all BESSs
+cant role in improving the power grid performance efficiently regardless of their parameter differences.
+and economically. In [10], an BESS coordination strategy is • A static BESS parameter and a time-varying SoC param-
+proposed with two operational phases to maximize the profits eter, whose average values are respectively estimated by
+of integrating BESSs into the ancillary market for frequency usingSAC[19]andDAC[20],aredefinedforeachBESS
+support. In [11], comprehensive comparisons of four algo- to enable an actual implementation of our distributed
+rithms are conducted for small-scale distributed BESSs in frequency control.
+centralized, decentralized and distributed systems. In [12], the The rest of this paper is organized as follows: Section II
+operating and economic benefits of centrally managed BESSs presents the formulation of the problem. Then, Section III
+is investigated in an islanded grid. Moreover, a strategy is presents a control strategy with global information. Our dual-
+proposed in [13] which enables BESSs to generate additional consensus- based distributed frequency control is presented in
+revenues from ancillary services such as triad avoidance. Section IV. Case studies are undertaken in Section V. Finally,
+Recently, decentralized droop control is presented to regu- Section VI concludes the paper.
+latefrequencyresponsewhilemaintainingtheState-of-Charge
+(SoC) of each BESS at a desired level for future grid sup-
+II. PROBLEMFORMULATION
+port [14]. The SoC balance issue is addressed in [15] by
+proper energy sharing through adjusting charging and dis- Fig. 2 shows the architecture of our distributed BESS con-
+chargingrates.In[16],adecentralizedcontrolapproachbased trolforfrequencyregulationinanisolatedpowersystemwitha
+on droop control is proposed to achieve SoC balance in an reheatthermalgeneratorandNdistributedBESSs.Allparame-
+autonomousmicrogrid.Theworkin[17]considersdistributed tersinFig.2arelistedinTableI.Thelowerpartofthefigureis
+control for package-level SoC balance. An SoC-based adap- aconventionalgeneratorcontrolloop.Asin[4],[21],and[22],
+tive droop control is reported in [18] to ensure SoC balance an equivalent model is used to describe the isolated power
+with an adjustable convergence speed. While SoC balance is system, and a proportional-integral (PI) controller is used to
+important, it may not be always appropriate in frequency reg- control the generator.
+ulation.TheBESSsownedbyindividualshavetheirowntasks TheupperpartofFig.2representsN distributedBESSsand
+that may lead to big differences in the SoC values among the our control system for all these BESSs in the power system.
+BESSs. In this case, it is infeasible to force the SoC values As in [9] and [23], the input or output power of a BESS, P Bi ,
+of all BESSs to converge to the same value during frequency can be described by a first-order model as
+regulation.
+K
+TomaximizethebenefitsofdistributedBESSsforfrequency P Bi = 1+ i Ts u i , i=1,...,N (1)
+support, it is important for all BESSs to work cooperatively. i
+However, regardless of the above-discussed progress, it is where i means the i-th BESS, K stands for control gain, T is
+i i
+still not well-understood how the SoC status of each BESS time constant, and u is the control signal to the BESS.
+i
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 3 ---
+6398 IEEETRANSACTIONSONSMARTGRID,VOL.10,NO.6,NOVEMBER2019
+TABLEI
+NOTATIONSANDSYMBOLS
+Fig.3. ThePBi −(cid:2)f characteristicofBESScontrol.
+controller and parameter estimation will be presented in later
+sections.
+In this paper, 1 denotes a row vector with all N ele-
+N
+ments being 1. I denotes an N×N identity matrix. All other
+N
+notations used in this paper are listed in Table I.
+A. The Philosophy of BESS Controller Design
+When power generation and load do not match, the
+frequency f will deviate from its reference fref, leading to
+frequency deviation (cid:2)f = fref − f. In practice, BESSs are
+expected to act in one of the following three modes to
+contribute to frequency regulation:
+1) If (cid:2)f > (cid:2)f + , then P > 0; the BESSs work in
+min Bi
+discharging mode to inject power to the grid;
+2) If (cid:2)f − ≤ (cid:2)f ≤ (cid:2)f + (dead zone), then P = 0; all
+min min Bi
+BESSs do nothing in this dead zone; and
+3) If (cid:2)f < (cid:2)f − , then P < 0; the BESSs work in
+min Bi
+chargingmodetoabsorbexcessivepowerfromthegrid.
+Thus, a general design of BESS controller is to have the
+controller output proportional to a function of (cid:2)f, i.e.,
+u =F(System and BESS parameters)·g((cid:2)f), (2)
+i ⎧i (cid:5) (cid:6)
+⎨0, (cid:2)f ∈ (cid:2)f − ,(cid:2)f +
+min min
+g((cid:2)f)= (cid:2)f −(cid:2)f + , (cid:2)f >(cid:2)f + (3)
+⎩ min min
+(cid:2)f −(cid:2)f − , (cid:2)f <(cid:2)f −
+min min
+whereF(·)isafunctionofsystemandBESSparameters.Itis
+i
+seen from Fig. 2 and Eqs. (2) and (3), for i=1,...,N, after
+K is determined, we need to design F(·) and also estimate
+i i
+systemandBESSparametersinF(·)forfrequencyregulation.
+i
+If there is no SoC constraint, we may simply set F(·)=1.
+i
+B. Criterion to Set the Gain K
+i
+ItisseenfromFig.2andEqs.(1)to(3)thatforafrequency
+deviation (cid:2)f, the corresponding power provided or absorbed
+by the BESSs is dependent on the gain K, ∀i ∈ {1,...,N}.
+i
+However, choosing K is non-trivial. In the discharging mode,
+Fig.2. AnisolatedpowersystemwithmultipleBESSs. i
+the bigger the value of K, the more power the i-th BESS
+i
+will supply. However, this is subject to a physical constraint
+of the maximum output power rate. A bigger K forces the
+i
+AsshownFig.2,ourtasksinclude:1)totuneBESScontrol BESS to work with a faster output power rate, accelerating
+gain K; 2) to design BESS controller with output signal u as the degradation of the BESS. On the other hand, if K is too
+i i i
+input to the i-th BESS; and 3) to define BESS parameters and small, the benefits of adding the BESSs for better frequency
+their estimation for implementation of the BESS controller. regulation are diminished.
+This section will discuss the philosophy in our BESS con- This section presents a method to set the gain K based
+i
+troller design as well as the criterion of tuning K. The BESS on a P − (cid:2)f characteristic [24], [25], which is shown in
+i Bi
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 4 ---
+XINGetal.:DUAL-CONSENSUS-BASEDDISTRIBUTEDFREQUENCYCONTROLFORMULTIPLEENERGYSTORAGESYSTEMS 6399
+Fig. 3. In Fig. 3, pd and pc are the desired power rates of the III. FREQUENCYCONTROLWITHGLOBALINFORMATION
+i i
+i-th BESS when (cid:2)f hits its positive and negative thresholds,
+In this section, the control design for Eq. (2) is discussed
+respectively. Meanwhile, pd and pc denote the biggest
+max,i max,i when all BESS information are available globally. This will
+power rates of the i-th BESS in the discharging and charging
+facilitate our development later for distributed BESS control
+modes,respectively.Then,fromFig.3,K inEq.(1)istunedas
+i withoutglobalBESSinformation.Ourdiscussionsinthissec-
+⎧
+⎨ Kd = pd i , in discharging mode tion are for the discharging mode only. They can be easily
+K i = ⎩ K i c = (cid:2)fm + ax p − c i (cid:2)f m + in , in charging mode. (4) ext F e o n r de d d isc to ha t r h g e in c g h , a i r t gi f n o g llo m w o s d f e r . om (1), (6) and (7) that
+i (cid:2)fm −
+ax
+−(cid:2)f
+m
+−
+in
+βu Kd
+τ˙d = i i , β (cid:2) i , i=1,...,N (8)
+C. State-of-Charge (SoC) Estimation i 1+T i s i S ¯ i Q i V Bi
+LetS i (t)betheSoCofthei-thBESSattimet,S i (0)bethe where β is a lumped parameter for the i-th BESS. Since the
+i
+initial SoC value. Also, let Q i and I Bi be the BEES capacity values of β are different in general, the values of τd(t) tend
+andoutputcurrent,respectively.S i (t)isestimatedbyusingthe to diverge e i ven if the values of τd(0) are initially i the same
+i
+basic Coulomb counting method [18], [26] as for all BESSs. Thus, F(·) in Eq. (2) is designed.
+(cid:7) i
+S i (t)=S i (0)− 1 I Bi dt, i=1,...,N (5) we F d o e r s i ig = n a 1, B . E .. S , S N c , o t n o tr m ol ee in t t E h q e . τ ( i 2 d ) c a o s nvergence constraints,
+Q
+i (cid:9) (cid:10)
+Differentiatingboth sidesof (5)yieldsS ˙ i (t)=−I Bi /Q i .Let u i =g i (β i ,β mean )·f i τ i d,τ m d ean ·g((cid:2)f), (9)
+V Bi denote the output voltage of battery i. Then, the power β (cid:9) (cid:10) 1−τd
+output P of the i-th BESS is obtained as P = V I . As g(β,β )= mean,f τd,τd = i , (10)
+Bi Bi Bi Bi i i mean β i i mean τd
+in [18] and [26], the output voltage of each battery can be i mean
+(cid:11)N (cid:9) (cid:10) (cid:11)N
+assumed to remain constant for a large range of SoC. Thus, 1 1
+τd = 1−τd , β = β, (11)
+it has mean N i mean N i
+i=1 i=1
+S ˙ i (t)=− P Bi , i=1,...,N. (6) where Eq. (11) requires the global information of τd and β
+Q i V Bi i i
+for all i=1,...,N, and g((cid:2)f) is given in Eq. (3).
+Now, let us validate that all values of τd for i = 1,...,N
+D. Control Objective and Constraints i
+converge to the same value under our control given in
+As discussed previously, for i = 1,...,N, the ith BESS
+allocates S ¯ i ∈ (0,1) of its capacity for frequency regula- Eqs. (9) to (11). Com (cid:12) bining ( (cid:13) 8) to (10) yields
+tion. While S ¯
+i
+can be different from one BESS to another,
+τ˙d =
+β
+mean
+1−τ
+i
+d
+g((cid:2)f),i=1,...,N (12)
+the reserved capacity of each BESS is utilized proportionally i τd (1+Ts)
+mean i
+when frequency regulation starts. Define
+(cid:8) From the definition of τd, the changing rate of τd is deter-
+τ i = τ τ i i d c = = S S i i ( ( t 0 ) ) − S S ¯ ¯ − i i S S i ( i ( 0 t ) ) − − ε ε , , i i n n c d h is a c r h g a in rg g in m g o m de ode (7) c T m h i a n c n e a g d n es b b y e m n t u h e c e g h l c e h f c a a t s e n t d g er i i n n t g h d a r e n a t t e e i i r t m s of i S n S o in i C . g A d th o s e e t s h c , e h t a h B n e E g e S in f S f g e o c r t u a s t t i e p o u f o t f T p τ i o d w a . n e I d r t
+j i
+where ε > 0 is a constant to avoid τ = 1 when the reserved follows from (12) that for i,j=1,...,N,
+energy runs out. In practice, ε should be very small and is set
+as 10 −4 in this paper. Thus, τ i d and τ i c respectively represent τ˙ i d = 1−τ i d · 1+T j s ≈ 1−τ i d (13)
+the percentages of the reserved energy already consumed in τ˙ j d 1−τ j d 1+T i s 1−τ j d
+discharging and charging modes.
+We have the following theoretical result in Theorem 1.
+Corresponding to Components 2 and 3 in the upper part of
+Theorem 1: In the discharging mode, for the i-th and j-th
+Fig. 2, the objective of this paper is to design a distributed
+BESSs (i,j=1,...,N) with the controller (9) to (11), if the
+BESS control approach in Eq. (2) for frequency regulation.
+initial values of τd(0) and τd(0) are the same, then τd(t) and
+This is subject to the following two constraints, which char- i j i
+τd(t) will remain the same (i.e., the preserved energy will be
+acterize the proportional use of the preserved percentages of j
+the capacity of all BESSs:
+consumedproportionally);otherwiseτd(t)andτd(t)willcon-
+i j
+1) If the values of τd(0) (or τc(0)) for i = 1,...,N vergeandeventuallyreach1(i.e.,thereservedenergywillrun
+i i
+are the same, then τd(t) (or τc(t)) should be kept out) at the same time.
+i i
+the same, implying proportional consumption of the Proof: Let z=τd−τd and V = 1z2. From Eq. (13)
+i j 2
+reserved energy across all BESSs; and
+2) If the values of τ i d(0) (or τ i c(0)) for i = 1,...,N are V ˙ = 1−τ i d τ˙d−τ˙d =− τ˙ j d z2 (14)
+different, then τd(t) (or τc(t)) should converge pro- 1−τd j j 1−τd
+i i j j
+portionally and eventually reach 1 at approximately
+the same time, indicating that the reserved amounts of As τ˙ j d >0 and ε <1−τ j d <1+ε, we have V ˙ ≤0. Thus, if
+energyacrossallBESSsrunoutataboutthesametime. τd(0)=τd, z(t)≡0, i.e., τd(t) and τd(t) remain the same.
+i j i j
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 5 ---
+6400 IEEETRANSACTIONSONSMARTGRID,VOL.10,NO.6,NOVEMBER2019
+If τd(0)(cid:8)=τd(0), it is obtained from V ˙ =0 that τd(t) and Proof: The proof is similar to the proof of [19, Th. 5] and
+i j i
+τd(t) will converge towards the same value. Moreover, define thus is omitted here.
+z j = 1−τ i d . z will remain constant because Remark 4: β mean is a constant. Thus, when βˆ i converges to
+1 1−τ
+j
+d 1
+(cid:9) (cid:10) (cid:12) (cid:13)
+β
+mean
+with a satisfactory error, Eq. (18) can stop running.
+−τ˙
+i
+d 1−τ
+j
+d + 1−τ
+i
+d τ˙
+j
+d
+C. DAC for τˆd in Each BESS
+z˙ = (cid:9) (cid:10) =0 (15) i
+1 1−τ
+j
+d 2 To estim
+(cid:8)
+ate time-varying τ mean , we design τˆ i as
+τˆ =υ +1−τd, i=1,...,N,i(cid:8)=j
+As a result, 1−τd and 1−τd will hit zero at the same time, i i (cid:14)i (cid:12) (cid:13) (19)
+i j υ˙ =−γυ + a τˆ −τˆ
+implying that τd and τd will reach 1 at the same time. i i j∈Ni ij j i
+i j
+Remark 1: The control structure (9) has three parts each where υ is an internal state, and γ >0 is a constant.
+i
+w pe i n th sa i t t e s f o o w r n th f e un e c f t f i e o c n t s s . c T a h u e se fi d rs b t y pa d r i t ff g e i r ( e β n i t ,β B m E e S an S ) p is ar t a o m c e o te m rs - Fro D m efi ( n 7 e ), τ τ ˆ d = m [ u τˆ s 1 t , b .. e . b , o τˆ u N n ]T de a d n . d M (cid:8) ore = ov [ e 1 r, − as τ 1 d τ˙ , d . = .., − 1 S ˙ − /S ¯ τ N d , ] τ˙ T d .
+β i . It is seen from (12) that with this term, the dynamics of isbounded. i Itisconcludedthat||γ(cid:8)+(cid:8)˙||≤γ| i |(cid:8)||+||(cid:8)˙ i || i ≤μ i
+τ i d isdecoupledfromβ i .Thesecondpartf i (τ i d,τ m d ean )aimsto where μ is a bounded constant. Define tracking error vector
+ensure the convergence property of τd. This is shown in (13)
+and the proof of Theorem 1. The third i part g((cid:2)f) responds to e=τˆ −1 N 1T N (cid:8)/N =τˆ −1 N τ m d ean (20)
+(cid:2)f by following the P Bi −(cid:2)f characteristic shown in Fig. 3. Then, we have the following Lemma:
+Remark 2: The control in (9) to (11) requires the global Lemma 2: If the parameters are chosen as γ > 0, (cid:9) >
+information of τ i d and β i (i = 1,...,N). While such global 0, L+LT ≥ 2(cid:9)(cid:10), and (cid:10) = I N −1 N 1T N /N, then the DAC
+information may be accessible in small-scale systems, it is algorithm(19)guaranteesthat||e||willexponentiallyconverge
+generally unavailable in large-scale systems with a large- totheset(cid:11) ={e|||e||≤ μ }whichcanbemadearbitrarily
+e γ+(cid:9)
+number of geographically distributed BESSs, causing difficul- small.
+ties in implementation of the control strategy. This motivates Proof: From [20, Th. 4], it can be obtained that
+our work in this paper on distributed BESS control.
+1
+||e(t)||≤ √ |1Tυ(t )|e −γ(t−t0 )
+N 0
+N
+IV. DUAL-CONSENSUS-BASEDDISTRIBUTEDCONTROL
+A. Distributed Controller + |(cid:10)τˆ(t 0 )|e −1 2 (γ+(cid:9))(t−t0 )+μ/(γ +(cid:9)) (21)
+Toalleviatetherequirementofglobalinformationincontrol Therefore, ||e|| will exponentially converge to (cid:11) . As μ is
+e
+implementation, a distributed control approach is presented: bounded, by setting a big (cid:9), which indicates big a to make
+ij
+(cid:9) (cid:10) (cid:9) (cid:10) L+LT ≥2(cid:9)(cid:10) hold, (cid:11) can be made arbitrarily small.
+u =g β,βˆ ·f τd,τˆ ·g((cid:2)f), (16) e
+i i i i i i i
+(cid:9) (cid:10) (cid:9) (cid:10) (cid:9) (cid:10)
+g β,βˆ =βˆ/β, f τd,τˆ = 1−τd /τˆ, (17) D. Analysis of Control Performance
+i i i i i i i i i i
+Eqs. (16)-(19) form our dual-consensus-based distributed
+where g((cid:2)f) is given in Eq. (3), τˆ i and βˆ i are the estimation frequency controller. We have the following theoretical result:
+of τ m d ean and β mean , respectively. Thus, how to design τˆ i and Theorem 2: With the distributed control approach
+βˆ
+i on each BESS from its own and neighbouring information (16)-(19), the results in Theorem 1 still hold.
+becomes critical. For distributed BESSs, their communication Proof: From (8), (16) and (17), it is obtained that
+graph is assumed to be connected and undirected. If the i-th τ˙d 1−τd τˆ βˆ
+and j-th BESSs are directly connected neighbours, we define i = i j i, i,j=1,...,N (22)
+a positive adjacency element a ij >0; otherwise, set a ij =0. τ˙ j d 1−τ j d τˆ i βˆ j
+By noticing that β mean is a constant while τ m d ean is time As both τˆ and βˆ converge much faster than τd, we have
+varying, a dual-consensus approach is developed to estimate i (cid:9) i (cid:10) (cid:9) (cid:10) i
+them separately. Specifically, βˆ i as an estimation of β mean is τ˙d/τ˙d ≈ 1−τd / 1−τd , i,j=1,...,N (23)
+obtained by employing SAC [19]. In comparison, τˆ as an i j i j
+i
+estimation of τd is derived by using DAC [20]. Both SAC Thus, Theorem 2 can be proved by following the analysis in
+mean
+and DAC are designed below in details. the proof of Theorem 1.
+B. SAC for
+βˆ
+i
+in Each BESS V. CASESTUDIES
+To estimate β , we design βˆ as To demonstrate our dual-consensus-based distributed con-
+mean i
+(cid:11) (cid:9) (cid:10)
+β ˙ˆ = a βˆ −βˆ , βˆ(0)=β, i=1,...,N (18) trol approach, two case studies are conducted. The first one
+i ij j i i i considers the case where the generator has sufficient genera-
+j∈Ni
+tion capability for load disturbances. In this case, the BESSs
+We have the following Lemma: help in improving the frequency response while meeting the
+Lemma 1: The DAC algorithm (18) guarantees that
+βˆ,i=
+proportional use constraint. The second case study investi-
+i
+1,...,N, will globally and exponentially converge to β . gatesascenariowherethegeneratorhasinsufficientgeneration
+mean
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 6 ---
+XINGetal.:DUAL-CONSENSUS-BASEDDISTRIBUTEDFREQUENCYCONTROLFORMULTIPLEENERGYSTORAGESYSTEMS 6401
+Fig.4. BESSscommunicationgraph.
+TABLEII
+BESSPARAMETERSANDOTHERSYSTEMPARAMETERS
+Fig.5. Casestudy1-performanceofτ i.
+Fig.6. Casestudy1-frequencyandpowergenerationchange.
+capability. Thus, the BESSs are required to work for a longer
+timeformaintainingthefrequencystability.Inbothcasestud-
+ies,ourdual-consensuscontrolapproachiscomparedwithtwo
+recent and relevant methods [13], [24] in which the P −(cid:2)f
+Bi
+characteristic is also adopted.
+In our case studies, 10 distributed BESSs with the commu-
+nication graph shown in Fig. 4 are integrated into an isolated
+power system. Their parameters and other system parameters
+arelistedinTableII.Thecontrolperiodissetas1/60s,which
+is the sampling rate of phasor measurement units (PMUs) in Fig.7. Casestudy1-performanceofSACandDAC.
+thecurrentindustrypractice.Whilewehaveusedperiodiccon-
+trol in our case studies to demonstrate the advantages of our
+approach, event-triggered control [27] can also be employed
+incontrolimplementationtoreducethecommunicationtraffic.
+Similar to [9], (cid:2)f + = −(cid:2)f − = 0.02Hz and (cid:2)f + =
+min min max
+−(cid:2)f − = 0.2 Hz are set. The BESSs are allowed to work
+max
+in the range [10%,90%], and the initial SoC values for the
+10 BESSs are respectively set as 65%, 60%, 58%, 50%, 70%,
+62%,49%,53%,68%and75%.ForeachBESS,themaximum
+allowed rate of power injection into the grid is 0.002 pu.
+Fig.8. Casestudy1-BESSoutput.
+A. Case Study 1: Sufficient Generation Capability
+In this case study, it is assumed that S ¯ = 1% for i =
+i
+1,2,3,4, S ¯ = 1.5% for i = 5,6,7,8, and S ¯ = 2% for i = over the time for the method without our proposed approach,
+i i
+9,10. The power system undergoes three stages: indicating the risk of reduced capacity from the BESSs for
+Stage 1: 0-10 s, The system operates in the steady state; frequency regulation.
+Stage 2: At 10 s, a 0.02pu load is taken off from the grid; In Fig. 6, without BESSs for frequency regulation, for a
+Stage 3: At 80 s, a 0.03pu load is added to the grid. 0.03puloadchangeat80s,(cid:2)f willreach−0.25Hz,violating
+TheadvantageofourdistributedBESScontrolapproachfor the normal operating condition. In comparison, with the help
+frequencyregulationisshowninFig.5–8.AsshowninFig.5, of BESSs for frequency regulation, (cid:2)f can be compressed to
+thevaluesofτ forallBESSswithourapproachremainalmost within −0.2 Hz. As shown in Fig. 6, our proposed approach
+i
+the same, implying perfect proportional use of the preserved can guarantee the frequency response similarly well with the
+BESScapacityamongallBESSs.ThisimpliesthattheBESSs methodwithoutourdistributedcontrolapproach.Fig.7shows
+alwaysmaintainthemaximumpossiblecapacityforfrequency the performance of SAC and DAC, while Fig. 8 compares the
+regulation.Incomparison,thevaluesofτ ofallBESSsdiverge BESS output with and without our proposed approach.
+i
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 7 ---
+6402 IEEETRANSACTIONSONSMARTGRID,VOL.10,NO.6,NOVEMBER2019
+shows that the addition of the 0.02 pu load causes (cid:2)f to go
+beyond −0.2 Hz. With the help of BESSs, both methods with
+andwithoutourcontrolapproachareabletobring(cid:2)f backto
+within−0.2Hz.However,thepeakvalueof(cid:2)f iscompressed
+byusingourapproachincomparisonwiththemethodwithout
+using our approach.
+It is also observed from Fig. 10 that our approach main-
+tains the (cid:2)f within −0.2 Hz for over 250 s. In comparison,
+the method without using our approach fails to do so shortly
+Fig.9. Casestudy2-performanceofτ i. afterabout170s,fromwhich(cid:2)f driftsawayquicklytoabout
+−0.3 Hz, significantly violating the normal operating condi-
+tion. This highlights the advantage of our distributed BESS
+control approach.
+VI. CONCLUSION
+A dual-consensus-based distributed control approach has
+beenpresentedforfrequencyregulationinpowersystemswith
+distributed BESSs. It consists of three main components in
+our design for BESS control gain, distributed BESS control
+strategy, and BESS parameter estimation, respectively. In the
+Fig.10. Casestudy2-frequencyandpowergenerationchange.
+BESS parameter estimation, a static parameter and a time-
+varyingparameterhavebeendefinedtoenableimplementation
+of our control strategy. Their average values are obtained
+by employing SAC and DAC, forming our dual-consensus
+approach. Case studies have been conducted to demonstrate
+the advantage of our approach. Future work includes inves-
+tigating the effects of non-ideal communication links on the
+control performance, and merging other BESS functions such
+as energy arbitrage and reserve into distributed frequency
+control.
+Fig.11. Casestudy2-BESSoutput.
+REFERENCES
+B. Case Study 2: Insufficient Generation Capability [1] NationalElectricityTransmissionSystemSecurityandQualityofSupply
+StandardVersion2.3,Nat.GridESO,Warwick,U.K.,Feb.2017.
+A 0.02 pu load is added to the grid, while the genera- [2] F. Teng et al., “Challenges of primary frequency control and benefits
+tor can only generate 0.01 pu additional power, indicating a of primary frequency response support from electric vehicles,” Energy
+Procedia,vol.88,pp.985–990,Jun.2016.
+gap of 0.01 pu. In addition, a generation rate constraint of
+[3] P.Mercier,R.Cherkaoui,andA.Oudalov,“Optimizingabatteryenergy
+3%/min(i.e.,0.0005pu/s)[21]isimposedtopowergeneration
+storage system for frequency control application in an isolated power
+to ensure the safe operation of power generation equipment. system,” IEEE Trans. Power Syst., vol. 24, no. 3, pp.1469–1477,
+Aug.2009.
+The 10 BESSs are divided into two groups, and the allocated
+energyisS ¯ i =5%forthefirstfiveBESSswhileS ¯ i =10%for [4] S fr . eq Z ue h n a c n y g, co Y n . tro M ll i e s r hr f a o , r a w n i d nd M fa . rm S s ha a h u id g e m h e p n o t u e r d , w “F it u h zz e y n - e lo rg g y ic st b o a ra se g d e
+the other BESSs. The initial τd values of the 10 BESSs are systems,” IEEE Trans. Power Syst., vol. 31, no. 2, pp.1595–1603,
+i
+Mar.2016.
+set as 10%, 5%, 15%, 0%, 6%, 0%, 2%, 20%, 18%, and 3%,
+[5] M.L.LazarewiczandT.M.Ryan,“Integrationofflywheel-basedenergy
+respectively. The simulation results are shown in Figs. 9–11.
+storageforfrequencyregulationinderegulatedmarkets,”inProc.IEEE
+AsshowninFig.9,thevaluesofτ forallBESSsconverge PowerEnergySoc.Gen.Meeting,2010,pp.1–6.
+i
+whenourapproachisemployedbutdivergewhenourapproach [6] Y. Chen, M. Keyser, M. H. Tackett, and X. Ma, “Incorporating short-
+term stored energy resource into Midwest ISO energy and ancillary
+is not used. The divergence of the values of τ for all BESSs
+i servicemarket,”IEEETrans.PowerSyst.,vol.26,no.2,pp.829–838,
+meanssomeBESSswillbeexhaustedmuchearlierthanothers. May2011.
+ThisisverifiedbytheBESSpoweroutputshowninFig.11.It [7] Y.Cheng,M.Tabrizi,M.Sahni,A.Povedano,andD.Nichols,“Dynamic
+availableAGCbasedapproachforenhancingutilityscaleenergystorage
+is seen from Fig. 11 that our approach maintains proportional
+performance,” IEEE Trans. Smart Grid, vol. 5, no. 2, pp.1070–1078,
+poweroutputsamongallBESSsforover250s.Incomparison, Mar.2014.
+withoutourapproach,someBESSsareexhaustedmuchearlier [8] C. A. Hill, M. C. Such, D. Chen, J. Gonzalez, and W. M. Grady,
+“Battery energy storage for enabling integration of distributed solar
+than others after about 120 s.
+powergeneration,”IEEETrans.SmartGrid,vol.3,no.2,pp.850–857,
+TheproportionaluseofthepreservedcapacityofallBESSs Jun.2012.
+by our proposed approach always maintains the maximum [9] S. Chen, T. Zhang, H. B. Gooi, R. D. Masiello, and W. Katzenstein,
+“Penetration rate and effectiveness studies of aggregated bess for
+possible capacity from all BESSs for frequency regulation,
+frequency regulation,” IEEE Trans. Smart Grid, vol. 7, no. 1,
+and consequently serves frequency regulation longer. Fig. 10 pp.167–177,Jan.2016.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 8 ---
+XINGetal.:DUAL-CONSENSUS-BASEDDISTRIBUTEDFREQUENCYCONTROLFORMULTIPLEENERGYSTORAGESYSTEMS 6403
+[10] D. Zhu and Y.-J. A. Zhang, “Optimal coordinated control of multiple YateendraMishra(S’06–M’09)receivedthePh.D.
+batteryenergystoragesystemsforprimaryfrequencyregulation,”IEEE degreeinelectricalengineeringfromtheUniversity
+Trans.PowerSyst.,vol.34,no.1,pp.555–565,Jan.2019. of Queensland, Brisbane, QLD, Australia, in 2009.
+[11] K. Worthmann, C. M. Kellett, P. Braun, L. Grüne, and S. R. Weller, HeiscurrentlyaSeniorLecturerandanAdvanced
+“Distributed and decentralized control of residential energy systems QLDResearchFellowwiththeSchoolofElectrical
+incorporating battery storage,” IEEE Trans. Smart Grid, vol. 6, no. 4, Engineering and Computer Science, Queensland
+pp.1914–1923,Jul.2015. University of Technology, Brisbane. His research
+[12] G.N.Psarros,E.G.Karamanou,andS.A.Papathanassiou,“Feasibility interests include distributed generation and dis-
+analysisofcentralizedstoragefacilitiesinisolatedgrids,”IEEETrans. tributed energy storage, and power system stability
+Sustain.Energy,vol.9,no.4,pp.1822–1832,Oct.2018. andcontrolandtheirapplicationsinsmartgrid.
+[13] B.M.Gundogdu,S.Nejad,D.T.Gladwin,M.Foster,andD.A.Stone,
+“A battery energy management strategy for U.K. enhanced frequency
+response and triad avoidance,” IEEE Trans. Ind. Electron., vol. 65,
+no.12,pp.9509–9517,Dec.2018. Yu-ChuTian(M’00)receivedthefirstPh.D.degree
+[14] J. W. Shim, G. Verbicˇ, K. An, J. H. Lee, and K. Hur, “Decentralized in industrial automation from Zhejiang University,
+operation of multiple energy storage systems: SOC management for Hangzhou, China, in 1993 and the second Ph.D.
+frequency regulation,” in Proc. IEEE Int. Conf. Power Syst. Technol. degree in computer and software engineering from
+(POWERCON),2016,pp.1–5. the University of Sydney, Sydney, NSW, Australia,
+[15] W. Huang and J. A. A. Qahouq, “Energy sharing control scheme for in 2009. He is currently a Professor of computer
+state-of-chargebalancingofdistributedbatteryenergystoragesystem,” science with the School of Electrical Engineering
+IEEETrans.Ind.Electron.,vol.62,no.5,pp.2764–2776,May2015. and Computer Science, Queensland University of
+[16] X.Lu,K.Sun,J.M.Guerrero,J.C.Vasquez,andL.Huang,“Double- Technology,Brisbane,QLD,Australia.Hisresearch
+quadrant state-of-charge-based droop control method for distributed interests include big data computing, distributed
+energy storage systems in autonomous DC microgrids,” IEEE Trans. computing, cloud computing, computer networks,
+SmartGrid,vol.6,no.1,pp.147–157,Jan.2015. andcontrolsystems.
+[17] H.CaiandG.Hu,“Distributedcontrolschemeforpackage-levelstate-
+of-charge balancing of grid-connected battery energy storage system,”
+IEEETrans.Ind.Informat.,vol.12,no.5,pp.1919–1929,Oct.2016.
+[18] X. Lu, K. Sun, J. M. Guerrero, J. C. Vasquez, and L. Huang, “State-
+GerardLedwich(SM’89)receivedthePh.D.degree
+of-charge balance using adaptive droop control for distributed energy
+in electrical engineering from the University of
+storage systems in DC microgrid applications,” IEEE Trans. Ind.
+Newcastle, Newcastle, Australia, in 1976. He is
+Electron.,vol.61,no.6,pp.2804–2815,Jun.2014.
+the Chair Professor of electrical asset manage-
+[19] R.Olfati-SaberandR.M.Murray,“Consensusproblemsinnetworksof
+ment with the School of Electrical Engineering
+agents with switching topology and time-delays,” IEEE Trans. Autom.
+and Computer Science, Queensland University of
+Control,vol.49,no.9,pp.1520–1533,Sep.2004.
+Technology,Brisbane,QLD,Australia.Hisresearch
+[20] R.A.Freeman,P.Yang,andK.M.Lynch,“Stabilityandconvergence
+interests are in the areas of power systems, power
+propertiesofdynamicaverageconsensusestimators,”inProc.45thIEEE
+electronics,andwideareacontrolofsmartgrid.
+Conf.Decis.Control(CDC),2006,pp.338–343.
+[21] S.K.AdityaandD.Das,“Applicationofbatteryenergystoragesystem
+to load frequency control of an isolated power system,” Int. J. Energy
+Res.,vol.23,no.3,pp.247–258,1999.
+[22] C. Peng, J. Li, and M. Fei, “Resilient event-triggering H∞ load Hongye Su (SM’14) received the B.E. degree in
+frequency control for multi-area power systems with energy-limited industrialautomationfromtheNanjingUniversityof
+DOSattacks,”IEEETrans.PowerSyst.,vol.32,no.5,pp.4110–4118, Chemical Technology, Jiangsu, China, in 1990 and
+Sep.2017. the M.E. and Ph.D. degrees in control science and
+[23] D. Kottick, M. Blau, and D. Edelstein, “Battery energy storage for engineering from Zhejiang University, Hangzhou,
+frequency regulation in an island power system,” IEEE Trans. Energy China, in 1993 and 1995, respectively, where he
+Convers.,vol.8,no.3,pp.455–459,Sep.1993. is a Professor with the Institute of Cyber-Systems
+[24] A. Cooke, D. Strickland, and K. Forkasiewicz, “Energy storage for and Control. His research interests include robust
+enhancedfrequencyresponseservices,”inProc.52ndInt.Univ.Power control, time-delay systems, and advanced process
+Eng.Conf.(UPEC),2017,pp.1–6. controltheoryandapplications.
+[25] D. M. Greenwood et al., “Frequency response services designed for
+energystorage,”Appl.Energy,vol.203,pp.115–127,Oct.2017.
+[26] C.Li,E.A.A.Coelho,T.Dragicevic,J.M.Guerrero,andJ.C.Vasquez,
+“Multiagent-baseddistributedstateofchargebalancingcontrolfordis- Chen Peng (SM’15) received the M.E. and Ph.D.
+tributedenergystorageunitsinACmicrogrids,”IEEETrans.Ind.Appl., degreesincontrolscienceandengineeringfromthe
+vol.53,no.3,pp.2369–2381,May/Jun.2017. ChineseUniversityofMiningTechnology,Xuzhou,
+[27] P. Tabuada, “Event-triggered real-time scheduling of stabilizing con- China, in 1999 and 2002, respectively. He is cur-
+troltasks,”IEEETrans.Autom.Control,vol.52,no.9,pp.1680–1685, rently a Professor with the School of Mechatronic
+Sep.2007. Engineering and Automation, Shanghai University,
+Shanghai, China. His research interests are in the
+areasofnetworkedcontrolsystems,powersystems,
+fuzzycontrolsystems,andinterconnectedsystems.
+Lantao Xing received the Ph.D. degree in control Minrui Fei received the B.E. and M.E. degrees in
+science and engineering from Zhejiang University, industrialautomationandthePh.D.degreeincontrol
+China, in 2018. From 2015 to 2016, he was theory and control engineering from the Shanghai
+a Visiting Scholar with Nanyang Technological UniversityofTechnology,Shanghai,China,in1984,
+University, Singapore. He is currently a Research 1992, and 1997, respectively, where he has been
+Fellow with the School of Electrical Engineering a Full Professor since 1998. His research interests
+and Computer Science, Queensland University of include networked control systems, intelligent con-
+Technology,Brisbane,QLD,Australia.Hisresearch trol, complex system modeling, hybrid network
+interests include nonlinear system control, dis- systems,andfieldcontrolsystems.
+tributedfrequencycontrol,andsmartgrid.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 11:27:53 UTC from IEEE Xplore. Restrictions apply.

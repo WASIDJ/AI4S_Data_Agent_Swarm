@@ -1,0 +1,831 @@
+--- Page 1 ---
+IEEETRANSACTIONSONINDUSTRIALELECTRONICS,VOL.62,NO.7,JULY2015 4355
+Distributed Secondary Voltage and Frequency
+Restoration Control of Droop-Controlled
+Inverter-Based Microgrids
+Fanghong Guo, Changyun Wen, Fellow, IEEE, Jianfeng Mao, Member, IEEE, and
+Yong-Duan Song, Senior Member, IEEE
+Abstract—Inthispaper,restorationsforbothvoltageand power grid, benefits brought by MG include less carbon con-
+frequency in the droop-controlled inverter-based islanded sumption, faster demand response, and so on [4]–[6]. In gen-
+microgrid (MG) are addressed. A distributed finite-time eral,anMGcanoperateintwomodes,i.e.,thegrid-connected
+control approach is used in the voltage restoration which
+and the islanded mode [7], [8]. In the grid-connected mode,
+enablesthevoltagesatallthedistributedgenerations(DGs)
+the MG is connected to the main power grid by closing the
+to converge to the reference value in finite time, and thus,
+thevoltageandfrequencycontroldesigncanbeseparated. isolationswitch(IS)inthepoint of common coupling. Due to
+Then, a consensus-based distributed frequency control the larger capacity of the main grid, the dynamics of the MG
+is proposed for frequency restoration, subject to certain is dominated by the main grid. Thus, the MG control task in
+controlinputconstraints.Ourcontrolstrategiesareimple-
+this mode is to deliver the scheduled real and reactive power
+mentedonthelocalDGs,andthus,nocentralcontrolleris
+tothemaingrid[7].WhenMGopenstheISandworksinthe
+requiredincontrasttoexistingcontrolschemesproposed
+so far. By allowing these controllers to communicate with islandedmode,itshouldnotonlymaintainitsownvoltageand
+theirneighboringcontrollers,theproposedcontrolstrategy frequencytocertainreferencevaluesbutalsoredispatchthereal
+canrestorebothvoltageandfrequencytotheirrespective and reactive power among the distributed generations (DGs)
+referencevalueswhilehavingaccuraterealpowersharing,
+andloads[8].ThecontrolofMGinthismodebecomesmuch
+under a sufficient local stability condition established. An
+morecomplicatedandchallenging.
+islanded MG test system consisting of four DGs is built in
+MATLABtoillustrateourdesignapproach,andtheresults Recently, inorder tostandardize itsoperation and function-
+validateourproposedcontrolstrategy. ality, hierarchical control for islanded MG systems has been
+proposed [9], [10]. It divides the control structure into three
+Index Terms—Decoupled control, distributed control,
+layers, namely, primary, secondary, and tertiary control. The
+finite-time control, microgrids (MGs), power sharing, sec-
+ondarycontrol. primary control is based on each local DG controller [11].
+However, there are some drawbacks in the primary control
+I. INTRODUCTION
+layer,suchasvoltageandfrequencydeviationcausedbydroop
+THE Microgrid (MG) integrates a large amount of renew- control [12]. Then, a secondary control is proposed to restore
+able energy sources, energy storage systems, and local the frequency and voltage to their reference values. In the ter-
+loadstoformsmall-scalelow-andmedium-voltagelevelpower tiary control, economic dispatch and power flow optimization
+systems [1]–[3]. Compared to the traditional fossil-fuel-based issuesareusuallyconsidered.
+Inthispaper,wefocusonthesecondarycontrollayer,where
+Manuscript received August 4, 2014; revised October 16, 2014; a distributed control structure for an islanded MG system is
+acceptedNovember7,2014.DateofpublicationDecember10,2014; tobeproposed.Conventionally,thesecondarycontrolisbased
+dateofcurrentversionMay15,2015.Thisworkwassupportedinpartby
+on an MG central controller (MGCC), which collects all the
+theMajorStateBasicResearchDevelopmentProgram973underGrant
+2012CB215202andinpartbytheNationalNaturalScienceFoundation information of the individual MG and then sends back the
+of China under Grant 61134001. The work was also jointly supported controlcommandtoeachMGastheirprimarycontrol[7].This
+bySingapore’sNationalResearchFoundationunderNRF-CRP8-2011-
+methodhascertainintrinsicdisadvantagessuchaspoorcontrol
+03andtheEnergyResearchInstituteatNTU(ERI@N).(Corresponding
+author:Y.-D.Song). dynamicsandtheneedofacentralcomputingandcommunica-
+F. Guo is with the Energy Research Institute at NTU (ERI@N), tionunit.Also,itmaysufferfromsingle-pointfailures.Inorder
+Interdisciplinary Graduate School, Nanyang Technological University,
+to solve these problems, a distributed control structure can be
+Singapore639798(e-mail:fguo003@e.ntu.edu.sg).
+C. Wen is with the School of Electrical and Electronic Engineering, applied in the secondary control, namely, each local DG con-
+NanyangTechnologicalUniversity,Singapore639798(e-mail:ecywen@ troller communicates with its neighboring DGs and no central
+ntu.edu.sg).
+controller is needed. This kind of distributed control strategy
+J.MaoiswiththeSchoolofMechanicalandAerospaceEngineering,
+Nanyang Technological University,Singapore 639798 (e-mail:jfmao@ hasbeenreportedin[13]–[16].In[13],adistributedcooperative
+ntu.edu.sg). secondarycontrolofMGisproposedusingfeedbacklineariza-
+Y.-D.SongiswiththeKeyLaboratoryofDependableServiceComput-
+tion.ItisassumedthatnoteveryDGinthesystemcandirectly
+inginCyberPhysicalSocietyofMinistryofEducationandtheSchoolof
+Automation, Chongqing University, Chongqing 400044, China (e-mail: access the reference frequency and voltage values. By allow-
+ydsong@cqu.edu.cn). ing controllers to communicate with their neighbors, they can
+Colorversionsofoneormoreofthefiguresinthispaperareavailable
+ensure that the frequency and voltage finally reach their refer-
+onlineathttp://ieeexplore.ieee.org.
+DigitalObjectIdentifier10.1109/TIE.2014.2379211 encevalues.However,theinherentlyexistingcouplingbetween
+0278-0046©2014IEEE.Personaluseispermitted,butrepublication/redistributionrequiresIEEEpermission.
+Seehttp://www.ieee.org/publications_standards/publications/rights/index.htmlformoreinformation.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 2 ---
+4356 IEEETRANSACTIONSONINDUSTRIALELECTRONICS,VOL.62,NO.7,JULY2015
+frequency andvoltageisnotconsidered.Similarlyin[14],the
+approachisemployedtoconvertthesecondaryvoltagecontrol
+to a linear second-order tracker synchronization problem. A
+generaldistributedapproachisproposedin[15]toregulatethe
+frequencyandvoltageaswellasthereactivepower.However,
+thedistributedcontrolschemeusedrequiresthateachlocalcon-
+trollercommunicateswithalltheothercontrollersintheentire
+system, which almost has the same communication cost as a
+centralizedcontroller.Inaddition,noanalysisonthedynamics
+and stability of the whole system is provided. A distributed
+averaging proportional integral (PI) controller is proposed
+in [16] to remove the frequency deviation while the power
+sharing property still holds. A first-order inverter model is de-
+rivedbyapplyingtheresultsinthetheoryofcoupledoscillators.
+This is achieved under the assumption that the node voltage
+remainsconstant.Also,voltagerestorationisnotconsidered.
+Inthispaper,westartwithanalyzingthedynamicsoftheDG
+unitsandthepowernetwork.Undertheassumptionofapurely Fig.1. SchematicdiagramofagenericislandedMG.
+inductivetransmissionline,asimplifieddynamicmodelofthe
+islanded MG is derived. We next design distributed voltage
+controllerstorestorethevoltagemagnitudestotheirreference
+values for all DGs within finite time. Then, a consensus-
+based distributed frequency control is designed. In the case
+of frequency restoration, there also exists a challenge that the
+control inputs should be equal to each other in their steady
+stateinordertomeetthepowersharingproperty.Adistributed
+proportional and integral method is proposed to handle such a
+constraint. A sufficient condition for frequency restoration is
+alsoestablished.
+Insummary,themaincontributionsofthispaperarethreefold. Fig.2. Schemeofalocalprimaryinvertercontroller.
+1) Bothfrequencyandvoltagerestorationsareaddressed.A A. DGModel
+finite-time voltage control is first proposed in islanded
+In a general ac MG system, each DG consists of a prime
+MG control to ensure that the voltage magnitudes are
+dc source, a dc/ac inverter, an LCL filter, and an RL output
+restoredtotheirreferencevaluesforallDGswithinfinite
+connector[9],asshowninFig.2.Theseinvertersoperateinthe
+time, regardless of frequency control. This enables the
+voltagecontrolmodewhentheMGisislanded[7].Generally,
+frequencyandvoltagecontroltobedesignedseparately.
+therearethreecontrolloops,namely,thevoltagecontrolloop,
+2) Adistributedconsensus-basedfrequencycontrolmethod
+current control loop, and droop control loop, in the primary
+is derived to restore the frequency to its reference value
+DG controller. Its detailed mathematical model is introduced
+whilemaintainingtherealpowersharingaccuracy.
+in[11].Itisalsoanalyzedin[11]thatthereisawidefrequency
+3) In contrast to existing schemes that require a central
+range for this primary controller. The dynamics of the LCL
+computing and communication controller, the proposed
+filter, the RL output connector, and the voltage and current
+distributedsecondarycontrolstrategyisimplementedon
+control loop are much faster than that of the droop control
+localDGcontrollers,whichcanavoidsingle-pointfailure
+function.Hence,wecanremodeltheprimarycontrollerbyonly
+andthusismorereliableandeconomicallyefficient.
+considering the dynamics of the droop control function and
+The remainder of this paper is organized as follows. In
+neglectingthedynamicsoftheotherfourfast-dynamicblocks.
+Section II, we introduce the models of the MGs, including
+Thedroopcontrolistoregulatethephaseangleδ andvolt-
+DG and network models. The distributed secondary controller i
+ageamplitudeV byusingthelocallymeasuredrealpowerand
+involving both voltage and frequency control is designed and i
+reactivepowerinformation,respectively.AccordingtotheCon-
+analyzed in Section III. Section IV presents simulation results
+sortiumforElectricReliabilityTechnologySolutions(CERTS)
+tovalidateourmethod.ThispaperisconcludedinSectionV.
+droop control function [5], the phase angle and voltage droop
+oftheithDGare
+II. MODELING OF MG (cid:2) (cid:3)
+δ˙ =ωd−k P m−P d (1)
+A schematic diagram of a generic islanded MG with a total i Pi i i
+(cid:2) (cid:3)
+of N DGs is shown in Fig. 1. Each DG has been connected k V˙ =(Vd−V )−k Q m−Q d (2)
+Vi i i Qi i i
+withrespectivelocalloads.TheyareintegratedthroughanMG
+network.Hence,themodelofislandedMGmainlyconsistsof whereωd andVd arethedesiredfrequencyandvoltageampli-
+twoparts,i.e.,theDGmodelandMGnetworkmodel. tude,respectively,k isthevoltagecontrolgain,k andk
+Vi Pi Qi
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 3 ---
+GUOetal.:DISTRIBUTEDSECONDARYVOLTAGEANDFREQUENCYRESTORATIONCONTROLOFINVERTER-BASEDMGs 4357
+arethefrequencyandvoltagedroopgains,respectively,Pmand varioustypesofloads,theZIPloadmodelisappliedhere[18],
+i
+Qm arethemeasuredrealandreactivepowers,andPd andQd whichisexpressedas
+i i i
+arethedesiredrealandreactivepowers,respectively.
+The measured P
+i
+m and Qm
+i
+can be obtained through the P Li =P 1i V i 2+P 2i V i +P 3i (8)
+followingfirst-orderlow-passfiltersas Q Li =Q 1i V i 2+Q 2i V i +Q 3i (9)
+τ P˙ m = −P m+P (3) whereP ,Q arenominalconstantimpedanceloads,P ,Q
+Pi i i i 1i 1i 2i 2i
+τ Q˙ m = −Q m+Q (4) are nominal constant current loads, and P 3i ,Q 3i are nominal
+Qi i i i constantpowerloads.
+Based on power balance relations [19], the injected real
+where τ and τ denote the respective time constants of the
+Pi Qi powerPˆ andreactivepowerQˆ areobtainedas
+twofiltersandP andQ aretherealandreactivepoweroutputs i i
+i i (cid:5)
+oftheithDG.
+Pˆ =V 2G − V V |Y |cos(δ −δ −φ ) (10)
+Thederivativeofthephaseanglecanberepresentedinterms i i ii i k ik i k ik
+ofω asfollows:
+k∈N(cid:5)i
+i Qˆ =−V 2B − V V |Y |sin(δ −δ −φ ) (11)
+i i ii i k ik i k ik
+δ˙
+i
+=ω
+i
+. (5) k∈N
+i
+Substituting(3)and(4)to(1),(2),and(5)yields whereV i andδ i arethevoltagemagnitudeandthephaseangle
+(cid:2) (cid:3) of the ith D(cid:6)G, |Y
+ik
+| is the magnitude of the admittance Y
+ik
+,
+τ Pi ω˙ i +ω i −ωd+k Pi P i −P i d =
+(cid:2)
+0
+(cid:3)
+(6) i.e.,|Y
+ik
+|= G
+ik
+2+B
+ik
+2,andφ
+ik
+istheadmittanceangleof
+τ k V¨ +(τ +k )V˙ +V −Vd+k Q −Q d =0. (7) Y ik ,i.e.,φ ik =φ ki =arctan(B ik /G ik ).Therealandreactive
+Qi Vi i Qi Vi i i Qi i i
+poweroutputsoftheithDGaregivenas
+Equations(6)and(7)denoteasimplifiedmodeloftheithDG.
+P =P +Pˆ (12)
+i Li i
+Q =Q +Qˆ . (13)
+B. NetworkModel
+i Li i
+Combining(6)–(13),wecangetthewholesystemdynamics.
+Before introducing the network model, some preliminary
+In order to formulate the voltage and frequency restoration
+knowledge of graph theory [17] is briefly presented first for
+control proposed in the next section, we make the following
+completeness.
+1) GraphTheory: AgraphisdefinedasG =(V,ξ),where assumption.
+V ={1,...,N} denotes the set of vertices and ξ ⊆V ×V Assumption 1: The power transmission lines of the MG
+network are lossless, i.e., G =0, Y =jB , and φ =
+is the set of edges between two distinct vertices. If, for all ik ik ik ik
+(i,j)⊆ξ, (j,i)⊆ξ, then we call G undirected. Otherwise, it φ ki =−(π/2),∀i∈N,k ∈N i .
+UnderAssumption1,(12)and(13)canbereducedto
+is called a directed graph. In this paper, both the physical and
+(cid:5)
+the communication graph are modeled as a undirected con-
+P =P + V V |B |sin(δ −δ ) (14)
+nectedgraph.Thesetofneighborsoftheithvertexisdenoted i Li i k ik i k
+as N = Δ {j ⊆V :(i,j)⊆ξ}. The elements of the adjacency k∈N i(cid:5) (cid:5)
+i Q =Q +V 2 |B |− V V |B |cos(δ −δ ). (15)
+matrix A are defined as a
+ij
+=a
+ji
+=1 if j ⊆N
+i
+; otherwise, i Li i ik i k ik i k
+a =a =0. The Laplacian matrix of G is defined as L= k∈N i k∈N i
+ij ji
+Δ−A,whereΔiscalledanin-degre(cid:4)ematrixandisdefinedas
+Remark 1: The assumption made earlier is common and
+Δ=diag(Δ i )⊆RN×N withΔ i = j∈N
+i
+a ij .Theincidence reasonable in power system analysis. The purely inductive
+matrix B of the graph with M distinct edges is defined as transmission lines can be achieved by making the inverter
+B=[b 1 ··· b M ],where(b l ) i =1and(b l ) j =−1,withother output admittance inductive and dominate over any resistive
+entries being 0 if edge l connects vertices i and j. Then, the effects in the network. More detailed justification can be seen
+weightedLaplacianmatrixisdefinedasL
+w
+=BWBT,where
+in[19]and[20].
+W =diag(w 1 ,...,w M )istheedgeweightmatrix. Remark2: Combining(6)–(15),weconcludethatthevolt-
+2) NetworkModel: AnMGdistributionnetworkisconsid- age dynamic (7) and (15) and the frequency dynamic (6) and
+ered as a connected and complex-weighted graph G =(V,ξ) (14) affect each other. In order to design the voltage and
+withnodesV beingtheDGs(buses)andedgesξ beingtheline frequency control separately, we first control the voltage to its
+impedances. Consider a network with N DGs, and let Y ik be referencevaluewithinfinitetimeandthendesignthefrequency
+theadmittance between theithandkthDGs,which isdefined restorationcontrollawwithconstantvoltageamplitudes,which
+as Y ik =G ik +jB ik ∈C, where G ik ∈R and B ik ∈R are willbeintroducedinthenextsection.
+the conductance and susceptance, respectively. If there is no
+connection between the ith and kth DGs, we define Y =0.
+The set of neighboring DGs of the ith DG is defin(cid:4)ed as
+ik
+N
+i
+=
+III. DISTRIBUTED SECONDARY CONTROLLER DESIGN
+{k|k ∈N,k(cid:4) (cid:4)=i,Y
+ik
+(cid:4)=0}. We also define G
+ii
+=
+k∈N
+i
+G
+ik
+Inthissection,wefirstgivesomebasicterminologyoffinite-
+and B = B . We assume that local loads are con- time control [21]–[24], which will be used in the subsequent
+ii k∈N
+i
+ik
+nected to each DG, i.e., S =P +Q . To incorporate development.Then,weanalyzesomepropertiesoftheprimary
+Li Li Li
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 4 ---
+4358 IEEETRANSACTIONSONINDUSTRIALELECTRONICS,VOL.62,NO.7,JULY2015
+controlbystudyingthebehaviorsofthenodestates,including
+both voltage and frequency. Based on these, we propose our
+secondary control objectives and, at last, design a distributed
+secondarycontrollawfortheMGtoachievetheseobjectives.
+A. Finite-TimeControl
+The idea of finite-time stabilization is to steer system states
+toarriveattheirequilibriuminfinitetime.Furthermore,finite-
+time stable closed-loop systems might have better robustness
+and disturbance rejection properties [21]. Due to the page
+limit, some basic concepts and definitions on finite-time sta-
+bilization, which can be found in [21]–[24], are omitted here.
+Fig.3. DistributedsecondarycontroldiagramofanislandedMG.
+However,thefollowinglemmaisneeded.Forconvenience,we
+denotesig(x)α =sgn(x)|x|α.
+wherem ,m ∈R+aretherealpowersharinggainsand
+Lemma1[22]: Forthefollowingsystem i k
+arechosenaccordingtothepowerratingoftheDGs[16].
+x˙ =y Conventionally, in the primary control, the frequency
+y˙ =Mu (16) droopgaink Pi isusuallychosenastheinverseproportion
+ofthepowerrating.Hence,wealsohave(18)as
+withfeedbackcontrolinput
+P m k
+i = i = Pk, ∀i,k ∈N. (19)
+u=−k 1 sig(x)α1 −k 2 sig(y)α2 (17) P k m k k Pi
+where x=[x ··· x ]T, y =[y ··· y ]T, k ,k >0, α
+1 N 1 N 1 2 1
+andα aretwopositiveconstantssatisfying0<α <1,α = C. DistributedSecondaryControllerDesign
+2 1 2
+2α /(1+α ), M ∈RN×N is a symmetric positive definite
+1 1 A distributed control strategy is proposed in the secondary
+matrix, and sig(·) is defined elementwise, it is globally finite-
+control layer, as shown in Fig. 3. Different from the MGCC
+timestable.
+control strategy, our secondary controller is applied locally
+with communication with its neighboring controllers. We add
+B. ControlObjective thesecondarycontrolinputsu =[u ω u V] T intotheprimary
+i i i
+Fromrelatedworkin[16]and[25],weconcludethatthefre- controlmodel(6)and(7)inthefollowingform:
+(cid:2) (cid:3)
+quencyoftheMGundertheprimarycontrollerwiththedroop
+τ ω˙ +ω −ωd+k P −P d +u ω =0 (20)
+function will be synchronized. According to [2(cid:4)6], the syn- Pi i i Pi i i i
+chronizedsteady-statefrequencyisω =ωd+( N (P d− (cid:2) (cid:3)
+(cid:4) ss i=1 i τ k V¨+(τ +k )V˙ +V −Vd+k Q −Q d +u V =0
+P )/ N (1/k )). Clearly, this shows that, as long as the Qi Vi i Qi Vi i i Qi i i i
+i i=1 Pi (cid:4)
+totalnominalpoweroutp (cid:4) ut N i=1 P i d isdifferentfromthetotal (21)
+consumptionrealpower N P ,thesynchronizedfrequency
+i=1 i
+willdeviatefromthenominalfrequencyωd.Asthefrequency where u i ω and u i V are the secondary frequency and voltage
+isaglobalstate,thedroopcontrolfunctioncansharerealpower controlinput,respectively.
+precisely with the inverse of the droop gain, i.e., k (P − 1) Finite-Time Voltage Restoration: The voltage dy-
+Pi i
+P d)=k (P −P d), ∀i,k ∈N. Similarly, the voltage will namic (21) can be rewritten as the following second-order
+i Pk k k
+deviate from its nominal value if the reactive power Q is dif- nonlinearsystem:
+i
+ferentfromitsdesiredvalueQd.Thus,secondarycontrollaws
+i x˙ =f (x ,x )+g (x )u ,i∈N,k ∈N (22)
+needtobedesignedforbothfrequencyandvoltagerestorations. i i i k i i i i
+In this paper, our control objectives for islanded MG are as where x =[V V˙ ]T, f (x ,x )=[V˙ f (x ,x )]T, g (x )=
+i i i i i k i 1i i k i i
+follows.
+[01/(τ k )]T,andu =u V,with
+1) Restore the network frequency and voltage to their re-
+Qi Vi i i
+(cid:7) (cid:8)
+spectivereferencevalues,i.e., (cid:4)
+k Q + |B |
+Qi 1i ik
+lim ω i (t)=ωref, ∀i∈N f (x ,x )=− τ Qi +k ViV˙ − k∈Ni V 2
+t→∞ 1i i k τ k i τ k i
+limV (t)=Vref,V (t)=Vref, ∀t>T, ∀i∈N Qi Vi Qi Vi
+i i
+t→T (cid:5)
+k
++ Qi |B |V V cos(δ −δ )
+forsomefinitetimeT. τ k ik i k i k
+2) Guaranteerealpowersharingaccuracy,i.e.,
+Qi Vi k∈Ni
+(cid:2) (cid:3)
+P m 1+k Q k Q −Qd −Vd
+i = i, ∀i,k ∈N (18) − Qi 2iV − Qi 3i i .
+P m τ k i τ k
+k k Qi Vi Qi Vi
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 5 ---
+GUOetal.:DISTRIBUTEDSECONDARYVOLTAGEANDFREQUENCYRESTORATIONCONTROLOFINVERTER-BASEDMGs 4359
+Similar to [14], it is assumed that only one DG is access to where z =[z ··· z ]T, z =[z ··· z ]T, L is the
+1 11 1N 2 21 2N c
+thereferencevoltagevalue;hence,wedefinethevoltagelocal Laplacian matrix of the designed communication graph, and
+neighborhoodtrackingerroras GV =diag(g V,g V,...,g V).
+1 2 N
+(cid:5) Let M =L +GV, and clearly, it is a symmetric positive
+c
+e i V = (V i −V k )+g i V(V i −Vref) (23) definite matrix [29]. Let x=Mz 1 and y =Mz 2 ; then, (31)
+k∈ (cid:5) N Ci becomes (16) with (17). According to Lemma 1, system (31)
+e dV = (V˙ −V˙ )+g V(V˙ −0) (24) isgloballyfinite-timestable,soTheorem1holds. (cid:2)
+i i k i i
+Remark3: Theproposedfinite-timevoltagecontroller(30)
+k∈N
+Ci
+cansteerthevoltageamplitudestotheirreferencevalueswithin
+whereg V isthevoltagepinninggain,whichisnonzeroforthe finite time T. This is achieved independent of the frequency
+i
+DGthathasdirectaccesstothereferencevoltagevalueVref. variable which means that Theorem 1 is valid no matter what
+N indicates the communication neighborhood set of the ith frequencycontrollawisused.Thisenablesthevoltageandthe
+Ci
+controller. frequencydesigntobeseparated.
+Weselect 2) Frequency Restoration: In order to restore the fre-
+quencytothenominalvaluewhileguaranteeingtherealpower
+y =h (x )=V −Vref. (25) sharing accuracy (19), from (19) and (20), we can easily con-
+i i i
+cludethatthereareconstraintsonthecontrolinputsu ω,i.e.,
+i
+Then,byusingthefollowingcoordinatetransformation[27]:
+(cid:9) (u ω) /(u ω) =1, ∀i,k ∈N (32)
+z =h (x )=V −Vref i s k s
+z 1 2 i i =L i fi h i i (x i )= i V˙ i (26) where (uω i ) s indicates the ith frequency control input value in
+the steady state. Thus, (32) requires that the control inputs in
+system(22)isrewrittenas
+thesteadystateshouldbeequaltoeachother.
+(cid:9)
+z˙ =z Inordertoachievethecontrolobjectivessubjecttoinputcon-
+z˙ 1i =v 2i (27) straints in (32), a distributed proportional and integral method
+2i i
+isproposedhere.Motivatedbytheworkin[31],thefrequency
+where controlinputisdesignedas
+v i =L2 fi h i (x i )+L gi L fi h i (x i )u i . (28) u i ω =α i (ωˆ i −ω i )⎛ ⎞ (33)
+(cid:5)
+L f h(x) is the Lie derivative of h(x) with respect to f, which ωˆ˙ i =β i e i ω+γ i ⎝ (u k ω−u i ω) ⎠ (34)
+is defined as L f h(x)=∇h(x)·f. Also, L2 f h(x) is defined (cid:5) k∈N Ci
+as L2 f h(x)=L f (L f h(x)). Note that, as both h(x) and f i are e i ω = (ω i −ω k )+g i ω(ω i −ωref) (35)
+continuous and differentiable in their domain, hence, the Lie
+derivativeL h(x)andL2h(x)alwaysexist[28].
+k∈N
+Ci
+f f
+Forthesystem(27),wecanconstructadistributedfinite-time whereα ,β ,γ ∈R+ aretheproportionalgains,eω isdefined
+i i i i
+controlleras as the frequency local neighborhood tracking error, and gω is
+i
+(cid:2) (cid:3) (cid:2) (cid:3) the frequency pinning gain, which is nonzero for the DG that
+v i =−k 1 sig e i V α1 −k 2 sig e i dV α2 (29) hasdirectaccesstothereferencefrequencyvalueωref.
+A block diagram of the proposed secondary controller is
+wherek ,k >0,0<α <1,andα =2α /(1+α ).
+1 2 1 2 1 1 showninFig.4.From(33)–(35)andFig.4,wecanseethatthe
+From(26),(28),and(29),wecanobtainafinite-timevoltage
+secondary frequency control input uω contains two parts. The
+controllerfor(22)as i
+firstone,namely,alocaltrackingerror,istomakethesteady-
+(cid:2) (cid:3) (cid:2) (cid:3)
+u V =u =− k 1 sig e i V α1 +k 2 sig e i dV α2 +L2 fi h i (x i ) statefrequencytrackthereferencefrequency,i.e., t l → im ∞ ω i (t)=
+i i L L h (x ) ωref, ∀i∈N.Thesecondpartistoensurethatthesteady-state
+gi fi i i
+(30) controlinputconstraintsin(32)aresatisfied.
+Note that some interesting results on the consensus of mul-
+whereL2 h (x )=f (x )andL L h (x )=1/(τ k ).
+fi i i 1i i gi fi i i Qi Vi tiagent systems constrained by nonlinear transmissions have
+Theorem 1: The voltage dynamics system (21) with the
+been established in [30]. In our case, it is sufficient to allow
+distributedvoltagecontrol(30)isgloballyfinite-timestableand
+linear transmission because, in a practical MG communica-
+canrestorethevoltagesatalltheDGstothereferencevaluein
+tion system, the accuracy of data transmission can always
+finitetime.
+be guaranteed by linear transmission. In the sense that the
+Proof: Theproofofthistheoremisequivalenttoshowing
+nonlinear function f in [30] is set to be f (x)=x, our
+that system (27) with the distributed control input (28) is ij ij
+designed consensus protocol (33)–(35) is consistent with that
+globallyfinite-timestable.Theoverallsystemof(27)and(28)
+in[30].
+canbewrittenas
+(cid:9) Wenowanalyzetheproposeddistributedfrequencyrestora-
+(cid:2) z˙ 1(cid:3)=z 2 (cid:2) (cid:3) tion controller (33)–(35) and establish a sufficient condition
+z˙ =−k sig (L +GV)z α1−k sig (L +GV)z α2 (31) for system stability. For the resulting closed-loop system,
+2 1 c 1 2 c 2
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 6 ---
+4360 IEEETRANSACTIONSONINDUSTRIALELECTRONICS,VOL.62,NO.7,JULY2015
+aresatisfied;andiii)thepowersharingaccuracyin(19)isguar-
+anteed if matrix A has exactly one zero eigenvalue and all its
+othereigenvaluesareintheopenlefthalfcomplexplane,where
+⎡ ⎤
+−γL c α 0 N×N γL c α+βW
+⎣ ⎦
+A= 0 N×N 0 N×N I N (41)
+−τ α −τ K L τ (α−I )
+P P p w P N
+with L being a weighted Laplacian matrix which is defined
+w
+asL =Bdiag(VrefVref|B |cos(δ(cid:4)−δ(cid:4)))BT,whereBis
+w ik i j
+theincidencematrixofthecommunicationgraphandδ(cid:4) isthe
+i
+voltageangleoftheithDGattheequilibriumpoint.
+Proof: Defineth(cid:21)efrequencyerrorasω˜ =ω−ωref1 N×1 ;
+then, δ˜(t)=δ(0)+ tω˜(τ)dτ. Note that the dynamics (40)
+0
+is not dependent on the value of the angles δ but only on
+i
+their differences δ −δ . Thus, we can arbitrarily choose one
+i j
+node,forexample,nodeN,asareferencenodeandexpressδ˜,
+i
+Fig.4. Diagramoftheproposedsecondarycontroller. i=1,2,...,N −1,relativetoδ˜ viathestatetransformation
+N
+(cid:22) (cid:23)
+finite-timeescapewillnotoccur.Therefore,inthetimeduration
+[t t +T], no signal of the frequency control system will go θ =Rδ˜, R= I N−1 −1 (N−1)×1 (42)
+0 0
+to infinity. Thus, we only need to check the stability of the
+proposedfrequencycontrolaftert>t +T. whereθ =[θ 1 θ 2 ··· θ N−1 ]T isan(N −1)×1vector.Then,
+0 wecanexpressthesysteminanewcoordinateas
+Note that, without loss of generality, here, we set Pd =0,
+i ⎧
+whichwillnotaffectthestabilityanalysis. ⎪⎪⎨ ωˆ˙ =(βW +γL c α)ω˜ −γL c αωˆ +γL c αωref1 N×1
+The proposed distributed secondary controller (33)–(35) of θ˙ =Rω˜
+(43)
+thewholeMGsystemcanbewritteninthefollowingcompact ⎪⎪⎩ ω˜˙ =τ
+P
+(α(cid:2) −I
+N
+)ω˜ −τ
+P
+αωˆ − (cid:3)τ
+P
+K
+P
+P(θ)
+form: +τ P ωd+(α−I N )ωref 1 N×1.
+Uω =α(ωˆ −ω) (36)
+Let(ωˆ(cid:4),θ(cid:4),ω˜(cid:4))betheequilibriumof(43),whichsatisfies
+ωˆ˙ =βeω−γL Uω (37) ⎧
+c ⎪⎪⎨ (βW +γL c α)ω˜(cid:4)−γL c αωˆ(cid:4)+γL c αωref1 N×1 =0 N×1
+eω =(L c +Gω)(ω−ωref1 N×1 ) (38) Rω˜(cid:4) =0 (N−1)×1
+w ωˆ h = er [ e ωˆ Uω ωˆ =[u 1 · ω ·· u 2 ω ωˆ · ] · T · , u N ω ω = ]T [ , ω α= ω diag( · α ·· 1 ,α ω 2 ,. ]T .. , ,α β N = ), ⎪⎪⎩ + τ P τ P (α(cid:2) ω − d I + N ( ) α ω˜(cid:4) − − I N τ P )ω αω r ˆ e (cid:4) f (cid:3) − 1 τ N P × K 1 P = P 0 ( N θ(cid:4) × ) 1.
+1 2 N 1 2 N (44)
+diag(β ,β ,···β ),eω =[e ω e ω ··· e ω]T,γ =diag(γ ,
+1 2 N 1 2 N 1
+γ
+2
+,...,γ
+N
+), Gω =diag(g
+1
+ω,g
+2
+ω,...,g
+N
+ω), L
+c
+is the Thesecondequationin(44)impliesthatω˜(cid:4) =c1 N×1 ,where
+Laplacian matrix of the communication graph, and 1 N×1 de- c is an arbitrary number. Then, the first equation in (44) be-
+notestheN-dimensionvectorwiththeelementsallequalto1. comesc(βW +γL c α)1 N×1 =γL c α(ωˆ(cid:4)−ωref1 N×1 ).Since
+Similarly,acompactformof(20)isasfollows: 1 N×1 does not lie in the range of L c , thus, c=0,
+and then, ω˜(cid:4) =0 N×1 , which implies that ω(cid:4) =ωref1 N×1 .
+τ P −1ω˙ =−ω+ωd1 N×1 −K P P(δ)−Uω (39) This means that lim ω i (t)=ωref, ∀i∈N. Furthermore,
+t→∞
+where τ =diag(τ −1,τ −1,...,τ −1), K =diag(K ,K , we have γL c α(ωˆ(cid:4)−ωref1 N×1 )=γL c α(ωˆ(cid:4)−ω(cid:4))=0 N×1 .
+...,K P ), and P( P δ) 1 = P d 2 iag(P ( P δ N ),P (δ P ),...,P (δ P ) 1 ) w P it 2 h Note that Uω(cid:4) =α(ωˆ(cid:4)−ω(cid:4)); then, γL c Uω(cid:4) =0 N×1 , which
+PN 1 2 N meansthat lim(u ω−u ω)=0,∀i,k ∈N.Thissatisfiesthe
+V i beingreplacedbytheirreferencevalueVref. t→∞ k i
+Combining (36)–(39), we can obtain the state-space equa- inputconstraints(32)andalsoimpliestheaccuraterealpower
+tionas sharing (19). Referring to [16, Theorem 2], (44) is solvable
+⎧ and has a unique solution (ωˆ(cid:4),θ(cid:4),0) if and only if max|θ −
+⎨ ωˆ˙ =(βW +γL c α)ω δ − ˙ = γL ω c αωˆ −βWωref1 N×1 θ k |<(π/2), ∀i∈N,k ∈N i , which is typically sa i t , i k sfied i in
+⎩
+ω˙ =τ P (α−I N )ω−τ P αωˆ −τ P K P P(δ)+τ P ωd1 N×1 real applications as pointed out in [16]. Thus, ii) and iii)
+(40) areproved.
+We now show that (40) is locally exponentially stable.
+whereW =L +Gω.
+c Similar to [16], by linearizing (40) around the equilibrium
+Theorem 2: Consider the closed-loop frequency control (ωˆ(cid:4),δ(cid:4),ωref),weobtain
+system (40). The proposed distributed controller (33)–(35) ⎡ ⎤ ⎡ ⎤
+ensures the following: i) system (40) is locally exponentially Δωˆ˙ Δωˆ
+stable;ii) the frequency converges to its reference value, i.e., ⎣ Δδ˙ ⎦ =A ⎣ Δδ ⎦ (45)
+lim ω (t)=ωref, ∀i∈N,whiletheinputconstraintsin(32) Δω˙ Δω
+i
+t→∞
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 7 ---
+GUOetal.:DISTRIBUTEDSECONDARYVOLTAGEANDFREQUENCYRESTORATIONCONTROLOFINVERTER-BASEDMGs 4361
+where A is given in (41), Δωˆ =ωˆ −ωˆ(cid:4), Δδ =δ−δ(cid:4), and
+Δω =ω−ω(cid:4).
+By calculation, we obtain that Ae =0, where e =
+1 1
+[0 1×N 1 1×N 0 1×N ]T is an eigenvector of A corresponding
+to the eigenvalue 0, which indicates that A has at least one
+eigenvalue equal to 0. Next, we will show that it has exactly
+onezeroeigenvalue.Consideringthelinearstatetransformation
+(42),weobtain
+⎡ ⎤ ⎡ ⎤
+Δωˆ˙ Δωˆ
+Fig.5. Simulationtestsystem.
+⎣ Δθ˙⎦
+=A
+(cid:9)⎣
+Δθ
+⎦
+(46)
+Δω˙ Δω TABLE I
+PARAMETERSOFPRIMARYCONTROLLERANDMGSYSTEMS
+where
+⎡ ⎤
+−γL c α 0 N×(N−1) γL c α+βW
+A (cid:9) = ⎣ 0 (N−1)×N 0 (N−1)×(N−1) R ⎦
+−τ α −τ K L(cid:9) τ (α−I )
+P P p w P N
+with L(cid:9) ∈RN×(N−1) being the weighted Laplacian matrix
+w
+afterstatetransformation,andΔθ =θ−θ(cid:4).
+Now,weshowthatA(cid:9)isafull-rankmatrix.Considering
+⎡ ⎤
+Δωˆ
+(cid:9)⎣ ⎦
+A Δθ =0 (3N−1)×1 (47)
+Δω
+wehave TABLE II
+⎧ PARAMETERSOFSECONDARYCONTROLLER
+⎨ −γL c αΔωˆ+(γL c α+βW)Δω=0 N×1
+⎩ RΔω=0 (N−1)×1 (48)
+−τ P αΔωˆ−τ P K p L(cid:9) w Δθ+τ P (α−I N )Δω=0 N×1 .
+The second equation in (48) implies that Δω =k1 N×1 ,
+wherekisanarbitrarynumber.Then,thefirstequationin(48)
+becomesγL c αΔωˆ =k(γL c α+βW)1 N×1 .Since1 N×1 does
+notlieintherangeofL ,thus,k =0,andthen,Δωˆ =Δω =
+c
+0 N×1 . Finally, considering the third equation in (48), we have
+τ P K p L(cid:9) w Δθ =0 N×1 .Asrank(L(cid:9) w )=N −1,thisimpliesthat
+Δθ =0 (N−1)×1 . As [Δωˆ Δθ Δω]T =0 (3N−1)×1 is the only distributed secondary controllers is also shown in Fig. 5.
+solutionof(46),thus,weconcludethatA(cid:9)isoffullrank.Since Thereferencevoltageandfrequencyvaluesareonlyknownto
+thelineartransformdoesnotchangetheeigenvalues,hence,A DG1,i.e.,g 1 V =g 1 ω =1andg k V =g k ω =0,k =2,3,4.All
+and A(cid:9) have the same eigenvalues, except that A has an extra theparameterssatisfytheconditionsinTheorems1and2.
+zero eigenvalue. This indicates that A(cid:9) is Hurwitz if and only The primary control is on operation from t=0 s while the
+if A has exactly one zero eigenvalue and all other eigenvalues secondarycontrolisactivatedatt=5s.Thissimulationcanbe
+are in the open left half complex plane. Thus the closed-loop dividedintofourstages.
+system(40)islocallyexponentiallystable[32].Thiscompletes Stage1(0–5s):Onlyprimarycontrolisactivatedatt=0s.
+theproofofTheorem2. (cid:2) Stage2(5s–):Secondarycontrolisonoperationfromt=5s.
+Stage 3 (10–30 s): Constant load L =1×104+j1×104W
+c
+isaddedtoLoad4.
+IV. SIMULATION RESULTS
+Stage4(30–40s):LoadL isremovedfromLoad4.
+c
+In order to test the designed secondary controller, a 220-V ThesimulationresultsareshowninFigs.6–9.Asseenfrom
+(per phase rms) 50-Hz islanded MG shown in Fig. 5 is con- Figs. 6 and 8, during stage 1, due to the droop function in
+sidered as the test system. The simulation is conducted in the primary control, the voltage amplitudes of four DGs fall
+MATLAB/Simulink environment. This islanded MG consists down to different values while the frequency can synchronize
+offourDGs,fourrespectivelocalloads,andthreetransmission to a common value (49.72 Hz). Unfortunately, both voltage
+lines. The parameters of the whole test system are summa- andfrequencydeviatefromtheirreferencevalues;hence,they
+rized in Tables I and II. To facilitate the illustration, in this need to be restored in the secondary control layer. When our
+example, we choose the same communication graph as the distributedsecondarycontrolisactivatedatt=5s,bothvolt-
+physical connection graph. The communication graph for the ageandfrequencycanquicklyrestoretotheirreferencevalues,
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 8 ---
+4362 IEEETRANSACTIONSONINDUSTRIALELECTRONICS,VOL.62,NO.7,JULY2015
+Fig.8. FrequencyoutputofthetestislandedMG.
+Fig.6. VoltageoutputofthetestislandedMG.
+Fig.9. SecondaryfrequencycontrolinputofthetestislandedMG.
+Fig.7. RealpoweroutputofthetestislandedMG.
+respectively (Vref =310 V and ωref =50 Hz). The steady- The real power outputs of these tested four DGs are shown
+state frequencies of the four DGs remain at 50 Hz no matter in Fig. 7. Before the secondary control is activated (Stage 1),
+if new constant load L is connected to or disconnected from the real power sharing is well achieved by the primary con-
+c
+DG4, even though there are transient deviations. This result trol,i.e.,P :P :P :P =1/k :1/k :1/k :1/k =
+1 2 3 4 P1 P2 P3 P4
+shows that the designed distributed secondary controller can 1:2:3:4.Whenthesecondarycontrolisactivated(from5s),
+eliminate the voltage and frequency deviation caused by the realpowerisstillwellsharedaccordingtothedesigneddroop
+primarycontrol. gains,regardlessoftheloadincreasingatstage3ordecreasing
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 9 ---
+GUOetal.:DISTRIBUTEDSECONDARYVOLTAGEANDFREQUENCYRESTORATIONCONTROLOFINVERTER-BASEDMGs 4363
+REFERENCES
+[1] F.Blaabjerg,R.Teodorescu,M.Liserre,andA.V.Timbus,“Overview
+of control and grid synchronization for distributed power generation
+systems,” IEEE Trans. Ind. Electron., vol. 53, no. 5, pp. 1398–1405,
+Oct.2006.
+[2] Q. Shafiee et al., “Robust networked control scheme for distributed
+secondary control of islanded microgrids,” IEEE Trans. Ind. Electron.,
+vol.61,no.10,pp.5363–5374,Oct.2014.
+[3] W. Yu, G. Wen, X. Yu, Z. Wu, and J. Lu, “Bridging the gap between
+complexnetworksandsmartgrids,”J.ControlDecision,vol.1,no.1,
+pp.102–114,2014.
+[4] F. Guo and C. Wen, “Distributed control subjected to constraints on
+control inputs: A case study on secondary control of droop-controlled
+inverter-basedmicrogrids,”inProc.9thIEEEConf.Ind.Electron.Appl.,
+Hangzhou,China,2014,pp.1119–1124.
+[5] X.Yu,C.Cecati,T.Dillon,andM.Simoes,“Thenewfrontierofsmart
+grids:Anindustrialelectronicsperspective,”IEEEInd.Electron.Mag.,
+vol.5,no.3,pp.49–63,Sep.2011.
+[6] J.Balaguer,Q.Lei,S.Yang,andU.Supatti,“Controlforgrid-connected
+and intentional islanding operations of distributed power generation,”
+IEEETrans.Ind.Electron.,vol.58,no.1,pp.147–157,Jan.2011.
+[7] J.A.P.Lopes,C.L.Moreria,andA. G.Madureira,“Definingcontrol
+strategiesformicrogridsislandedoperation,”IEEETrans.PowerSyst.,
+Fig.10. Comparisonbetweentheproposedmethodandtheapproach vol.21,no.2,pp.916–924,May2006.
+in[14]. [8] S.Chakraborty,M.D.Weiss,andM.G.Simoes,“Distributedintelligent
+energymanagementsystemforasingle-phasehigh-frequencyacmicro-
+atstage4.Thesecondaryfrequencycontrolinputsareshownin grid,”IEEETrans.Ind.Electron.,vol.54,no.1,pp.97–109,Feb.2007.
+Fig.9.Clearly,thesesimulationresultsvalidatethatsecondary [9] J.M.Guerrero,J.C.Vasquez,J.Matas,andL.G.deVicuna,“Hierarchical
+controlofdroop-controlledacanddcmicrogrids—Ageneralapproachto-
+frequency control inputs are equal to each other in the steady
+wardstandardization,”IEEETrans.Ind.Electron.,vol.58,no.1,pp.158–
+state,i.e.,(u 1 ω) s =(u 2 ω) s =(u 3 ω) s =(u 4 ω) s . 172,Jan.2011.
+As mentioned in the introduction, there are limited ap- [10] J.M.Guerrero,M.Chandorkar,T.Lee,andP.C.Loh,“Advancedcontrol
+architecturesforintelligentmicrogrids-PartI:Decentralizedandhierar-
+proachestosolvevoltageandfrequencyrestorationproblemsin
+chicalcontrol,”IEEETrans.Ind.Electron.,vol.60,no.4,pp.1254–1262,
+adistributedway.Asfarasweknow,relevantresultsareonly Apr.2013.
+availablein[13]–[16].Amongtheseapproaches,only[13]and [11] N. Pogaku, M. Prodanovic, and T. C. Green, “Modeling, analysis and
+testingofautonomousoperationofaninverter-basedmicrogrid,”IEEE
+[14] consider similar problems to that of this paper. However,
+Trans.PowerElectron.,vol.22,no.2,pp.613–625,Mar.2003.
+in[14],frequencyrestorationisnotconsidered.Therefore,here, [12] A. S. Dobakhshari, S. Azizi, and A. M. Ranjbar, “Control of micro-
+we just make a comparison with the method proposed in [14] grids:Aspectsandprospects,”inProc.Int.Conf.Netw.,Sens.Control,
+Apr.2011,pp.38–43.
+involtagerestorationbyalsoapplyingittotheaforementioned
+[13] A. Bidram, A. Davoudi, F. K. Lewis, and Z. Qu, “Secondary control
+MGsystem.Thecontrolgainsaresetask 1 =100andk 2 =40 of microgrids based on distributed cooperative control of multi-agent
+in both our proposed method and the controller in [14]. The systems,”IETGenerationTransmiss.Distrib.,vol.7,no.8,pp.822–831,
+Aug.2013.
+simulationresultsofStage2fortheperiod[4.8,7.5]areshown
+[14] A.Bidram,A.Davoudi,F.K.Lewis,andJ.M.Guerrero,“Distributedco-
+inFig.10.ItisclearfromFig.10thatourproposedmethodhas operativesecondarycontrolofmicrogridsusingfeedbacklinearization,”
+asettlingtimeofabout1.5s,whilethemethodin[14]requires IEEETrans.PowerSyst.,vol.28,no.3,pp.3462–3470,Aug.2013.
+[15] Q. Shafiee, J. M. Guerrero, and J. C. Vasquez, “Distributed secondary
+2.5 s for the responses to settle down, which is about 166%
+controlforislandedmicrogrids—Anovelapproach,”IEEETrans.Power
+of our settling time. This actually makes sense as our scheme Electron.,vol.29,no.2,pp.1018–1031,Feb.2014.
+ensurestheconvergencewithinfinitetime. [16] J.W.Simpson-Porco,F.Dorfler,andF.Bullo,“Sychronizationandpower
+sharingfordroop-controlledinvertersinislandedmicrogrids,”Automat-
+ica,vol.49,no.9,pp.2603–2611,Sep.2013.
+V. CONCLUSION [17] C.GodsilandG.Royle,AlgebraicGraphTheory. NewYork,NY,USA:
+Springer-Verlag,2001.
+Theproblemofvoltageandfrequencyrestorationinislanded [18] K.Hatipoglu,I.Fidan,andG.Radman,“Investigatingeffectofvoltage
+changesonstaticZIPloadmodelinamicrogridenvironment,”inProc.
+MGsystemsisconsideredinthispaper.Adistributedsecondary
+NAPS,Sep.2012,pp.1–5.
+control scheme is proposed to solve this problem. Compared [19] A.R.BergenandV.Vittal,PowerSystemAnalysis. EnglewoodCliffs,
+to the existing centralized control approach, our method is NJ,USA:Prentice-Hall,1986.
+[20] J. Schiffer, O. Romeo, A. Astolfi, J. Raisch, and T. Sezi, “Conditions
+fully distributed. In order to design and analyze the voltage
+forstabilityofdroop-controlledinverter-basedmicrogrids,”Automatica,
+and frequency secondary restoration control separately, we vol.50,no.10,pp.2457–2469,Oct.2014.
+first apply the distributed finite-time approach to design the [21] Y.Wang,D.Cheng,Y.Hong,andH.Qin,“Finite-timestabilizingexcita-
+tioncontrolofasynchronousgenerator,”Int.J.Syst.Sci.,vol.33,no.1,
+voltagecontroller,whichenablesthevoltageregulationwithin
+pp.13–22,2002.
+finite time. Then, the frequency restoration is addressed while [22] Y.Hong,J.Huang,andY.Xu,“Onanoutputfeedbackfinite-timestabi-
+keepingtherealpowersharingaccuracy.Asufficientlocalsta- lizationproblem,”IEEETrans.Autom.Control,vol.46,no.2,pp.305–
+309,Feb.2001.
+bilityconditionfortheproposedcontrollerisgiven.Simulation
+[23] M. Rosier, “Homogeneous Lyapunov function for homogeneous con-
+resultsshowthattheproposedcontrollercanrestorethevoltage tinuous vector filed,” Syst. Control Lett., vol. 19, no. 6, pp. 467–473,
+and frequency of the whole system to their reference values Dec.1992.
+[24] S. Bhat and D. Bernstein, “Continuous finite-time stabilization of the
+whilekeepingagoodrealpowersharingaccuracy,nomatterif
+translational and rotational double integrators,” IEEE Trans. Autom.
+additionalloadisconnectedtoordisconnectedfromthesystem. Control,vol.43,no.5,pp.678–682,May1998.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 10 ---
+4364 IEEETRANSACTIONSONINDUSTRIALELECTRONICS,VOL.62,NO.7,JULY2015
+[25] Z. Wang, M. Xia, and M. Lemmon, “Voltage stability of weak power Jianfeng Mao (M’04) received the B.E. and
+distribution networks with inverter connected sources,” in Proc. Amer. M.E. degrees in automation science from
+ControlConf.,Washington,DC,USA,2013,pp.6577–6582. Tsinghua University, Beijing, China, in 2001
+[26] H. Bouattour, Distributed Secondary Control in Microgrids. Stuttgart, and 2004, respectively, and the Ph.D. degree
+Germany:Univ.Stuttgart,2013. insystemsengineeringfromBostonUniversity,
+[27] D. Cheng, T. J. Tarn, and A. Isidori, “Global external linearization of Boston,MA,USA,in2009.
+nonlinearsystemsviafeedback,”IEEETrans.Autom.Control,vol.30, He is currently an Assistant Professor with
+no.8,pp.808–811,Aug.1985. theDivisionofSystemsandEngineeringMan-
+[28] J.SlotineandW.Li,AppliedNonlinearControl. UpperSaddleRiver, agement,SchoolofMechanicalandAerospace
+NJ,USA:Prentice-Hall,2009. Engineering,NanyangTechnologicalUniversity,
+[29] J.HuandY.Hong,“Leader-followingcoordinationofmulti-agentsys- Singapore.Hisresearchisprimarilyfocusedon
+temswithcouplingtimedelays,”Phys.A,Statist.Mech.Appl.,vol.374, themodelingandoptimizationofdiscrete-eventandhybridsystemswith
+no.2,pp.853–863,Feb.2007. applicationstotransportationsystems,airtrafficmanagement,energy
+[30] Y. Chen, J. Lu, and Z. Lin, “Consensus of discrete-time multi-agent management,andhealthcaresystems.
+systems with transmission nonlinearity,” Automatica, vol. 49, no. 6,
+pp.1768–1775,Jun.2013.
+[31] M.Andreasson,D.V.Dimarogonas,H.Sandberg,andK.H.Johansson, Yong-Duan Song (SM’10) received the Ph.D.
+“Distributed control of networked dynamical systems: Static feedback, degree in electrical and computer engineer-
+integral action and consensus,” IEEE Trans. Autom. Control, vol. 59, ing from Tennessee Technological University,
+no.7,pp.1750–1765,Jul.2014. Cookeville,TN,USA,in1992.
+[32] C.T.Chen,LinearSystemTheoryandDesign,3rded. London,U.K.: He held a tenured Full Professor posi-
+OxfordUniv.Press,1999. tion with North Carolina A&T State University,
+Greensboro,NC,USA,from1993to2008anda
+Langley Distinguished Professor position with
+FanghongGuoreceivedtheB.Eng.degreein the National Institute of Aerospace, Hampton,
+automation science from Southeast University, VA,USA,from2005to2008.Heiscurrentlythe
+Nanjing,China,in2010andtheM.Eng.degree Dean of the School of Automation, Chongqing
+in automation science and electrical engineer- University,Chongqing,China,andtheFoundingDirectoroftheInstitute
+ing from Beihang University, Beijing, China, in of Smart Systems and Renewable Energy, Chongqing University. He
+2013.HeiscurrentlyworkingtowardthePh.D. wasoneofthesixLangleyDistinguishedProfessorswiththeNational
+degreeintheEnergyResearchInstitute,Inter- InstituteofAerospace(NIA)andistheFoundingDirectorofCooperative
+disciplinaryGraduateSchool,NanyangTechno- Systems at NIA. His research interests include intelligent systems,
+logicalUniversity,Singapore. guidancenavigationandcontrol,bio-inspiredadaptiveandcooperative
+Hisresearchinterestsincludedistributedco- systems,railtrafficcontrolandsafety,andsmartgrid.
+operativecontrol,microgridsystems,distributed Dr.SonghasservedasanAssociateEditor/GuestEditorforseveral
+optimization,andsmartgrid. prestigiousscientificjournals.
+Changyun Wen (F’10) received the B.Eng.
+degree from Xi’an Jiaotong University, Xi’an,
+China, in 1983 and the Ph.D. degree from the
+University of Newcastle, Newcastle, Australia,
+in1990.
+From August 1989 to August 1991, he was
+aPostdoctoralFellowattheUniversityofAde-
+laide, Adelaide, Australia. Since August 1991,
+he has been with the School of Electrical and
+ElectronicEngineering,NanyangTechnological
+University, Singapore, where he is currently a
+Full Professor. His main research activities are control systems and
+applications.
+Dr. Wen is an Associate Editor of a number of journals, includ-
+ingAutomatica, IEEE TRANSACTIONS ON INDUSTRIAL ELECTRONICS,
+and IEEE Control Systems Magazine. He is the Executive Editor-in-
+Chief of the Journal of Control and Decision. He served the IEEE
+TRANSACTIONSON AUTOMATICCONTROLasanAssociateEditorfrom
+January2000toDecember2002.HewasamemberoftheIEEEFellows
+Committeefrom2011to2013andaDistinguishedLectureroftheIEEE
+ControlSystemsSocietyfromFebruary2010toFebruary2013.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:13 UTC from IEEE Xplore. Restrictions apply.

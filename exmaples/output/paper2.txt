@@ -1,0 +1,1631 @@
+--- Page 1 ---
+IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018 1857
+Distributed Secondary Control for Power Allocation
+and Voltage Restoration in Islanded DC Microgrids
+FanghongGuo ,Member,IEEE,QianwenXu ,StudentMember,IEEE,ChangyunWen ,Fellow,IEEE,
+LeiWang ,Member,IEEE,andPengWang ,Fellow,IEEE
+Abstract—Thispaperpresentsadistributedsecondarycontrol namely,alternatingcurrent(AC)MG,directcurrent(DC)MG
+scheme for accurate power allocation and voltage restoration in andhybridAC/DCMG.Inthispaper,wemainlyfocusonthe
+islandeddcmicrogrids.Conventionallythedroopcontrolfunction
+DCMG,whichusuallyoperatesinanislandedmode[2]–[4].
+isemployedintheprimarycontrollayertorealizepowersharing
+In islanded DC MG, droop control is usually implemented
+amongthedistributedgenerators(DGs)inadecentralizedfashion.
+However, the dc bus voltage may deviate from its nominal value inthelocalDGcontrollertorealizethepowersharing[5]–[6].
+duetodifferentloadprofiles.Inordertorestorethedcbusvoltage It can force the current output of each DG to be proportional
+to its nominal value while maintaining the power sharing accu- tothedesignedratio,ifthedroopgainsarechosensufficiently
+racy, a distributed control scheme is proposed in the secondary
+larger than the line resistance. One of the advantages brought
+controllayer.Byusinglimitedinformationofdcbusvoltageand
+by droop control method is that it is implemented in a fully
+thesecondarycontrolinputsoftheirneighboringcontrollers,adis-
+tributedsecondarycontrolinputcanbedesignedandthensentto decentralizedwayandnocommunicationbetweeneachDGis
+its corresponding primary controller. Besides, compared to most required. However, as pointed out in [7]–[8], when applying
+existing methods, no global information is required and only dc the droop control function, there is a trade-off between power
+busvoltagefeedbackisneeded.Inaddition,byemployingtheidea
+sharingandvoltageregulation.Highdroopgainleadstoahigh
+ofpinningcontrol,ourproposedsecondarycontrolcanbefurther
+powersharingaccuracybutapoorvoltageregulation,i.e.,large
+simplifiedbyonlysendingthedcbusvoltagetooneDG.Anislanded
+dcmicrogridtestsystemisbuiltintheMATLABSimulinkenviron- DC bus voltage deviation. The DC bus voltage may vary un-
+menttovalidateourproposedmethod.Anexperimentalprototype der different load condition, and it is hard to be maintained at
+consistingoftwoDGsisdesignedtodemonstratethenewlypro- desiredreferencevalue.Inordertosolvethevoltagedeviation
+posedapproachandverifytheobtainedtheoreticalresults.
+problem, a secondary control is proposed in [9], where a cen-
+Index Terms—Distributed control, secondary control, voltage tralizedsecondaryvoltagecompensationcontrollerisdesigned.
+restoration,powersharing,DCmicrogrid. Thevoltagedeviationerrorisfedtoastandardproportionaland
+integral(PI)controller,whosecontrolsignalisthensenttoall
+theDGs.Itisnotedthatsuchcentralizedcontrolisusuallyim-
+I. INTRODUCTION
+plementedonanextrasinglecontroller,andthiscontrollerhas
+INRECENTyears,morerenewableenergysourceshavepen-
+somelimitations,suchaseasytosufferfromsingle-pointfail-
+etrated into existing power systems to meet the rapidly in- ures and is also unable to meet the plug-and-play requirement
+creasing electricity demand [1]. One popular solution to inte- ofrecentMGsystem[10]–[12].
+gratedifferenttypesofrenewableenergysourcesistheconcept Inordertoovercomeabovelimitations,distributedsecondary
+ofmicrogrid(MG).AnMGisasmall-scalepowersystemthat voltagerestorationcontrolhavebeenproposedin[13]–[17].No
+integrates a number of local distributed generator (DG) units, extracentralizedcontrollerisneededandeachsecondarycon-
+energystoragesystemsandlocalloadstogether.Therearedif- troller is located at each local DG and they can communicate
+ferenttypesofMGsreportedintheliterature.Accordingtothe with neighboring controllers respectively. In [15], the average
+coupling bus type, the MG can be classified into three types, valueofthecurrentsuppliedbyalltheDGsisrequiredtocal-
+culate the compensation signal, which is then added to con-
+Manuscript received April 7, 2017; revised July 26, 2017 and December ventional droop control function. However, how to obtain the
+24,2017;acceptedMarch11,2018.DateofpublicationMarch19,2018;date
+averagevalueofthecurrentisnotdiscussed.Similarly,anaver-
+ofcurrentversionSeptember18,2018.ThisworkwassupportedbytheEn-
+ergyResearchInstitute@NTU(ERI@N),NanyangTechnologicalUniversity, agevoltagesharingschemeisproposedin[16]tocompensate
+Singapore.Paperno.TSTE-00331-2017.(Correspondingauthor:LeiWang.) for the voltage deviation caused by droop control. In [17], a
+F.GuowaswiththeExperimentalPowerGridCentre,AgencyforScience,
+distributed compensation method is proposed, which is based
+TechnologyandResearch(A*STAR),Singapore627590.Heisnowwiththe
+Department of Automation, Zhejiang University of Technology, Hangzhou, on the global droop gain and total load current. To some de-
+China310032(e-mail:,fhguobuaa@163.com). gree, these global information cannot be easily obtained in a
+Q.Xu,C.Wen,L.Wang,andP.WangarewiththeSchoolofElectricaland
+distributed manner. It is also worthy to point out that all these
+ElectronicEngineering,NanyangTechnologicalUniversity,Singapore639798
+(e-mail:,qxu007@e.ntu.edu.sg;ecywen@ntu.edu.sg;wanglei_0201@163.com; methodsaretocompensateforthevoltagedeviationinafeed-
+epwang@ntu.edu.sg). forwardfashion.
+Colorversionsofoneormoreofthefiguresinthispaperareavailableonline
+Inthispaper,anewdistributedsecondarycontrolschemeis
+athttp://ieeexplore.ieee.org.
+DigitalObjectIdentifier10.1109/TSTE.2018.2816944 proposed,whichisnotonlyabletorestoretheDCbusvoltage
+1949-3029©2018IEEE.Personaluseispermitted,butrepublication/redistributionrequiresIEEEpermission.
+Seehttp://www.ieee.org/publicationsstandards/publications/rights/index.htmlformoreinformation.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 2 ---
+1858 IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018
+tothereferencevalue,butalsocanmaintainthepowersharing
+accuracy brought by the droop control. Different from above
+mentionedmethods,theproposedmethodisdesignedbasedon
+thefeedbackmechanismandnoglobalinformationsuchasthe
+averagecurrent,averagevoltage,globaldroopgainareneeded.
+It only requires to measure and feedback the DC bus voltage
+to certain secondary controllers. Each secondary controller is
+located at a corresponding local DG, and its designed control
+outputisfedtothedroopcontrolfunctionintheprimarylayer
+respectively. By allowing the secondary controller to commu-
+nicatewithitsneighboringcontrollers,theproposeddistributed
+Fig.1. Decentralizedprimarycontrolforpowersharing.
+secondary control method can achieve the same goal as the
+centralizedone.Inordernottodestroythepowersharingaccu-
+racybroughtbydroopcontrol,itisanalyzedthatthedesigned ThevoltagereferenceVref isgeneratedbythedroopcontrol
+i
+control inputs from all the local secondary controllers should functionasfollows[18],
+be equal at steady state. This imposes a constraint to the con-
+V ref =V ∗−k I (2)
+trol inputs, which is a new challenge in design and analysis. i i i
+Hence, to overcome the challenges, a secondary control error whereV∗ isnominalDCvoltage,k isthedroopgain,I isthe
+i i
+is defined by combining both the voltage restoration error and outputcurrentoftheithDG.
+control input consensus error, which is then fed to a PI con- ForanislandedDCMGwithseveralDGsconnectedinpar-
+troller to produce the secondary control input. The stability of allel,theDCbusvoltageV is
+b
+proposeddistributedsecondarycontrolisanalyzedbyestablish-
+ingasufficientconditionforthecontrollerparameters.Besides, V b =V i −R i I i . (3)
+theproposedmethodcanbefurthersimplifiedbyemployingthe
+Combining(1)–(3),wehave
+ideaofpinningcontrol,i.e.,onlytheDGswithnonzeropinning
+gaingettheDCbusvoltagefeedback. V b =V ∗−(R i +k i )I i (4)
+The main contributions of proposed method can be sum-
+whichimpliesthat
+marizedasfollows.1)Theproposedsecondarycontrollersare
+fullydistributed,whichcanmeettheplug-and-playrequirement; (R +k )I =(R +k )I , ∀i,j (5)
+i i i j j j
+2) No global information is needed, which make the designed
+From(5),wecanseethatthepowersharingratioisinversely
+controllerseasytoimplementandreliableinthesensethatthey
+proportional tothesumofthelineresistanceR and designed
+do not suffer single-point failures; 3) Only DC bus voltage is i
+droopgaink ,i.e.,
+needed to measure and feedback, which reduces the system i
+cost;4)Newcontrolstrategy,includingemployingtheideaof I R +k
+i = j j, ∀i,j (6)
+pinningcontrol,isproposedtoovercomechallengescausedby I R +k
+j i i
+the constraints in ensuring the simplicity and flexibility of the
+Ifthedroopgaink issetmuchlargerthanthelineresistance
+controllers; 5) The effectiveness of the designed controllers is i
+R .i.e.,
+analyzedtheoreticallyandverifiedbyexperimentalresults. i
+k (cid:4)R (7)
+i i
+II. PROBLEMFORMULATIONANDOBJECTIVES
+thenwehave
+In an islanded DC MG, droop control is usually employed I R +k k
+to realize the power sharing among all the DGs in a totally i = j j ≈ j, ∀i,j (8)
+I R +k k
+decentralizedway.Inthissection,wefirstlybrieflyreviewand j i i i
+analyzethisdecentralizedpowersharingmethodandthenpoint which implies under condition (7), power sharing ratio (8) is
+out some existing problems such as DC bus voltage deviation dominated by the designed droop gain k , which acts like a
+i
+causedbythismethod. “virtual impedance”. In other words, if the droop gain k is
+i
+properly chosen according the power rating ratio of each DG,
+A. DroopControl thentheproportionalpowersharingcanberealizedamongall
+theDGs.
+Theblockdiagramofdecentralizedpowersharingmethodfor
+eachlocalDGisshowninFig.1,whichisindeedtheprimary
+B. Objectives
+control layer of the islanded DC MG. Note that if the voltage
+andcurrentcontrolloopsarewell-designed,theconverteroutput Byfurtherlookinginto(4),theDCbusvoltageV b willdeviate
+DCvoltageV i isfastenoughtotrackthereferencevoltageV i ref, from the nominal voltage V∗ as long as I i (cid:6)=0. Furthermore,
+i.e., the larger the droop gain k i is, the more the voltage deviation
+V∗−V is. Hence the objective of this paper is to restore the
+V i =V i ref (1) DCbus b voltageV b tothenominalvalueV(cid:2) whilemaintaining
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 3 ---
+GUOetal.:DISTRIBUTEDSECONDARYCONTROLFORPOWERALLOCATIONANDVOLTAGERESTORATION 1859
+thepowersharingaccuracy(8).Inthenextsection,afullydis-
+tributedsecondarycontrolmethodisproposedtosolvevoltage
+restorationproblem.
+III. DISTRIBUTEDSECONDARYCONTROL
+FORVOLTAGERESTORATION
+Inthissection,anewdistributedsecondaryvoltagerestoration
+method is proposed for an islanded DC MG system, where
+severalDCDGsareconnectedinparallel.EachDGisdirectly
+controlledbythedroopfunctionbasedprimarycontroller,where
+its detailed diagram is shown in Fig. 1. A secondary control
+signalu istobedesignedtoaddintothedroopfunction(2)in
+i
+theprimarycontrol,i.e.,
+V ref =V ∗−k I +u (9)
+i i i i
+whichresultsinrevising(4)as Fig.2. Thediagramofproposeddistributedsecondarycontrol.
+V =V ∗−(R +k )I +u (10)
+b i i i i
+Besides,itisworthytopointoutthattheproposeddistributed
+From(10),itcanbeeasilyconcludedthatifweneedtomain-
+controlmethodologycanbealsoappliedtoACandAC/DCMGs
+tain the power sharing accuracy brought by the droop control,
+withsomemodificationsontheproposedschemeaccordingto
+i.e., to make (8) still hold, there exists a constraint for the de-
+particularcontroltasks.Themaincommon ideasbehind these
+signed secondary control input u . That is, in the steady state,
+i distributed control methods include distributed PI control and
+allthesecondarycontrolinputshouldbeequal,i.e.,
+pinningcontrol.InACMG,thefrequencyandvoltagerestora-
+(u )s =(u )s,∀i,j (11) tionproblemcanbesolvedbyapplyingthisdistributedcontrol
+i j
+approach[19].
+where(u )s denotesthevalueofu inthesteadystate.
+i i
+B. StabilityAnalysis
+A. ControllerDesign
+Wenowanalyzetheproposeddistributedsecondarycontroller
+From above analysis, we conclude that the objective of the
+and establish a sufficient condition for system stability. The
+proposedsecondarycontrolleristorestoretheDCbusvoltage
+closed-loopsystemconsistingof(10),(12)–(15)canbeobtained
+V tothereferencevalueV∗,i.e., lim eV(t)=0,whilemeeting
+b t→∞ asfollows:
+thecontrolinputconstraint,i.e.,
+t
+l
+→
+im
+∞
+eui (t)=0,∀i,whereeV
+eV1 n×1 =(R+k)I−u (16)
+and eui are named as the voltage restoration error and control
+inputconsensuserror,whicharedefinedasfollowsrespectively u˙ =K P e˙+K I e (17)
+eV =V ∗−V
+b
+(12) e=αeV1 n×1 −βLu (18)
+(cid:2)
+where N i denotes th
+e
+e
+ui
+ne
+=
+ig j h ∈ b N o i r
+(
+h
+u
+o j od
+−
+s
+u
+e i t
+)
+of the ith second
+(1
+ar
+3
+y
+) w
+· K I ·
+h
+= P ·
+e
+e 2
+r
+, n [
+e
+. I ]T . 1
+R
+. , I , 2
+=
+K α · P
+d
+· n =
+i
+·
+a
+) I ,
+g
+d n
+(
+i
+R
+K a ]T g
+1
+I , (
+,
+u α =
+R
+1 =
+2
+, d
+,
+α i
+.
+[ a 2
+.
+u g ,
+.
+1 . (
+,
+K .
+R
+u . 2 I
+n
+, 1 α
+)
+· ,
+,
+· n K ·
+k
+) I , u 2
+=
+n ,. β
+d
+] . T
+i
+. =
+a
+, , K
+g
+K d
+(
+P
+k
+i I a n
+1
+g =
+,
+) (
+k
+, β
+2
+d 1
+,
+e i , a
+.
+= β
+.
+g
+.
+2 (
+,
+[ K , e
+k
+. 1 P
+n
+. e . 1
+)
+2 , ,
+,
+controller. β ), L is the Laplacian matrix of the communication graph,
+n
+Thenasimpledistributedsecondary (cid:3) controlisdesignedas 1 n×1 denotes the n− dimension vector with all the elements
+equalto1.
+u =K e +K e dt (14)
+i Pi i Ii i AssumethattheresistanceloadisconnectedtotheDCMG,
+thenwehave
+where K and K are the coefficients of the proportion and
+Pi Ii
+V
+integral (PI) controller for the ith DG, e i is the combination 1T n×1 I =
+R
+b (19)
+error,whichisdefinedas L
+whereR istheloadresistance.
+e
+i
+=α
+i
+eV +β
+i
+eui (15)
+Before
+L
+giving the main results, two important lemmas are
+whereα ,β ∈R+ arethecombinationgains. presentedasfollows.
+i i
+Thedetaileddiagramofproposedsecondarycontrolisshown Lemma1: A=D+c1T n×1 1 n×1 ∈R n×n isinvertible,and
+inFig.2.Notethatdifferentfromexistingfeed-forwardmethods its inverse matrix A−1 is a strictly diagonally dominant ma-
+[13]–[17],theproposedsecondaryvoltagerestorationisrealized trix with the diagonal elements being positive, where D =
+onafeedbackmechanism.Inaddition,noglobalinformationis diag(d1,d2,...,d
+n
+)∈R+
+n×n
+is a diagonal matrix, c>0 is
+required. somepositiveconstant.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 4 ---
+1860 IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018
+Proof: SeeAppendix. (cid:2) K >0.
+Hu L rw em itz m , a if 2: the T c h o e nt m ro a l tr p ix ar Z am = ete − rs α α R i L a 1 n n d ×1 β 1 i T n a × r 1 e A c − h 1 o − sen βL tha is t
+Ii
+t l → im ∞ e(t)=0 n×1 (29)
+m
+α βi i
+at
+=
+rix
+s
+A
+i >
+−1
+0
+.
+,∀i=1,...,n, where s i is the sum of row i in
+the
+B
+n
+e
+(
+s
+2
+id
+7
+e
+)
+s
+b
+,
+e
+i
+c
+t
+o
+c
+m
+an
+e
+b
+s
+ealsoobtainedthatifK Pi issetasK Pi =0,
+Proof: SeeAppendix. (cid:2)
+e˙ =ZK e (30)
+Theorem1: Considertheprimarycontrolsystemin(10).The I
+proposedsecondarycontroller(12)–(15)ensuresthefollowing AndifK >0,(29)isalsoachieved.
+results:i)theDCbusvoltagerestorestoitsnominalvalueV∗, Ii
+Combining(18)and(29),itimpliesthat
+i.e., lim eV(t)=0; ii) the power sharing accuracy in (8) is
+guara t→ nt ∞ eedifthecontrollerparametersα i andβ i arechosensuch t l → im ∞ αeV1 n×1 (t)=βLu(t) (31)
+t
+th
+h
+a
+e
+t
+P
+th
+I
+e
+p
+m
+ar
+a
+a
+t
+m
+rix
+et
+Z
+ers
+=
+sa
+−
+ti
+α
+sf
+R
+y
+L
+K
+1 n×1
+≥
+1T n
+0
+×
+,
+1
+K
+A−1
+>
+−
+0
+β
+,
+L
+w
+i
+h
+s
+e
+H
+re
+ur
+A
+wi
+=
+tz,
+R
+an
++
+d Since1 n×1 doesnotlieintherangeofL,thus
+k+R L 1 n×1 1T n×1 .
+Pi Ii
+t l → im ∞ eV(t)=0 (32)
+Proof: Substituting(19)into(12),wehave
+eV =V ∗−V =V ∗−R 1T I (20) t
+l
+→
+im
+∞
+Lu(t)=0 n×1 (33)
+b L n×1
+Equation(32)impliesthatourproposedsecondarycontroller
+Substituting(20)into(16),wehave can restore the DC bus voltage V to the reference value V∗.
+b
+eV1 n×1 =(V ∗−R L 1T n×1 I)1 n×1 =(R+k)I−u (21) In addition, (33) indicates that t l → im ∞ (u i (t)−u j (t))=0,∀i,j,
+whichsatisfiesthecontrolinputconstraintandfurtherguarantee
+whichimpliesthat
+thepowersharingaccuracyin(8).Thiscompletestheproofof
+(R+k+R L 1 n×1 1T n×1 )I =V ∗1 n×1 +u (22) Theorem1. (cid:2)
+AccordingtoLemma1,itiseasytoconcludethatA=R+
+C. DistributedSecondaryControlWithPinningGain
+k+R L 1 n×1 1T n×1 isinvertible.Then
+Inthelastsection,thevoltagerestorationerror(12)isincluded
+I =A −1 V ∗1 n×1 +A −1 u (23) inthecontroller(14)foralltheDGs.Infact,asoneadvantageof
+distributedcontrol,theDCbusvoltageV couldnotbeknown
+Substituting(23)into(16),weobtain b
+by all the DGs [19]. Then motivated by the idea of pinning
+eV1
+n×1
+=(R+k)I−u control, we modify (15) by multiplying the pinning gain g
+i
+in
+eachcontroller,i.e.,
+=(R+k)A −1 V ∗1 n×1 +[(R+k)A −1 −E]u
+=(R+k)A −1 V ∗1 n×1 −R L 1 n×1 1T n×1 A −1 u (24)
+e
+i
+=α
+i
+g
+i
+eV +β
+i
+eui (34)
+where g is nonzero for the DG that has access to the DC bus
+i
+whereEisanidentitymatrix.Thensubstituting(24)into(18), voltageV .
+b
+wehave Theorem2: Consider the primary control system in (10).
+e=αeV1
+n×1
+−βLu The proposed secondary controller given in (12)–(14), and
+(34) ensures the following results: i) the DC bus voltage re-
+=α(R+k)A −1 V ∗1 n×1 −(αR L 1 n×1 1T n×1 A −1 +βL)u stores to its reference value V∗, i.e., t l → im ∞ eV(t)=0; ii) the
+(25) power sharing accuracy in (8) is guaranteed if the controller
+parametersg ,α andβ arechosensuchthatthematrixZ(cid:11) =
+Differentiatingbothsideof(25)withrespecttotimet, i i i
+−αgR
+L
+1
+n×1
+1T
+n×1
+A−1 −βLisHurwitz,andthePIparameters
+e˙ =−(αR L 1 n×1 1T n×1 A −1 +βL)u˙ (26) satisfyK Pi ≥0,K Ii >0,whereA=R+k+R L 1 n×1 1T n×1 .
+Proof: The stability analysis with pinning gain follows
+Substituting(17)into(26),wehave
+similarly to that of Theorem 1 by replacing α with αg,
+e˙ =Z(K P e˙+K I e) (27) where g =diag(g1,g2,...,g n ). As long as the matrix Z(cid:11) =
+whereZ =−(αR L 1 n×1 1T n×1 A−1 +βL). t − er ( s α s g a R ti L sf 1 y n× K 1 P 1 i T n ≥ ×1 A 0, − K 1 + Ii β > L 0 ) , i t s he H n ur th w e itz co a n n c d lu t s h i e on P s I ( p 3 a 2 r ) am an e d -
+According to Lemma 2, if the control parameters α i and β i (33)stillhold. (cid:2)
+areproperlychosen,thenthematrixZ isHurwitz. Remark1: The proposed distributed secondary control
+Rewriting(27)as method is further simplified by applying the idea of pinning
+(E−ZK )e˙ =ZK e (28) control, which only allows to feedback the DC bus voltage V b
+P I
+tocertainDGs(inextremecase,onlyoneDGisneeded).This
+From(28),itiseasytoconcludethatthefollowingobjective simplificationcangreatlyreducethenumberofcommunication
+will be achieved if the PI parameters are chosen as K >0, linksbetweentheDCbusandlocalDGs.However,moreDGs
+Pi
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 5 ---
+GUOetal.:DISTRIBUTEDSECONDARYCONTROLFORPOWERALLOCATIONANDVOLTAGERESTORATION 1861
+Fig.3. Casestudysetup.
+accesstheDCbusvoltagewillleadafastervoltagerestoration TABLEI
+speed,whichwillbeillustratedinthenextsection.
+PARAMETERSOFMGSYSTEMANDTHEPRIMARYCONTROLLER
+Remark2: Inthispaper,similartotheworkin[14]–[17],a
+DC MG with all the DGs connected in parallel is considered, DG1/DG2 DG3/DG4
+wherethemainobjectiveistorestorethecommonbusvoltage
+DG VDC 100V VDC 100V
+V b tothereferencevalue.However,iftheDGsareconnectedto fs 1.25kHz fs 1.25kHz
+differentbuses,thecontrolobjectiveistomaintaintheaverage
+LCFilter Lf 1e-2H Lf 1e-2H
+ofallthebusvoltagestocertainreferencevalue,see[10].Due Cf 2200μF Cf 2200μF
+todifferentobjectives,thelatercaseisoutofthescopeofthis LineResistance R1/R2 0.01Ω R3/R4 0.01Ω
+paperandneedstobeconsideredseparately.
+VoltageLoop KVP 4 KVP 4
+KVI 800 KVI 800
+D. ControlParametersSelection CurrentLoop KIP 5 KIP 5
+KII 110 KII 110
+According to the results in Theorems 1 and 2, one can
+DroopGain k1/k2 6/3 k3/k4 2/2
+follow the following general guidelines to design the control
+parameters.
+Step1: Choose the control parameters g , α and β to make
+i i i
+surethatthematrixZ orZ(cid:11)isHurwitz.
+Theproposedsecondarycontrolwithandwithoutpinninggains
+Step2: Select proper PI parameters satisfying that K ≥0
+Pi are firstly verified respectively. The plug-and-play property of
+andK >0toensuresystemstability.Forthesystem
+Ii proposedmethodisalsotested.
+transient performances with respect to these two pa-
+TheislandedDCMGsystemconsistsof3regularDGs(DG1,
+rameters, from our investigation based on simulation
+DG2, and DG3) and one backup DG (DG4). For simulation
+studies and experimental tests, it is found that larger
+studies,differentpowerratingsarechosenaccordingtocertain
+K and K lead to shorter settling time but larger
+P I givenratios,forexampleS1 :S2 :S3 :S4 =1:2:3:3inour
+overshoot.
+simulation example, which is shown in Fig. 3. The DC/DC
+Remark3: Notethatthecondition(50)inAppendixBisjust
+buckconverterisemployedineachDGanditsdetailedprimary
+one sufficient condition to make Z Hurwitz. In practice, there
+controlloopisshowninFig.1,wheretwostandardPIcontrollers
+are many other choices to select the control parameters g , α
+i i are used in the voltage control loop and current control loop
+and β , as long as that the matrix Z and Z(cid:11) are Hurwitz. For
+i respectively. The parameters of the primary control layer as
+example,theparametersweselectedinourcasestudiessection
+wellasMGsystemaresummarizedinTableI.Theparametersof
+alsomeettherequirementofZ andZ(cid:11)beingHurwitz.
+proposedsecondarycontrollerarelistedinTableII.TheDCbus
+voltageV ismeasuredandthensenttocertainDGsaccording
+b
+IV. SIMULATIONRESULTS
+tothedefinitionofpinninggains.Inthiscasestudy,weinitially
+Inordertovalidatetheproposeddistributedcontrolscheme,a setthepinninggainsasg1 =1,g2 =g3 =g4 =0,whichmeans
+simulationtestmodelisbuiltinMatlabSimulinkenvironment. thatweonlyneedtosendtheDCbusvoltageV toDG1.Suppose
+b
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 6 ---
+1862 IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018
+TABLEII
+PARAMETERSOFSECONDARYCONTROLLER
+DG1 DG2 DG3 DG4
+Secondary α1 1 α2 1 α3 1 α4 1
+Controller β1 1 β2 1 β3 1 β4 1
+KP1 1 KP2 1 KP3 1 KP4 1
+KI1 40 KI2 40 KI3 40 KI4 40
+g1 1 g2 0 g3 0 g4 0
+Reference V∗=48V
+Load RL1 =5Ω, RL2 =5Ω
+Fig. 5. Current output of test islanded DC MG with pinning gains g1 =
+1,g2 =g3 =g4 =0.
+Fig.6. SecondarycontrolinputoftestislandedDCMGwithpinninggains
+g1 =1,g2 =g3 =g4 =0.
+Fig. 4. Voltage output of test islanded DC MG with pinning gains g1 =
+1,g2 =g3 =g4 =0.
+thedroopgainsof4DGsarechosenastheinverseproportionof
+thepowerratingof4DGs,i.e.,k1 :k2 :k3 :k4 =6:3:2:2.
+A. ProposedDistributedSecondaryControl
+Thewholesimulationcanbedividedinto6stages:
+Stage1(0-2s):Onlyprimarycontrolisactivatedatt=0s
+Stage2(2s-):Secondarycontrolisonoperationfromt=2s
+Stage3(5-12s):Load2isconnectedtotheMGsystem
+Stage4(8-13s):DG4ispluggedinandconnectedtotheMG
+system
+Stage5(12s-):Load2isdisconnectedfromDCbus
+Stage6(13s-):DG4isremovedfromtheMGsystem
+ThecommunicationgraphisshowninFig.3.Thesimulation
+results are presented in Figs. 4–6. As seen from Fig. 4, the
+bus voltage V drops to 39.94 V due to the effect of droop
+b
+controlduringStage1whenonlyprimarycontrolisactivated. Fig.7. VoltageoutputoftestislandedDCMGwithpinninggainsg1 =g2 =
+g3 =g4 =1.
+However,whenourproposedsecondarycontrolisactivatedat
+t=2s,thebusvoltageV quicklyrestorestothereferencevalue
+b
+Vref =48V.Thesteady-stateDCbusvoltageremainsat48V into the current output shown in Fig. 5, our proposed method
+nomatterLoad2isconnectedtoordisconnectedfromthebus, is also able to maintain the power sharing ratio brought by
+even though there are transient deviations. These results show theprimarycontroller,i.e.,I1 :I2 :I3 =1:2:3,regardlessof
+that the proposed method is able to eliminate the bus voltage the load increasing at Stage 3 or decreasing at Stage 5. The
+deviationcausedbydroopcontrol.Besides,byfurtherlooking secondary control inputs are shown in Fig. 6. Clearly, these
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 7 ---
+GUOetal.:DISTRIBUTEDSECONDARYCONTROLFORPOWERALLOCATIONANDVOLTAGERESTORATION 1863
+Fig.8. CurrentoutputoftestislandedDCMGwithpinninggainsg1 =g2 =
+g3 =g4 =1.
+Fig.11. CurrentoutputoftestislandedDCMGwithphase-to-groundfault
+occurredduringt=5sto6s.
+Fig.9. SecondarycontrolinputoftestislandedDCMGwithpinninggains
+g1 =g2 =g3 =g4 =1.
+Fig. 12. Secondary control input of test islanded DC MG with phase-to-
+groundfaultoccurredduringt=5sto6s.
+runninginastand-bymodewiththevoltageoutputV4 =47.9V,
+anditssecondarycontrolinputis0.WhenDG4isconnectedat
+t=8s, the DC bus V increases to 48.6 V but then it quickly
+b
+restoresto48V.Itisclearlyseenthatthesecondarycontrolinput
+of DG4 reaches a consensus value along with those of all the
+other 3 regular DGs. When DG4 is disconnected at t=13s,
+both the voltage and current output are the same as those at
+Stage 2. These results validate the plug-and-play property of
+ourproposedmethod.
+Fig.10. VoltageoutputoftestislandedDCMGwithphase-to-groundfault
+occurredduringt=5sto6s. 2) Case B: Different Pinning Gains: Inthis case study, we
+compare the performance of our proposed method under the
+condition of different pinning gains. Figs. 4–6 show the result
+simulationresultsvalidatethatthesecondarycontrolinputsare withthepinninggainssettingasg1 =1,g2 =g3 =g4 =0.In
+equaltoeachotherinthesteadystate,asstatedin(11). this case study, we set the pinning gains as g1 =g2 =g3 =
+Inthefollowing,2differentcasestudieswillbediscussed. g4 =1,i.e.,alltheDGshaveaccesstotheDCbusvoltageV
+b
+.
+1) Case A: Backup DG Plug-and-Play: In this case study, Besides, compared to previous case, in order to mitigate the
+theplug-and-play property ofproposed method willbetested. currentovershoot,smallerK =0.1ischosen.Thesimulation
+Pi
+The backup DG (DG4) is assumed to be connected to the DC results are shown in Figs. 7–9. Comparing to the results in
+busfromt=8stot=13swiththesamepowersharingratio Figs. 4–6, the transient voltage deviations in case study are
+asDG3anddisconnectedfromt=13s.Thesimulationresults much smaller and the settling time is also shorter. However,
+are shown in Figs. 4–6. Before connecting to the bus, DG4 is these advantages are achieved at the expense of more cost in
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 8 ---
+1864 IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018
+TABLEIII
+COMPARISONOFDIFFERENTVOLTAGERESTORATIONMETHODS
+Control TechniqueUsed Voltage Global Communication
+Method Regulation Information
+Ref.[14] Averagecurrentcompensation Good Averagecurrent all-to-all
+Ref.[15] Averagevoltageandcurrent Good Averagevoltage all-to-all
+compensation andcurrent
+Ref.[16] Feed-forward Good Globaldroopgain all-to-all
+Proposed FeedbackandPinningcontrol Precise None Neighbourhood
+Method communication
+TABLEIV
+PARAMETERSOFMGSYSTEMANDTHECONTROLLER
+DG1 DG2
+DG VDC 50V VDC 50V
+fs 20kHz fs 20kHz
+LCFilter Lf 1.5e-3H Lf 1.5e-3H
+Cf 470μF Cf 470μF
+LineResistance R1 1Ω R2 1Ω
+VoltageLoop KVP 0.1 KVP 0.1
+KVI 1 KVI 1
+CurrentLoop KIP 0.01 KIP 0.01
+KII 1 KII 1
+Fig.13. Experimentsetup. DroopGain k1 10 k2 10
+SecondaryController α1 1 α2 1
+β1 1 β2 1
+signaltransmission,i.e.,thebusvoltageneedstobetransmitted
+KP1 0 KP2 0
+to all the DGs. Hence there is a trade-off between the control KI1 10 KI2 10
+performanceandsystemcost. Reference Vref =100V
+Load RL1 =50Ω, RL2 =100Ω
+B. RobustnessTestWithRespecttoTemporaryFault
+In this section, in order to show the fault tolerance ability
+of our proposed method, a case study with a temporary phase
+withaDC/DCboostconverter.Thecontrolalgorithmsareex-
+to ground fault on the common bus during t=5s to 6s is
+ecuted on a dSPACE1006 control platform to generate PWM
+conducted. The simulation results are shown in Figs. 10–12.
+signals for two converters, with the sampling frequency syn-
+Duringthefaultperiod[5s,6s],allthebusvoltagedropdown
+chronizedtoPWMfrequencyat20kHz.Tworesistorsarecon-
+toalmostzeroandthecommonbuscurrentoutputgoesashigh
+nected between the output of each converter and the common
+as 300 A. However, once the fault is cleared, after a transient
+bustoemulatethelineimpedance.Theresistiveloadswithtwo
+processof1.5s,thewholesystembecomesstableandrestored
+switchesareusedtogeneratedifferentloadingprofiles.Thede-
+tothesamepre-faultcondition.Theseresultsdemonstratethat
+tailedconfigurationparametersoftheexperimentsetuparelisted
+ourproposedmethodhasthetemporaryfaulttoleranceability.
+inTableIV.
+C. ComparisonWithExistingMethods
+A. ExperimentalResultsWithResistantLoad
+The comparison between the proposed method and existing
+Firstly,wesetthepinninggainsasg1 =g2 =1,whichmeans
+distributed control methods is summarized in Table III. It is
+thatthesetwoDGsbothaccessthebusvoltageV .AtfirstLoad
+noted that compared to the existing methods, our proposed b
+1isconnectedtothebus.Theexperimentalresultsareshownin
+method can achieve more precise voltage regulation with
+Fig.14.Initiallythesecondarycontrolisnotactivated.Itcanbe
+less communication burden and without requiring global
+observedthattheterminalvoltagesV1 andV2 dropto90.38V
+information.
+and90.36Vrespectively,andbusvoltageV is89.59V,which
+b
+is largely deviated from the reference voltage Vref =100V.
+V. EXPERIMENTALVALIDATION
+Whenthesecondarycontrolisactivated,itisobviousthatthebus
+Inthissection,ascaled-downDCMGwithtwoDGsisbuilt voltageV isrestoredto100.74V.Besides,thepowersharing
+b
+inthelaboratorytoverifytheproposedstrategy,whichisshown ratio is kept unchanged as I1 :I2 ≈k2 :k1 =1:1. In order
+in Fig. 13. Each DG is represented by an ideal voltage source to test the proposed method under different load condition, an
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 9 ---
+GUOetal.:DISTRIBUTEDSECONDARYCONTROLFORPOWERALLOCATIONANDVOLTAGERESTORATION 1865
+Fig.14. VoltageandcurrentoutputofeachDGandDCBusbeforeandafter Fig.17. VoltageandcurrentoutputofeachDGandPCCunderdifferentload
+secondarycontrolinputisactivated. conditionwithpinninggainsg1 =1,g2 =0.
+Fig.15. VoltageandcurrentoutputofeachDGandDCBusunderdifferent
+loadcondition.
+Fig.18. VoltageandcurrentoutputofeachDGandPCCwithconstantpower
+load.(a)Voltageoutput.(b)Currentoutput.
+Fig.16. VoltageandcurrentoutputofeachDGandDCBusbeforeandafter B. ExperimentalResultsWithConstantPowerLoad
+secondarycontrolinputisactivatedwithpinninggainsg1 =1,g2 =0.
+In this section, in order to verify the proposed scheme with
+non-linear load, Load 2 is changed to a constant power load
+(CPL) P =100W. The experimental results are shown in
+extra load, i.e., Load 2, is connected and disconnected to the L
+Fig.18.ItisobservedthatnomatterwhetherthisCPLiscon-
+bus. The experimental results are shown in Fig. 15. The bus
+nectedtoordisconnectedfromPCC,thebusvoltageV keeps
+voltageV remainsat100.74VnomatterLoad2isconnected b
+b unchanged as V =100.59V. Besides, the two DGs share the
+ordisconnected.Besides,itisobservedthatthecurrentoutput b
+currentoutputalmostequallyaccordingtotheirdesigneddroop
+of DG1 and DG2 are increased almost by 50% when Load 2
+gains(k1 :k2 =1:1).Theseresultsvalidatetheeffectiveness
+isconnected,whichisthesameproportionastheLoads.When
+ofproposedmethodunderCPLcondition.
+Load2isdisconnected,boththevoltageandcurrentoutputof
+allDGsarethesameasthepreviousone.
+C. ExperimentalResultsWithCommunicationTimeDelay
+NextweconsiderthatonlyoneDG(DG1)canaccessthebus
+voltageV
+b
+,i.e.,settingthepinninggainsasg1 =1,g2 =0.The In this section, the performance of the overall system is in-
+experimentalresultsareshowninFigs.16and17.Itisobserved vestigated by considering different communication time delay
+that the steady state of all the signals are the same as those in Δt among each secondary controller, namely 0.001 s, 0.01 s
+Figs.14and15exceptformuchslowertransientresponse,which and 0.1 s. A time delay block in dSPACE1006 is used to im-
+arethesameaswhatareobservedinthesimulationsection. plement the delay of u . Initially, Load 1 is connected to the
+i
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 10 ---
+1866 IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018
+Fig.19. VoltageandcurrentoutputofeachDGandPCCwithtimedelay
+Δt=0.001s.(a)Voltageoutput.(b)Currentoutput.
+Fig.21. VoltageandcurrentoutputofeachDGandPCCwithtimedelay
+Δt=0.1s.(a)Voltageoutput.(b)Currentoutput.
+be achieved with time delay Δt less than 0.001s for this test
+example.
+Inpractice,thedistributedcommunicationcanbeappliedto
+wirelessnetworks,suchasZigBee,WiFi,andcellularcommu-
+nication networks [20]. For the long-range low-delay network
+such as cellular communication network, the communication
+time delay is usually negligible as pointed out in [20]. In ad-
+dition, the proposed scheme is implemented in the secondary
+controllayer,whosedynamicsismuchslowerthanthatofthe
+primary control layer. Furthermore, the communication infor-
+mationinvolvedisonlythecontrolinputu andthebusvoltage
+i
+V .Hencenetworkswithnormalwirelesscommunicationspeed
+b
+andbandwidtharefarmoresufficientforimplementingthepro-
+poseddistributedscheme.
+VI. CONCLUSION
+In this paper, a distributed secondary control scheme is de-
+signedforpowerallocationandvoltagerestorationinislanded
+Fig.20. VoltageandcurrentoutputofeachDGandPCCwithtimedelay DC MGs. Compared to existing secondary control methods,
+Δt=0.01s.(a)Voltageoutput.(b)Currentoutput.
+whichareusuallydesignedinafeed-forwardfashion,ourpro-
+posedmethodisbasedonthefeedbackidea.Byonlymeasuring
+bus and the secondary control is activated. A 100 W CPL is bus voltage and exchanging limited neighboring information,
+connected to and disconnected from the bus respectively. The the distributed secondary controller can be designed for each
+experimental results are shown in Figs. 19–21. From these re- localDGstorealizethegoalofbusvoltagerestorationaswell
+sults, it is observed that the performance of proposed method as accurate power sharing. Besides, by applying the idea of
+deteriorateswhenthedelaytimebecomeslargerandlarger.By pinningcontrol,ourproposedmethodcanbefurthersimplified
+comparingthecasesthatΔt=0.001sandΔt=0sinFig.15, by only sending the bus voltage to one DG. The effectiveness
+littledifferenceisobservedintheirperformances.Thuswecan ofproposedcontrollerisanalyzedtheoreticallyandverifiedby
+conclude that acceptable voltage restoration performances can bothsimulationandexperimentalresults.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 11 ---
+GUOetal.:DISTRIBUTEDSECONDARYCONTROLFORPOWERALLOCATIONANDVOLTAGERESTORATION 1867
+APPENDIXA Notethat
+(cid:12) (cid:12)
+PROOFOFLEMMA1 (cid:12)
+(cid:12)
+d2 +c c ··· c (cid:12)
+(cid:12)
+Proof: Suppose (cid:12) (cid:12) c d3 +c ··· c (cid:12) (cid:12)
+⎡ ⎤ A11
+=(cid:12)
+(cid:12) (cid:12) . . . . . . . .
+(cid:12)
+(cid:12) (cid:12) (42)
+d1 +c c ··· c (cid:12) . . . . (cid:12)
+⎢ ⎢ c d2 +c ··· c ⎥ ⎥ (cid:12) c c ··· d n +c (cid:12)
+A=⎢ ⎢ ⎣ . . . . . . . . . . . . ⎥ ⎥ ⎦ (35) (cid:12) (cid:12) (cid:12) c c ··· c (cid:12) (cid:12) (cid:12)
+(cid:12) (cid:12)
+c c ··· d n +c A12 = (cid:12) (cid:12) (cid:12) c . d3 . +c ·· . · c . (cid:12) (cid:12) (cid:12) (43)
+(cid:12). . . . (cid:12)
+(cid:12). . . . (cid:12)
+Doing elementary row operation of A by letting each row (cid:12) (cid:12)
+c c ··· d +c
+(r2,...,r
+n
+)subtractrow1(r1),thenwehave
+(cid:12)
+n
+(cid:12)
+⎡ ⎤
+(cid:12)
+(cid:12)
+c d2 +c ··· c (cid:12)
+(cid:12)
+d1 +c c ··· c (cid:12) (cid:12)c c ··· c (cid:12) (cid:12)
+A (cid:11) = ⎢ ⎢ ⎢ ⎢ ⎣ − . . . d1 d . . . 2 ·· . . . · 0 . . . ⎥ ⎥ ⎥ ⎥ ⎦ = (cid:10) A A (cid:11) 1 (cid:11) 3 A A (cid:11) 2 (cid:11) 4 (cid:11) (36) A13 =(cid:12) (cid:12) (cid:12) (cid:12) (cid:12) c . . . c . . . ·· . . . · d . . . +c (cid:12) (cid:12) (cid:12) (cid:12) (cid:12)
+n
+−d1 0 ··· d n (cid:12) (cid:12)c c ··· c (cid:12) (cid:12)
+(cid:12) (cid:12)
+(cid:12) (cid:12)
+where A(cid:11) 1 =d1 +c, A(cid:11) 2 =[c··· c]∈R 1×n−1, A(cid:11) 3 = =−
+(cid:12)
+(cid:12) (cid:12)
+c
+.
+d2
+.
++c ··
+.
+· c
+.
+(cid:12)
+(cid:12) (cid:12) (44)
+[−d1 ··· −d1 ]T ∈R n−1×1, A(cid:11) 4 =diag(d2,d3,...,d n )∈ (cid:12) (cid:12) . . . . . . . . (cid:12) (cid:12)
+R n−1×n−1. (cid:12) c c ··· d +c (cid:12)
+n
+As (cid:12) (cid:12)
+(cid:12) (cid:12)c d2 +c ··· c (cid:12) (cid:12)
+(cid:12) (cid:12)
+det(A)=det(A (cid:11))=det(A (cid:11) 1 )det(A 1) (37) (cid:12) (cid:12) . . . . . . . . . . . . (cid:12) (cid:12)
+where
+A1n =(cid:12)
+(cid:12) (cid:12)
+(cid:12)
+c c ··· d n−1 +c
+(cid:12)
+(cid:12) (cid:12)
+(cid:12)
+(cid:12)c c ··· c (cid:12)
+A 1 =A (cid:11) 4 −A (cid:11) 3 A (cid:11) 1 −1 A (cid:11) 2 (cid:12) (cid:12)c c ··· c (cid:12) (cid:12)
+(cid:12) (cid:12)
+(cid:12) (cid:12)
+=diag(d2,d3,...,d n )+ d1
+d1
++
+c
+c 1T n−1×1 1 n−1×1 (38) =(−1)n−1
+(cid:12)
+(cid:12) (cid:12)
+(cid:12)
+c
+.
+.
+d2
+.
+.
++c ··
+.
+.
+· c
+.
+.
+(cid:12)
+(cid:12) (cid:12)
+(cid:12)
+(45)
+(cid:12). . . . (cid:12)
+(cid:12) (cid:12)
+Repeatingaboveprocedure,wefinallyhave c c ··· d n−1 +c
+det(A)=(d1 +c)(d2 +c1 )···(d n +c n−1 ) (39) ··· T d h n en + i · t · i · s + ea c s d y 2d to 3 · o · b · t d a n in −1 t , h | a A t 1 | 2 A | 1 = 1 | c = d3 d d 2 4 d · 3 · · · · d · n d , n ·· + ·, c | d A 3 1 d j 4 |
+=cd2 ···d j−1d j+1 ···d n ,j =3,...,n(cid:13) −1, |A1n |=cd2d3
+wh R er e e w c r i iti = ng d d ( i 3 i + c 9 c i ) − i− , 1 1 w , e i o = bt 1 a , in ...,n−1withc0 =c. · d ··d > n− 0 1 . . In H a e si n m ce ilar w w e ay h , a w v e e al | s A o 1 o 1 b | t − ain|A n j=2 | | − A (cid:13)1j | n =d |A 2d3 | · > ··
+n ii j=2 ij
+0,∀i=1,...,n, which means the adjoint matrix adj(A) is
+det(A)=d1d2 ···d
+n
++cd2d3 ···d
+n
++cd1d3 ···d
+n
+a
+A−
+st
+1
+ri
+=
+ctly d
+1
+iag
+a
+o
+d
+n
+j
+a
+(
+l
+A
+ly
+),
+do
+th
+m
+e
+i
+n
+na
+w
+nt
+e
+m
+co
+at
+n
+r
+c
+ix
+lu
+.
+d
+A
+e
+s
+th
+th
+a
+e
+t A
+in
+−
+ve
+1
+rs
+i
+e
+s
+m
+al
+a
+so
+trix
+a
++···+cd1d2 ···d n−1 (40) strictlyd
+d
+i
+e
+a
+t
+g
+(A
+o
+)
+nallydominantmatrixwiththediagonalelements
+being positive (as det(A)>0). This completes the proof of
+It is obvious that det(A)(cid:6)=0, hence A is invertible, and its Lemma1.
+invert matrix is denoted as A−1. Now we are going to prove
+A−1 isastrictlydiagonallydominantmatrix.Letadj(A)bethe APPENDIXB
+adjointmatrixofA,whichisdenotedas PROOFOFLEMMA2
+⎡ ⎤ Proof: According to Lemma 1 in the appendix, it implies
+A11 A12 ··· A1n thatthesumofeachroworcolumn(asA−1 isalsoasymmetric
+⎢ ⎥
+adj(A)=
+⎢
+⎢ ⎢
+A
+.
+21 A
+.
+22 ··
+.
+· A
+.
+2n ⎥
+⎥ ⎥ (41)
+matrix)inA−1 ispositive.ThenwecanrewritethematrixZ as
+⎣ . . . . . . . . ⎦ Z =−R L α1 n×1ST −βL (46)
+A n1 A n2 ··· A nn whereS =[s1 s2 ··· s
+n
+]T withs
+i
+>0.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 12 ---
+1868 IEEETRANSACTIONSONSUSTAINABLEENERGY,VOL.9,NO.4,OCTOBER2018
+InthefollowingwewillshowthatZisHurwitzifthecontrol [8] S.Augustine,M.K.Mishra,andN.Lakshminarasamma,“Adaptivedroop
+parameters,α andβ areproperlychosen. control strategy for load sharing and circulating current minimization
+i i
+inlow-voltagestandaloneDCmicrogrid,”IEEETrans.Sustain.Energy,
+Considerasystemwiththefollowingdynamics
+vol.6,no.1,pp.132–141,Jan.2015.
+[9] J.M.Guerrero,J.C.Vasquez,J.Matas,L.G.deVicuna,andM.Castilla,
+x˙ =Zx (47)
+“Hierarchicalcontrolofdroop-controlledACandDCmicrogrids:Agen-
+eralapproachtowardstandardization,”IEEETrans.Ind.Electron.,vol.58,
+wherex∈Rn isthesystemstate. no.1,pp.158–172,Jan.2011.
+ALyapunovcandidateischosenas [10] V.Nasirian,S.Moayedi,A.Davoudi,andF.L.Lewis,“Distributedcoop-
+erativecontrolofDCmicrogrids,”IEEETrans.PowerElectron.,vol.30,
+1 no.4,pp.2288–2303,Apr.2015.
+V = 2 xTβ −1 x (48) [11] A.A.Hamad,M.A.Azzouz,andE.F.El-Saadany,“Multiagentsuper-
+visorycontrolforpowermanagementinDCmicrogrids,”IEEETrans.
+whereβ ischosenasβ =diag(β1,...,β
+n
+)>0.
+[12] J
+S
+.
+m
+Z
+a
+h
+r
+a
+t
+o
+G
+a
+ri
+n
+d
+d
+,v
+F
+o
+.
+l
+D
+.7
+o
+,
+rfl
+n
+e
+o
+r
+.
+,
+2
+“
+,
+D
+p
+i
+p
+s
+.
+tr
+1
+ib
+0
+u
+5
+t
+7
+e
+–
+d
+1
+c
+0
+o
+6
+n
+8
+t
+,
+r
+M
+ol
+a
+a
+r
+n
+.
+d
+20
+o
+1
+p
+6
+t
+.
+imizationinDCmi-
+Thenwehave crogrids,”Automatica,vol.61,pp.18–26,Nov.2015.
+V ˙ =xTβ −1 Zx=−xTβ −1(R L α1 n×1ST +βL)x [13] T di . s M tri o b r u s t t e y d n c , o B n . t H ro r l e f d o z r a D k C ,G m . i D cr . o D g e ri m d e o t p ri e a r d a e ti s n , g a m nd od V e . s G ,” . I A E g E e E li T d r i a s, n “ s U .P n o i w fie e d r
+Syst.,vol.31,no.1,pp.802–812,Jan.2016.
+=−xT(R
+L
+β −1 α1 n×1ST +L)x (49) [14] S. Thomas, S. Islam, S. R. Sahoo, and S. Anand, “Distribution sec-
+ondarycontrolwithreducedcommunicationinlow-voltageDCmicro-
+Ifthedesignedcontrolparametersα andβ arechosensuch grid,”inProc.10thInt.Conf.Compat.PowerElectron.PowerEng.,2016,
+i i
+thatβ−1α1
+n×1
+=S,i.e.,
+[15] S
+pp
+.
+.
+A
+1
+n
+2
+a
+6
+n
+–
+d
+1
+,
+3
+B
+1.
+.G.Fernandes,andJ.M.Guerrero,“Distributedcontrolto
+α ensureproportionalloadsharingandimprovevoltageregulationinlow-
+β i i =s i ,∀i=1,...,n (50) v p o p l . t 1 ag 9 e 00 D –1 C 91 m 3 i , c A ro p g r r . i 2 d 0 s, 1 ” 3 I . EEE Trans. Power Electron., vol. 28, no. 4,
+[16] X.Lu,J.M.Guerrero,K.Sun,andJ.C.Vasquez,“Animproveddroopcon-
+thenwehave
+trolmethodforDCmicrogridsbasedonlowbandwidthcommunication
+(cid:14) (cid:14)
+V ˙ =−xT(R L SST +L)x=−R L (cid:14) STx (cid:14)2 −xTLx≤0 w IE i E th E D T C ra b n u s s .P v o o w lta e g r e E r le e c st t o ro ra n t . i , o v n o a l. n 2 d 9 e , n n h o a . n 4 c , e p d p c . u 1 r 8 r 0 en 0 t –1 sh 8 a 1 r 2 in , g Ap ac r. c 2 u 0 ra 1 c 4 y . ,”
+(51) [17] F. Gao, S. bozhko, G. Asher, P. Wheeler, and C. Patel, “An improved
+voltagecompensationapproachinadroop-controlledDCpowersystem
+Notethat(51)becomesequalityonlywhen forthemoreelectricaircraft,”IEEETrans.PowerElectron.,vol.31,no.10,
+(cid:15) pp.7369–7383,Oct.2016.
+STx=0 [18] P.-H.Huang,P.-C.Liu,W.Xiao,andM.S.ElMoursi,“Anoveldroop-
+(52) basedaveragevoltagesharingcontrolstrategyforDCmicrogrids,”IEEE
+xTLx=0 Trans.SmartGrid,vol.6,no.2,pp.1096–1106,May2015.
+[19] F.Guo,C.Wen,J.Mao,andY.-D.Song,“Distributedsecondaryvolt-
+Thesecondequationin(52)impliesthatx=m1 n×1,where a
+m
+g
+i
+e
+cr
+a
+o
+n
+g
+d
+ri
+f
+d
+r
+s
+e
+,”
+qu
+I
+e
+E
+n
+E
+c
+E
+yr
+T
+e
+r
+s
+a
+to
+n
+r
+s
+a
+.
+t
+I
+i
+n
+o
+d
+n
+.
+c
+E
+o
+l
+n
+e
+t
+c
+r
+t
+o
+r
+l
+o
+o
+n
+f
+.,
+d
+v
+r
+o
+o
+l
+o
+.
+p
+6
+-
+2
+c
+,
+on
+n
+t
+o
+r
+.
+ol
+7
+l
+,
+ed
+pp
+in
+.
+v
+4
+e
+3
+r
+5
+te
+5
+r
+–
+-b
+4
+a
+3
+s
+6
+e
+4
+d
+,
+misanarbitraryvalue.Substitutingi(cid:13)tintothefirstequationin Jul.2015.
+(
+m
+52
+=
+),i
+0
+t
+.
+y
+T
+ie
+h
+l
+i
+d
+s
+s
+m
+m
+e
+S
+an
+T
+s
+1
+t
+n
+h
+×
+at
+1
+V
+=
+˙ <
+0.
+0
+i.
+,
+e
+f
+.
+o
+,m
+rx(cid:6)=
+n i=
+0
+1
+n×
+s i
+1.
+=0,whichgives [20] H
+d gr e
+.
+i c d
+L
+e s
+i
+n ,
+a
+” t
+n
+r I a
+g
+E l
+,
+i E z
+B
+e E
+.
+d
+J
+T i
+.
+r n
+C
+a v n
+h
+e s r
+o
+. t
+i
+e
+,
+S r
+W
+m c a o
+.
+r n
+Z
+t t
+h
+r G o
+u
+l r
+a
+i t
+n
+d h
+g
+, r
+,
+o v
+a
+u o
+n
+g l
+d
+. h 4
+X
+w ,
+.
+n ir
+S
+o e .
+h
+le 1
+e
+s
+n
+, s
+,
+p c
+“
+p o
+S
+. m
+t
+3
+a
+2 m
+b
+1
+i
+u
+l
+–
+i
+n
+t
+3
+y
+i 3 c 1
+e
+a
+n
+, ti
+h
+M o
+a
+n a
+n
+s r
+c
+. i
+e
+n 2
+m
+0 m
+e
+1 i
+n
+3 c
+t
+. o
+o
+r
+f
+-
+The above derivations conclude that the system (47) is [21] W.Du,J.Zhang,Y.Zhang,andZ.Qian,“Stabilitycriterionforcascaded
+global exponential stable (G.E.S.), which further implies that systemwithconstantpowerload,”IEEETrans.PowerElectron.,vol.28,
+Z =−R
+L
+α1 n×1ST −βL is Hurwitz if the condition (50) is
+[22] X
+no
+.
+.
+L
+4
+u
+,
+,
+p
+K
+p
+.
+.
+S
+1
+u
+8
+n
+4
+,
+3
+J
+–
+.
+1
+M
+85
+.
+1
+G
+,
+u
+A
+er
+p
+r
+r
+e
+.
+r
+2
+o
+0
+,
+1
+J.
+3
+C
+.
+.Vasquez,L.Huang,andJ.Wang,“Sta-
+satisfied. bilityenhancementbasedonvirtualimpedanceforDCmicrogridswith
+constantpowerloads,”IEEETrans.SmartGrid,vol.6,no.6,pp.2770–
+2783,Aug.2015.
+REFERENCES
+[1] X.YuandY.Xue,“SmartGrids:Acyber-physicalsystemsperspective,”
+Proc.IEEE,vol.104,no.5,pp.1058–1070,May2016.
+[2] F.NejabatkhahandY.W.Li,“Overviewofpowermanagementstrategies
+ofhybridAC/DCmicrogrid,”IEEETrans.PowerElectron.,vol.30,no.12,
+pp.7072–7089,Dec.2015.
+[3] Y.Gu,W.Li,andX.He,“Frequency-coordinatingvirtualimpedancefor
+autonomouspowermanagementofDCmicrogrid,”IEEETrans.Power FanghongGuo(M’16)receivedtheB.Eng.degree
+Electron.,vol.30,no.4,pp.2328–2337,Apr.2015. in automation science from Southeast University,
+[4] W. Yu, G. Wen, X. Yu, Z. Wu, and J. Lu, “Bridging the gap between Nanjing,China,inJuly2010,theM.Eng.degreein
+complexnetworksandsmartgrids,”J.ControlDecision,vol.1,no.1, automationscienceandelectricalengineeringfrom
+pp.102–114,2014. BeihangUniversity,Beijing,China,inJanuary2013,
+[5] X.Lu,K.Sun,J.M.Guerrero,J.C.Vasquez,andL.Huang,“State-of- and the Ph.D. degree in sustainable earth from the
+chargebalanceusingadaptivedroopcontrolfordistributedenergystorage EnergyResearchInstituteatNTU,Interdisciplinary
+systemsinDCmicrogridapplications,”IEEETrans.Ind.Electron.,vol.61, GraduateSchool,NanyangTechnologicalUniversity,
+no.6,pp.2804–2815,Jun.2014. Singapore, in November 2016. He was a Scientist
+[6] A.A.Hamad,M.A.Azzouz,andE.F.El-Saadany,“Multiagentsuper- withtheExperimentalPowerGridCentre,Agency
+visorycontrolforpowermanagementinDCmicrogrids,”IEEETrans. for Science, Technology and Research (A*STAR),
+SmartGrid,vol.7,no.2,pp.1057–1068,Mar.2016. SingaporeandiscurrentlyaLecturerintheZhejiangUniversityofTechnology,
+[7] S. Augustine, N. Lakshminarasamma, and M. K. Mishra, “Control of Hangzhou,China.Hisresearchinterestsincludedistributedcooperativecontrol,
+photovoltaic-based low-voltage dc microgrid system for power sharing distributedoptimizationonmicrogridsystems,andsmartgrid.
+with modified droop algorithm,” IET Power Electron., vol. 9, no. 6, HewastherecipientoftheNationalAwardforOutstandingSelf-financed
+pp.1132–1143,2016. ChineseStudentsStudyAbroadin2015.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
+
+--- Page 13 ---
+GUOetal.:DISTRIBUTEDSECONDARYCONTROLFORPOWERALLOCATIONANDVOLTAGERESTORATION 1869
+QianwenXu(S’15)receivedtheB.Sc.degreeinelec- LeiWang(M’16)wasbornin1990.Hereceivedthe
+trical engineering from Tianjin University, Tianjin, B.S.degreeinautomationfromWuhanUniversity,
+China,in2014.Sheiscurrentlyworkingtowardthe Wuhan,China,in2011,andthePh.D.degreeincon-
+Ph.D. degree at the School of Electrical and Elec- trolscienceandengineeringfromZhejiangUniver-
+tronicEngineering,NanyangTechnologicalUniver- sity,Hangzhou,China,in2016.HeiscurrentlyaRe-
+sity,Singapore.Herresearchinterestsincludemicro- searchFellowwithNanyangTechnologicalUniver-
+gridstabilityandcontrol. sity,Singapore.HehasvisitedC.A.SY.-DEIS,Uni-
+versityofBolognafromDecember2014toDecember
+2015,supportedbyCSC.Hiscurrentresearchinter-
+estsincludestabilization,regulation,observerdesign
+andadaptivecontrolfornonlinear,hybridand/ornet-
+workedsystems,anditsapplicationstomobilerobotsandpowersystems.
+ChangyunWen(F’10)receivedtheB.Eng.degree
+from Xi’an Jiaotong University, Xi’an, China, in
+1983,andthePh.D.degreefromtheUniversityof
+Newcastle,Newcastle,NSW,Australia,in1990.
+FromAugust1989toAugust1991,hewasaRe-
+searchAssociateandthenaPostdoctoralFellowwith PengWang(F’17)receivedtheB.Sc.degreefrom
+theUniversityofAdelaide,Adelaide,SA,Australia. XianJiaotongUniversity,Xi’an,China,in1978,the
+Since August 1991, he has been with the School M.Sc.degreefromtheTaiyuanUniversityofTech-
+of Electrical and Electronic Engineering, Nanyang nology,Taiyuan,China,in1987,andtheM.Sc.and
+TechnologicalUniversity,Singapore,whereheiscur- Ph.D.degreesfromtheUniversityofSaskatchewan,
+rentlyaFullProfessor.Hehasbeenactivelyinvolved SK, Canada, in 1995 and 1998, respectively. Cur-
+inorganizinginternationalconferencesplayingtherolesoftheGeneralChair, rently,heisaProfessorwithNanyangTechnological
+GeneralCo-Chair,TechnicalProgramCommitteeChair,ProgramCommittee University,Singapore.
+Member,GeneralAdvisor,PublicityChairandsoon.Hismainresearchactivi-
+tiesincludetheareasofcontrolsystemsandapplications,autonomousrobotic
+system,intelligentpowermanagementsystem,smartgrids,cyber-physicalsys-
+tems,complexsystemsandnetworks,model-basedonlinelearning,andsystem
+identification.
+Prof.WenisanAssociateEditorofanumberofjournalsincludingAutomat-
+ica,theIEEETRANSACTIONSONINDUSTRIALELECTRONICSandtheIEEECON-
+TROLSYSTEMSMAGAZINE.HeistheExecutiveEditor-in-ChiefoftheJournal
+ofControlandDecision.HewasanAssociateEditorfortheIEEETRANSAC-
+TIONSONAUTOMATICCONTROLfromJanuary2000toDecember2002.Hewas
+amemberofIEEEFellowCommitteefromJanuary2011toDecember2013
+andaDistinguishedLecturerofIEEEControlSystemsSocietyfromFebruary
+2010toFebruary2013.HewastherecipientoftheIESPrestigiousEngineering
+AchievementAward2005fromtheInstitutionofEngineers,Singapore(IES)in
+2005.HewastherecipientoftheBestPaperAwardofIEEETRANSACTIONSON
+INDUSTRIALELECTRONICSin2017.
+Authorized licensed use limited to: Northeastern University. Downloaded on July 15,2025 at 08:09:29 UTC from IEEE Xplore. Restrictions apply.
