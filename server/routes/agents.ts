@@ -303,7 +303,105 @@ agentsRouter.post("/:id/start", (req, res) => {
   res.json({ agent: sanitizeAgentForResponse(updated!) });
 });
 
-// POST /api/agents/:id/stop — disable agent
+// POST /api/agents/test-connection — verify model API connectivity
+agentsRouter.post("/test-connection", async (req, res) => {
+  const { model, apiKey, apiBaseUrl } = req.body;
+
+  if (!model && !apiBaseUrl) {
+    return res.status(400).json({
+      error: { code: "VALIDATION_ERROR", message: "model or apiBaseUrl is required" },
+    });
+  }
+
+  const resolvedModel = typeof model === "string" ? model : "";
+  const resolvedKey = typeof apiKey === "string" ? apiKey : "";
+  const resolvedUrl = typeof apiBaseUrl === "string" ? apiBaseUrl : "";
+
+  try {
+    const baseUrl = resolvedUrl || "https://api.anthropic.com";
+    const isAnthropicCompatible = baseUrl.toLowerCase().includes("/anthropic") ||
+      baseUrl.toLowerCase().includes("anthropic.ai");
+
+    if (isAnthropicCompatible) {
+      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": resolvedKey || process.env.ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+          ...(resolvedKey ? {} : {}),
+        },
+        body: JSON.stringify({
+          model: resolvedModel || "claude-sonnet-4-5-20250929",
+          max_tokens: 1,
+          messages: [{ role: "user", content: "Hi" }],
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        return res.json({ ok: false, error: `认证失败 (${response.status}): API Key 无效或已过期` });
+      }
+
+      if (response.status === 400 && !resolvedKey && !process.env.ANTHROPIC_API_KEY) {
+        return res.json({ ok: false, error: "未提供 API Key 且系统无默认 Key" });
+      }
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        const modelUsed = data.model || resolvedModel || "unknown";
+        return res.json({ ok: true, model: modelUsed, message: `连接成功: ${modelUsed}` });
+      }
+
+      if (data.error) {
+        const errMsg = typeof data.error === "object" ? data.error.message : String(data.error);
+        return res.json({ ok: false, error: `模型返回错误 (${response.status}): ${errMsg}` });
+      }
+
+      return res.json({ ok: false, error: `HTTP ${response.status}` });
+    } else {
+      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${resolvedKey}`,
+        },
+        body: JSON.stringify({
+          model: resolvedModel || "gpt-4o",
+          max_tokens: 1,
+          messages: [{ role: "user", content: "Hi" }],
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        return res.json({ ok: false, error: `认证失败 (${response.status}): API Key 无效或已过期` });
+      }
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        const modelUsed = data.model || resolvedModel || "unknown";
+        return res.json({ ok: true, model: modelUsed, message: `连接成功: ${modelUsed}` });
+      }
+
+      if (data.error) {
+        const errMsg = typeof data.error === "object"
+          ? (data.error.message || data.error.type || JSON.stringify(data.error))
+          : String(data.error);
+        return res.json({ ok: false, error: `模型返回错误 (${response.status}): ${errMsg}` });
+      }
+
+      return res.json({ ok: false, error: `HTTP ${response.status}` });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return res.json({ ok: false, error: `连接失败: ${message}` });
+  }
+});
+
+// POST /api/agents/:id/stop — enable agent
 agentsRouter.post("/:id/stop", (req, res) => {
   const existing = agentStore.getAgentById(req.params.id);
   if (!existing) {

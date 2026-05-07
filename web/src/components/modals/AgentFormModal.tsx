@@ -15,10 +15,12 @@ import {
   Eye,
   EyeOff,
   Globe,
+  Zap,
 } from "lucide-react";
 import type { Agent } from "../../types";
 import { MODEL_OPTIONS, TOOL_OPTIONS } from "../../types";
 import { showToast } from "../NotificationContainer";
+import { AgentApi } from "../../api/index";
 import {
   Select,
   SelectContent,
@@ -80,6 +82,8 @@ export default function AgentFormModal({
   );
   const [showApiKey, setShowApiKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message?: string; error?: string } | null>(null);
 
   const isCustom = modelSelect === "__custom__";
   const preset = getPresetModel(modelSelect);
@@ -397,6 +401,60 @@ export default function AgentFormModal({
                   </div>
                 )}
               </div>
+            {/* Test Connection Button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  const resolvedModel = isCustom ? customModel.trim() : modelSelect;
+                  if (!resolvedModel) {
+                    showToast("error", "请先选择或输入模型");
+                    return;
+                  }
+                  const keyToSend = needsApiConfig ? (apiKey || (isEditing && agent?.hasApiKey ? "" : "")) : "";
+                  setTesting(true);
+                  setTestResult(null);
+                  try {
+                    const result = await AgentApi.testConnection(
+                      resolvedModel,
+                      keyToSend,
+                      effectiveBaseUrl || "",
+                    );
+                    setTestResult(result);
+                    if (result.ok) {
+                      showToast("success", result.message || "连接成功");
+                    } else {
+                      showToast("error", result.error || "连接失败");
+                    }
+                  } catch {
+                    setTestResult({ ok: false, error: "请求失败，请检查网络" });
+                    showToast("error", "请求失败，请检查网络");
+                  } finally {
+                    setTesting(false);
+                  }
+                }}
+                disabled={testing || (!apiKey && !(isEditing && agent?.hasApiKey))}
+                className="w-full flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg transition-all disabled:opacity-50"
+                style={{
+                  background: testResult?.ok
+                    ? "rgba(34,197,94,0.08)"
+                    : testResult?.ok === false
+                      ? "rgba(239,68,68,0.08)"
+                      : "rgba(200,149,108,0.04)",
+                  border: `1px solid ${testResult?.ok ? "rgba(34,197,94,0.2)" : testResult?.ok === false ? "rgba(239,68,68,0.2)" : "var(--border-subtle)"}`,
+                  color: testResult?.ok ? "#22c55e" : testResult?.ok === false ? "#ef4444" : "var(--text-secondary)",
+                }}
+              >
+                {testing ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : testResult?.ok ? (
+                  <Check size={12} />
+                ) : testResult?.ok === false ? (
+                  <X size={12} />
+                ) : (
+                  <Zap size={12} />
+                )}
+                {testing ? "测试中..." : testResult?.ok ? "连接成功" : testResult?.ok === false ? "连接失败" : "测试连接"}
+              </button>
             </div>
           )}
 

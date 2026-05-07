@@ -443,6 +443,19 @@ export const AgentApi = {
     await request("DELETE", `/api/agents/${id}`);
   },
 
+  /** POST /api/agents/test-connection — verify model API connectivity */
+  async testConnection(
+    model: string,
+    apiKey: string,
+    apiBaseUrl: string,
+  ): Promise<{ ok: boolean; model?: string; message?: string; error?: string }> {
+    return request("POST", "/api/agents/test-connection", {
+      model,
+      apiKey,
+      apiBaseUrl,
+    });
+  },
+
   /** POST /api/agents/:id/start — enable agent, response: { agent: {...} } */
   async start(id: string): Promise<Agent> {
     const res = await request<{ agent: BackendAgent }>(
