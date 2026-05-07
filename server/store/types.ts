@@ -37,9 +37,10 @@ export interface Agent {
   maxTurns?: number;
   maxBudgetUsd?: number;
   allowedTools?: string[];
-  model?: string;        // SDK 模型 ID，如 'claude-sonnet-4-5-20250929'
-  apiKey?: string;       // 自定义 API Key（明文存储，仅本地使用）
-  apiBaseUrl?: string;   // 自定义 API Base URL
+  model?: string;
+  provider?: string;       // Provider type: "claude" | "kimi" | "glm" | "minimax" | "codex" | "openai" | "deepseek"
+  apiKey?: string;
+  apiBaseUrl?: string;
   taskCount: number;
   stats: AgentStats;
   lastEventAt: number;

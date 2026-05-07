@@ -2865,3 +2865,127 @@ Task #97: 前端 — Agent 状态警告
 ### 下一步
 
 - 重新截图替换 README 中的旧截图
+
+## Task: 多模型 Provider 集成 — Provider 抽象层 + 路由
+
+**日期**: 2026-05-08
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **Provider 抽象层设计与实现**
+   - 定义 `AgentProvider` 接口（`server/providers/types.ts`）— 统一 `startQuery`/`resumeQuery`/`cleanup` 生命周期
+   - 定义 `ProviderMessage` 统一消息类型，将不同 Provider 的输出归一化为 `init`/`assistant`/`result` 三类
+   - 定义 `ProviderType` 联合类型：`claude | kimi | glm | minimax | codex | openai | deepseek`
+   - 实现 `inferProviderType` — 根据 Agent 的 `model`/`apiBaseUrl`/`provider` 字段自动推断 Provider
+   - **关键路由逻辑**：`apiBaseUrl` 包含 `/anthropic` 时强制走 ClaudeProvider（保留 Coding Agent 完整工具链）
+
+2. **ClaudeProvider 实现**（`server/providers/claudeProvider.ts`）
+   - 封装现有 `@anthropic-ai/claude-agent-sdk` 的 `query()` API
+   - 将 SDK 的 `SDKMessage` 流转换为 `ProviderMessage` 流
+   - 保持完整的 Coding Agent 能力（文件读写、Bash、Session 恢复等）
+   - **GLM/DeepSeek/Mimo/MiniMax 等提供 `/api/anthropic` 兼容端点的模型也走此路径**
+
+3. **AISDKProvider 实现**（`server/providers/aisdkProvider.ts`）
+   - 基于 Vercel AI SDK (`ai` + `@ai-sdk/*`) 实现
+   - 使用 `moonshotai` 官方 provider 和 `createOpenAICompatible` 适配其他 API
+   - 将 `streamText()` 输出转换为 `ProviderMessage` 流
+   - **仅提供轻量文本生成，不包含 Coding Agent 工具**（Bash/Read/Write/Edit 由 Claude Code CLI 内部处理）
+
+4. **Provider 注册表**（`server/providers/registry.ts`）
+   - `createProvider(agent)` — 根据 Agent 配置创建正确的 Provider 实例
+   - `getProvider(agent)` — 缓存 Provider 实例，避免重复创建
+   - 自动路由：含 `/anthropic` URL → ClaudeProvider，其他 → AISDKProvider
+
+5. **SDK Session Manager 重构**（`server/services/sdkSessionManager.ts`）
+   - 核心改造：`startTask`/`resumeTask` 根据 Provider 类型选择路径
+   - 新增 `consumeProviderStream`/`processProviderMessage` — 处理非 Claude Provider 的消息流
+   - 保留 `consumeSDKStream`/`processSDKMessage` — Claude Provider 走原路径，零破坏性
+   - `finalizeTask` 提取为公共方法 — 两种 Provider 共享的完成处理逻辑
+   - `stopTask`/`stopAll` — 根据 Provider 类型调用对应的 cleanup
+
+6. **Agent 类型扩展**
+   - `Agent` 接口新增 `provider?: string` 字段 — 显式指定 Provider 类型
+   - API 路由 `POST/PUT /api/agents` 支持 `provider` 参数
+
+7. **依赖安装**
+   - 新增: `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/moonshotai`, `@ai-sdk/openai-compatible`, `zod`
+
+8. **TDD 测试覆盖**
+   - `providers/types.test.ts` — 28 个测试（inferProviderType 推断、toEventType 映射）
+   - `providers/claudeProvider.test.ts` — 7 个测试（接口、流转换、模型覆盖）
+   - `providers/aisdkProvider.test.ts` — 10 个测试（6 种 Provider 创建、stream 消费、resume）
+   - `providers/registry.test.ts` — 13 个测试（createProvider 路由、getProvider 缓存）
+   - 全部 307 个测试通过（含既有 249 + 新增 58）
+
+### 文件变更
+
+| 文件 | 变更 |
+|------|------|
+| `server/providers/types.ts` | 新增 — Provider 接口、消息类型、推断函数 |
+| `server/providers/types.test.ts` | 新增 — 类型测试 |
+| `server/providers/claudeProvider.ts` | 新增 — Claude Provider 实现 |
+| `server/providers/claudeProvider.test.ts` | 新增 — Claude Provider 测试 |
+| `server/providers/aisdkProvider.ts` | 新增 — AI SDK Provider 实现 |
+| `server/providers/aisdkProvider.test.ts` | 新增 — AI SDK Provider 测试 |
+| `server/providers/registry.ts` | 新增 — Provider 注册表 |
+| `server/providers/registry.test.ts` | 新增 — 注册表测试 |
+| `server/providers/index.ts` | 新增 — 导出汇总 |
+| `server/services/sdkSessionManager.ts` | 重构 — 双路径架构（SDK + Provider） |
+| `server/store/types.ts` | 修改 — Agent 接口新增 provider 字段 |
+| `server/routes/agents.ts` | 修改 — API 支持 provider 参数 |
+| `server/package.json` | 修改 — 新增 AI SDK 依赖 |
+
+### 架构决策
+
+- **双路径架构**：Claude Provider 保留原生 `claude-agent-sdk` 完整工具链（Bash/Read/Write/Edit/Session 恢复）；AISDKProvider 仅提供 `streamText()` 轻量文本生成
+- **Anthropic 兼容端点优先走 ClaudeProvider**：GLM/DeepSeek/Mimo/MiniMax 等提供 `/api/anthropic` 端点的模型自动路由到 ClaudeProvider，保留 Coding Agent 完整能力
+- **Provider 抽象层**：`AgentProvider` 接口统一所有 Provider 的生命周期，`sdkSessionManager` 不再直接依赖 SDK 类型
+- **向后兼容**：未指定 `provider` 字段的 Agent 默认走 Claude Provider，零破坏性
+
+### 下一步
+
+- 集成测试：验证 Kimi/GLM/MiniMax 的实际 API 调用
+- 前端：Agent 创建/编辑表单增加 Provider 选择下拉和 API 连通性测试
+
+---
+
+## Task: Agent 模型连通性测试
+
+**日期**: 2026-05-08
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **后端 `POST /api/agents/test-connection` 端点**（`server/routes/agents.ts`）
+   - 接收 `{ model, apiKey, apiBaseUrl }` 参数
+   - 根据 `apiBaseUrl` 判断 Anthropic 兼容端点 vs OpenAI 兼容端点
+   - Anthropic 兼容端点：发送 `/v1/messages` 请求（`x-api-key` + `anthropic-version` 头）
+   - OpenAI 兼容端点：发送 `/chat/completions` 请求（`Authorization: Bearer` 头）
+   - 15 秒超时保护
+   - 返回 `{ ok: true, model, message }` 或 `{ ok: false, error }` 结构化结果
+
+2. **前端 `AgentApi.testConnection()` 方法**（`web/src/api/index.ts`）
+   - 封装 `POST /api/agents/test-connection` API 调用
+
+3. **前端「测试连接」按钮**（`web/src/components/modals/AgentFormModal.tsx`）
+   - Agent 创建/编辑表单中添加「测试连接」按钮
+   - 点击后调用 `testConnection()` 发送验证请求
+   - 成功：显示绿色 ✓ + 模型名
+   - 失败：显示红色 ✗ + 错误信息
+   - 按钮 loading 状态防止重复点击
+
+### 文件变更
+
+| 文件 | 变更 |
+|------|------|
+| `server/routes/agents.ts` | 新增 `POST /test-connection` 端点 |
+| `web/src/api/index.ts` | 新增 `testConnection()` API 方法 |
+| `web/src/components/modals/AgentFormModal.tsx` | 新增测试连接按钮 + 状态展示 |
+
+### 验证结果
+
+- Anthropic 兼容端点路由正确（GLM/DeepSeek/Mimo/MiniMax）
+- OpenAI 兼容端点路由正确（Kimi 等）
+- 前端 TypeScript 编译无错误
+- 后端 agents 路由测试全部通过

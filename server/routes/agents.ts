@@ -104,7 +104,7 @@ agentsRouter.get("/:id", (req, res) => {
 
 // POST /api/agents
 agentsRouter.post("/", (req, res) => {
-  const { name, avatar, role, prompt, projectId, maxTurns, maxBudgetUsd, allowedTools, model, apiKey, apiBaseUrl } = req.body;
+  const { name, avatar, role, prompt, projectId, maxTurns, maxBudgetUsd, allowedTools, model, provider, apiKey, apiBaseUrl } = req.body;
 
   // Validate required fields
   const nameError = validateString(name, "name", 1, 50);
@@ -148,6 +148,7 @@ agentsRouter.post("/", (req, res) => {
     maxBudgetUsd: maxBudgetUsd ?? DEFAULT_MAX_BUDGET_USD,
     allowedTools: allowedTools ?? [...DEFAULT_ALLOWED_TOOLS],
     model: typeof model === "string" ? model : "",
+    provider: typeof provider === "string" ? provider : "",
     apiKey: typeof apiKey === "string" ? apiKey : "",
     apiBaseUrl: typeof apiBaseUrl === "string" ? apiBaseUrl : "",
     taskCount: 0,
@@ -187,7 +188,7 @@ agentsRouter.put("/:id", (req, res) => {
   const allowedFields = [
     "name", "avatar", "role", "prompt", "projectId",
     "maxTurns", "maxBudgetUsd", "allowedTools", "isEnabled",
-    "model", "apiBaseUrl",
+    "model", "apiBaseUrl", "provider",
   ];
 
   for (const field of allowedFields) {

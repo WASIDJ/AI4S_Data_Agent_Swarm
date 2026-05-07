@@ -11,8 +11,13 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.75",
+    "@ai-sdk/moonshotai": "^2.0.21",
+    "@ai-sdk/openai": "^3.0.62",
+    "@ai-sdk/openai-compatible": "^2.0.46",
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
     "@anthropic-ai/sdk": "^0.91.1",
+    "ai": "^6.0.175",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -20,7 +25,8 @@
     "multer": "^2.1.1",
     "p-queue": "^8.0.1",
     "proper-lockfile": "^4.1.2",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

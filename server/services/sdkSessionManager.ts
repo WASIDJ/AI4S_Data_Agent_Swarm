@@ -15,15 +15,23 @@ import {
   extractSessionId,
   extractCostInfo,
 } from "../sdk/messageParser.js";
+import {
+  getProvider,
+  type AgentProvider,
+  type ProviderMessage,
+  toEventType,
+  type ProviderCostInfo,
+} from "../providers/index.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface ActiveQuery {
-  stream: Query;
+  stream: Query | AsyncIterable<ProviderMessage>;
   abortController: AbortController;
   sessionId?: string;
+  provider?: AgentProvider;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,22 +47,38 @@ class SDKSessionManager {
   // -----------------------------------------------------------------------
 
   async startTask(task: Task, agent: Agent, projectDir: string): Promise<void> {
-    const { stream, abortController } = await startQuery(task, agent, projectDir);
+    const provider = getProvider(agent);
 
-    const entry: ActiveQuery = { stream, abortController };
-    this.activeQueries.set(task.id, entry);
+    if (provider.type === "claude") {
+      const { stream, abortController } = await startQuery(task, agent, projectDir);
+      const entry: ActiveQuery = { stream, abortController, provider };
+      this.activeQueries.set(task.id, entry);
 
-    // Store AbortController in sessionStore for runtime access
-    const existingSession = sessionStore.getSessionByTaskId(task.id);
-    if (existingSession) {
-      sessionStore.setAbortController(existingSession.id, abortController);
+      const existingSession = sessionStore.getSessionByTaskId(task.id);
+      if (existingSession) {
+        sessionStore.setAbortController(existingSession.id, abortController);
+      }
+
+      this.consumeSDKStream(task.id, stream as Query).catch((err) => {
+        console.error(`[SDKSessionManager] Stream error for task ${task.id}:`, err);
+        this.handleStreamError(task.id, err);
+      });
+    } else {
+      const abortController = new AbortController();
+      const result = await provider.startQuery({ task, agent, projectDir, abortController });
+      const entry: ActiveQuery = { stream: result.stream, abortController, provider };
+      this.activeQueries.set(task.id, entry);
+
+      const existingSession = sessionStore.getSessionByTaskId(task.id);
+      if (existingSession) {
+        sessionStore.setAbortController(existingSession.id, abortController);
+      }
+
+      this.consumeProviderStream(task.id, result.stream).catch((err) => {
+        console.error(`[SDKSessionManager] Provider stream error for task ${task.id}:`, err);
+        this.handleStreamError(task.id, err);
+      });
     }
-
-    // Start consuming the stream in the background (do not await)
-    this.consumeStream(task.id, stream).catch((err) => {
-      console.error(`[SDKSessionManager] Stream error for task ${task.id}:`, err);
-      this.handleStreamError(task.id, err);
-    });
   }
 
   // -----------------------------------------------------------------------
@@ -68,22 +92,37 @@ class SDKSessionManager {
     agent: Agent,
     projectDir: string,
   ): Promise<void> {
-    const { stream, abortController } = await resumeQuery(
-      sessionId,
-      message,
-      task,
-      agent,
-      projectDir,
-    );
+    const provider = getProvider(agent);
 
-    const entry: ActiveQuery = { stream, abortController, sessionId };
-    this.activeQueries.set(task.id, entry);
+    if (provider.type === "claude") {
+      const { stream, abortController } = await resumeQuery(
+        sessionId,
+        message,
+        task,
+        agent,
+        projectDir,
+      );
 
-    // Start consuming
-    this.consumeStream(task.id, stream).catch((err) => {
-      console.error(`[SDKSessionManager] Resume stream error for task ${task.id}:`, err);
-      this.handleStreamError(task.id, err);
-    });
+      const entry: ActiveQuery = { stream, abortController, sessionId, provider };
+      this.activeQueries.set(task.id, entry);
+
+      this.consumeSDKStream(task.id, stream as Query).catch((err) => {
+        console.error(`[SDKSessionManager] Resume stream error for task ${task.id}:`, err);
+        this.handleStreamError(task.id, err);
+      });
+    } else {
+      const abortController = new AbortController();
+      const result = await provider.resumeQuery(sessionId, message, {
+        task, agent, projectDir, abortController,
+      });
+      const entry: ActiveQuery = { stream: result.stream, abortController, sessionId, provider };
+      this.activeQueries.set(task.id, entry);
+
+      this.consumeProviderStream(task.id, result.stream).catch((err) => {
+        console.error(`[SDKSessionManager] Resume provider stream error for task ${task.id}:`, err);
+        this.handleStreamError(task.id, err);
+      });
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -101,7 +140,11 @@ class SDKSessionManager {
       }
     }
 
-    cleanupQuery(taskId);
+    if (entry?.provider) {
+      entry.provider.cleanup(taskId);
+    } else {
+      cleanupQuery(taskId);
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -139,13 +182,25 @@ class SDKSessionManager {
   // consumeStream — process the SDK message stream
   // -----------------------------------------------------------------------
 
-  private async consumeStream(taskId: string, stream: Query): Promise<void> {
+  private async consumeSDKStream(taskId: string, stream: Query): Promise<void> {
     try {
       for await (const message of stream) {
-        this.processMessage(taskId, message);
+        this.processSDKMessage(taskId, message);
       }
     } catch (err: unknown) {
-      // AbortError is expected when stopTask() is called
+      if (err && typeof err === "object" && "name" in err && (err as Error).name === "AbortError") {
+        return;
+      }
+      throw err;
+    }
+  }
+
+  private async consumeProviderStream(taskId: string, stream: AsyncIterable<ProviderMessage>): Promise<void> {
+    try {
+      for await (const message of stream) {
+        this.processProviderMessage(taskId, message);
+      }
+    } catch (err: unknown) {
       if (err && typeof err === "object" && "name" in err && (err as Error).name === "AbortError") {
         return;
       }
@@ -157,21 +212,18 @@ class SDKSessionManager {
   // processMessage — handle a single SDK message
   // -----------------------------------------------------------------------
 
-  private processMessage(taskId: string, message: SDKMessage): void {
+  private processSDKMessage(taskId: string, message: SDKMessage): void {
     const entry = this.activeQueries.get(taskId);
     const sessionId = entry?.sessionId || "unknown";
 
-    // Check for SDKInit — bind session
     const initSessionId = extractSessionId(message);
     if (initSessionId) {
       this.bindSession(taskId, initSessionId);
     }
 
-    // Parse into events
     const events = parseMessage(taskId, sessionId, message);
     if (events.length === 0) return;
 
-    // Update task counters
     const task = taskStore.getTaskById(taskId);
     if (!task) return;
 
@@ -179,7 +231,6 @@ class SDKSessionManager {
       (e: Event) => e.eventType === "SDKAssistant" && e.toolName,
     ).length;
 
-    // Check for cost info from result messages
     const costInfo = extractCostInfo(message);
     const budgetUsed = costInfo
       ? costInfo.totalCostUsd
@@ -191,14 +242,60 @@ class SDKSessionManager {
       lastEventAt: Date.now(),
     });
 
-    // Persist and broadcast each event through the shared event pipeline.
     for (const event of events) {
       eventProcessor.processEvent(event);
     }
 
-    // Handle result message — task completion
     if (costInfo) {
-      this.handleTaskCompletion(taskId, message, costInfo);
+      this.handleSDKTaskCompletion(taskId, message, costInfo);
+    }
+  }
+
+  private processProviderMessage(taskId: string, message: ProviderMessage): void {
+    const entry = this.activeQueries.get(taskId);
+    const sessionId = message.sessionId || entry?.sessionId || "unknown";
+
+    if (message.type === "init" && message.sessionId) {
+      this.bindSession(taskId, message.sessionId);
+    }
+
+    const eventType = toEventType(message.type);
+    const event: Event = {
+      id: message.id,
+      taskId,
+      sessionId,
+      eventType,
+      source: "sdk",
+      ...(message.toolName ? { toolName: message.toolName } : {}),
+      ...(message.toolInput ? { toolInput: message.toolInput } : {}),
+      ...(message.text ? { toolOutput: message.text } : {}),
+      timestamp: message.timestamp,
+      raw: message.raw,
+    };
+
+    eventProcessor.processEvent(event);
+
+    const task = taskStore.getTaskById(taskId);
+    if (!task) return;
+
+    if (message.type === "assistant" && message.toolName) {
+      taskStore.updateTask(taskId, {
+        turnCount: task.turnCount + 1,
+        lastEventAt: Date.now(),
+      });
+    }
+
+    if (message.type === "result") {
+      const costInfo: ProviderCostInfo = {
+        totalCostUsd: message.costUsd ?? 0,
+        numTurns: message.numTurns ?? 1,
+        durationMs: message.durationMs ?? 0,
+        subtype: message.resultSubtype ?? "success",
+        isErr: message.isError ?? false,
+      };
+      const budgetUsed = costInfo.totalCostUsd > 0 ? costInfo.totalCostUsd : task.budgetUsed;
+      taskStore.updateTask(taskId, { budgetUsed, lastEventAt: Date.now() });
+      this.handleProviderTaskCompletion(taskId, message, costInfo);
     }
   }
 
@@ -206,7 +303,7 @@ class SDKSessionManager {
   // handleTaskCompletion — process SDK result message
   // -----------------------------------------------------------------------
 
-  private handleTaskCompletion(
+  private handleSDKTaskCompletion(
     taskId: string,
     message: SDKMessage,
     costInfo: ReturnType<typeof extractCostInfo>,
@@ -238,26 +335,71 @@ class SDKSessionManager {
         break;
     }
 
-    // Update task
+    this.finalizeTask(taskId, completedReason, output, costInfo.totalCostUsd);
+  }
+
+  private handleProviderTaskCompletion(
+    taskId: string,
+    message: ProviderMessage,
+    costInfo: ProviderCostInfo,
+  ): void {
+    const task = taskStore.getTaskById(taskId);
+    if (!task || (task.status !== "Running" && task.status !== "Stuck")) return;
+
+    let completedReason: Task["completedReason"];
+    let output: string | undefined;
+
+    if (costInfo.isErr) {
+      completedReason = "error";
+      output = message.errors?.join("; ") || message.text || "Unknown error";
+    } else {
+      switch (costInfo.subtype) {
+        case "success":
+          completedReason = "sdk_result";
+          output = message.text || "";
+          break;
+        case "error_max_turns":
+          completedReason = "max_turns";
+          break;
+        case "error_max_budget_usd":
+          completedReason = "max_budget";
+          break;
+        default:
+          completedReason = "sdk_result";
+          output = message.text || "";
+          break;
+      }
+    }
+
+    this.finalizeTask(taskId, completedReason, output, costInfo.totalCostUsd);
+  }
+
+  private finalizeTask(
+    taskId: string,
+    completedReason: Task["completedReason"],
+    output: string | undefined,
+    totalCostUsd: number,
+  ): void {
+    const task = taskStore.getTaskById(taskId);
+    if (!task || (task.status !== "Running" && task.status !== "Stuck")) return;
+
     taskStore.updateTask(taskId, {
       status: "Done",
       completedReason,
       output: output ? output.slice(0, 10000) : undefined,
       completedAt: Date.now(),
-      budgetUsed: costInfo.totalCostUsd,
+      budgetUsed: totalCostUsd,
     });
 
-    // Update agent stats and status
     if (task.agentId) {
       const agent = agentStore.getAgentById(task.agentId);
       if (agent) {
         const newCompleted = agent.stats.totalTasksCompleted + 1;
-        const newTotalCost = agent.stats.totalCostUsd + costInfo.totalCostUsd;
+        const newTotalCost = agent.stats.totalCostUsd + totalCostUsd;
         const duration = task.startedAt ? Date.now() - task.startedAt : 0;
         const totalDurations = agent.stats.avgDurationMs * agent.stats.totalTasksCompleted + duration;
         const newAvgDuration = newCompleted > 0 ? totalDurations / newCompleted : 0;
 
-        // Check if agent has other running tasks
         const hasRunningTasks = taskStore
           .getAllTasks()
           .some(
@@ -280,20 +422,23 @@ class SDKSessionManager {
       }
     }
 
-    // Clean up active query
+    const entry = this.activeQueries.get(taskId);
     this.activeQueries.delete(taskId);
-    if (costInfo) {
-      // sessionReverseMap cleanup handled by the sessionId from entry
+    if (entry?.sessionId) {
+      this.sessionReverseMap.delete(entry.sessionId);
     }
 
-    cleanupQuery(taskId);
+    if (entry?.provider) {
+      entry.provider.cleanup(taskId);
+    } else {
+      cleanupQuery(taskId);
+    }
 
-    // Broadcast
     broadcast("task:update", {
       id: taskId,
       status: "Done",
       completedReason,
-      budgetUsed: costInfo.totalCostUsd,
+      budgetUsed: totalCostUsd,
     });
   }
 
@@ -318,8 +463,14 @@ class SDKSessionManager {
       agentStore.updateAgent(task.agentId, { status: "idle", currentTaskId: undefined });
     }
 
+    const entry = this.activeQueries.get(taskId);
     this.activeQueries.delete(taskId);
-    cleanupQuery(taskId);
+
+    if (entry?.provider) {
+      entry.provider.cleanup(taskId);
+    } else {
+      cleanupQuery(taskId);
+    }
 
     broadcast("task:update", {
       id: taskId,
@@ -356,7 +507,11 @@ class SDKSessionManager {
   stopAll(): void {
     for (const [taskId, entry] of this.activeQueries) {
       entry.abortController.abort();
-      cleanupQuery(taskId);
+      if (entry.provider) {
+        entry.provider.cleanup(taskId);
+      } else {
+        cleanupQuery(taskId);
+      }
     }
     this.activeQueries.clear();
     this.sessionReverseMap.clear();
