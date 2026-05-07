@@ -79,6 +79,42 @@ function validateAgentFields(body: Record<string, unknown>): string | null {
   return null;
 }
 
+function normalizeModelForApi(model: string): string {
+  return model.replace(/\[[^\]]+\]$/, "");
+}
+
+function isDeepSeekConnection(model: string, baseUrl: string): boolean {
+  return model.toLowerCase().startsWith("deepseek") ||
+    baseUrl.toLowerCase().includes("deepseek");
+}
+
+function resolveDeepSeekChatBaseUrl(baseUrl: string): string {
+  const trimmed = baseUrl.replace(/\/$/, "");
+  if (!trimmed) return "https://api.deepseek.com";
+
+  if (trimmed.toLowerCase().includes("api.deepseek.com")) {
+    return trimmed
+      .replace(/\/anthropic(?:\/v1)?$/i, "")
+      .replace(/\/v1$/i, "");
+  }
+
+  return trimmed.replace(/\/anthropic(?:\/v1)?$/i, "");
+}
+
+type ProbeResponseBody = {
+  model?: string;
+  error?: unknown;
+};
+
+function getApiErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const errorObject = error as Record<string, unknown>;
+    return String(errorObject.message ?? errorObject.type ?? JSON.stringify(errorObject));
+  }
+
+  return String(error);
+}
+
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
@@ -316,11 +352,15 @@ agentsRouter.post("/test-connection", async (req, res) => {
   const resolvedModel = typeof model === "string" ? model : "";
   const resolvedKey = typeof apiKey === "string" ? apiKey : "";
   const resolvedUrl = typeof apiBaseUrl === "string" ? apiBaseUrl : "";
+  const apiModel = normalizeModelForApi(resolvedModel);
 
   try {
     const baseUrl = resolvedUrl || "https://api.anthropic.com";
-    const isAnthropicCompatible = baseUrl.toLowerCase().includes("/anthropic") ||
-      baseUrl.toLowerCase().includes("anthropic.ai");
+    const isDeepSeek = isDeepSeekConnection(apiModel || resolvedModel, baseUrl);
+    const isAnthropicCompatible = !isDeepSeek && (
+      baseUrl.toLowerCase().includes("/anthropic") ||
+      baseUrl.toLowerCase().includes("anthropic.ai")
+    );
 
     if (isAnthropicCompatible) {
       const response = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/messages`, {
@@ -332,7 +372,7 @@ agentsRouter.post("/test-connection", async (req, res) => {
           ...(resolvedKey ? {} : {}),
         },
         body: JSON.stringify({
-          model: resolvedModel || "claude-sonnet-4-5-20250929",
+          model: apiModel || "claude-sonnet-4-5-20250929",
           max_tokens: 1,
           messages: [{ role: "user", content: "Hi" }],
         }),
@@ -347,31 +387,41 @@ agentsRouter.post("/test-connection", async (req, res) => {
         return res.json({ ok: false, error: "未提供 API Key 且系统无默认 Key" });
       }
 
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as ProbeResponseBody;
 
       if (response.ok) {
-        const modelUsed = data.model || resolvedModel || "unknown";
+        const modelUsed = data.model || apiModel || "unknown";
         return res.json({ ok: true, model: modelUsed, message: `连接成功: ${modelUsed}` });
       }
 
       if (data.error) {
-        const errMsg = typeof data.error === "object" ? data.error.message : String(data.error);
+        const errMsg = getApiErrorMessage(data.error);
         return res.json({ ok: false, error: `模型返回错误 (${response.status}): ${errMsg}` });
       }
 
       return res.json({ ok: false, error: `HTTP ${response.status}` });
     } else {
-      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      const chatBaseUrl = isDeepSeek ? resolveDeepSeekChatBaseUrl(baseUrl) : baseUrl.replace(/\/$/, "");
+      const chatModel = apiModel || (isDeepSeek ? "deepseek-chat" : "gpt-4o");
+      const body: Record<string, unknown> = {
+        model: chatModel,
+        max_tokens: 1,
+        stream: false,
+        messages: [{ role: "user", content: "Hi" }],
+      };
+
+      if (isDeepSeek && chatModel.toLowerCase().includes("v4-pro")) {
+        body.thinking = { type: "enabled" };
+        body.reasoning_effort = "high";
+      }
+
+      const response = await fetch(`${chatBaseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${resolvedKey}`,
         },
-        body: JSON.stringify({
-          model: resolvedModel || "gpt-4o",
-          max_tokens: 1,
-          messages: [{ role: "user", content: "Hi" }],
-        }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(15000),
       });
 
@@ -379,17 +429,15 @@ agentsRouter.post("/test-connection", async (req, res) => {
         return res.json({ ok: false, error: `认证失败 (${response.status}): API Key 无效或已过期` });
       }
 
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as ProbeResponseBody;
 
       if (response.ok) {
-        const modelUsed = data.model || resolvedModel || "unknown";
+        const modelUsed = data.model || chatModel || "unknown";
         return res.json({ ok: true, model: modelUsed, message: `连接成功: ${modelUsed}` });
       }
 
       if (data.error) {
-        const errMsg = typeof data.error === "object"
-          ? (data.error.message || data.error.type || JSON.stringify(data.error))
-          : String(data.error);
+        const errMsg = getApiErrorMessage(data.error);
         return res.json({ ok: false, error: `模型返回错误 (${response.status}): ${errMsg}` });
       }
 

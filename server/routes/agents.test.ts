@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import request from "supertest";
 import { app, server, startServer } from "../app.js";
 import * as agentStore from "../store/agentStore.js";
@@ -15,6 +15,10 @@ describe("Agent API", () => {
     if (server.listening) {
       server.close();
     }
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   const validAgent = {
@@ -186,6 +190,44 @@ describe("Agent API", () => {
         .send({ prompt: "short" });
 
       expect(updateRes.status).toBe(400);
+    });
+  });
+
+  describe("POST /api/agents/test-connection", () => {
+    it("routes DeepSeek anthropic-compatible base URL to chat completions", async () => {
+      const fetchMock = vi.fn(async () =>
+        new Response(JSON.stringify({ model: "deepseek-v4-pro" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const res = await request(app)
+        .post("/api/agents/test-connection")
+        .send({
+          model: "deepseek-v4-pro[1m]",
+          apiKey: "sk-test",
+          apiBaseUrl: "https://api.deepseek.com/anthropic",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        ok: true,
+        model: "deepseek-v4-pro",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("https://api.deepseek.com/chat/completions");
+      expect(init?.headers).toMatchObject({
+        Authorization: "Bearer sk-test",
+      });
+
+      const body = JSON.parse(String(init?.body));
+      expect(body.model).toBe("deepseek-v4-pro");
+      expect(body.thinking).toEqual({ type: "enabled" });
+      expect(body.reasoning_effort).toBe("high");
     });
   });
 
