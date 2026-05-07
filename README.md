@@ -41,7 +41,7 @@ docker compose up --build -d
 
 访问 `http://localhost:3456`
 
-评测部署、验证步骤、日志和 API 说明见 [docs/系统部署与运行说明.md](/home/ryou/myworkspace/develop/PROJECT/competiton/AI4S_Data_Agent_Swarm/docs/系统部署与运行说明.md)。
+评测部署、验证步骤、日志和 API 说明见 [docs/系统部署与运行说明.md](docs/系统部署与运行说明.md)。
 
 ---
 
@@ -70,9 +70,44 @@ docker compose up --build -d
 
 ## 主界面
 
-![Homepage](screenshots/01-homepage.png)
-
 三栏布局：**Agent 面板**（左） · **任务看板**（中） · **详情面板**（右）
+
+<table>
+  <tr>
+    <td align="center"><b>Landing Page</b></td>
+    <td align="center"><b>登录页</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/00-landing-page.png" width="420" /></td>
+    <td><img src="screenshots/auth-login.png" width="420" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>主界面</b></td>
+    <td align="center"><b>Agent 详情</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/01-homepage.png" width="420" /></td>
+    <td><img src="screenshots/08-agent-detail.png" width="420" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>新建任务</b></td>
+    <td align="center"><b>新建智能体</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/06-create-task.png" width="420" /></td>
+    <td><img src="screenshots/create-agent-modal.png" width="420" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>项目切换</b></td>
+    <td align="center"><b>用户菜单</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/project-dropdown.png" width="420" /></td>
+    <td><img src="screenshots/user-dropdown.png" width="420" /></td>
+  </tr>
+</table>
+
+功能特性：
 
 - **Landing Page** — 项目介绍与登录入口
 - **登录/注册** — JWT 认证，支持账号密码登录
