@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI4S Data Agent Swarm</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:#000}
+
+/* ===== Layering ===== */
+#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
+#content{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+#content.interactive{pointer-events:auto}
+
+/* ===== Card: initially hidden, revealed by timeline ===== */
+.card{
+  background:rgba(255,255,255,0.02);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:20px;
+  padding:44px 40px 36px;
+  width:100%;
+  max-width:540px;
+  min-width:300px;
+  backdrop-filter:blur(52px) saturate(160%);
+  -webkit-backdrop-filter:blur(52px) saturate(160%);
+  box-shadow:0 12px 48px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.03);
+  position:relative;
+  overflow:hidden;
+  opacity:0;
+  transform:scale(0.92) translateY(20px);
+  transition:none;
+}
+.card.revealed{
+  opacity:1;
+  transform:scale(1) translateY(0);
+  transition:opacity 1.2s cubic-bezier(.16,1,.3,1),transform 1.2s cubic-bezier(.16,1,.3,1);
+}
+.card::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent 10%,rgba(200,149,108,0.3),transparent 90%);
+  opacity:0;
+  transition:opacity .8s ease 1s;
+}
+.card.revealed::before{opacity:1}
+
+/* ===== Elements inside card with staggered reveal ===== */
+.card-el{opacity:0;transform:translateY(12px);transition:opacity .7s cubic-bezier(.4,0,.2,1),transform .7s cubic-bezier(.4,0,.2,1)}
+.card-el.show{opacity:1;transform:translateY(0)}
+
+.brand{display:flex;align-items:center;justify-content:center;gap:10px}
+.brand-icon{color:#c8956c;font-size:14px;letter-spacing:.1em;opacity:.85;text-shadow:0 0 12px rgba(200,149,108,.25),0 0 4px rgba(200,149,108,.15);transition:text-shadow .6s ease}
+.brand-text{color:#a08050;font-size:11px;letter-spacing:.25em;text-transform:uppercase;font-weight:500;opacity:.7;transition:opacity .6s ease}
+
+h1{color:#e8e8e8;font-size:22px;font-weight:600;text-align:center;letter-spacing:.03em;line-height:1.3}
+h1 .glint{position:relative;display:inline}
+h1 .glint::after{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(200,149,108,.4),transparent);
+  mix-blend-mode:overlay;opacity:0;
+}
+h1 .glint.sweep::after{
+  animation:glintSweep .6s ease-out forwards;
+}
+@keyframes glintSweep{0%{left:-100%;opacity:0}30%{opacity:1}100%{left:100%;opacity:0}}
+
+.sub{color:#555;font-size:12px;text-align:center;letter-spacing:.06em;line-height:1.6}
+
+.tags{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
+.tag{padding:6px 12px;border-radius:6px;font-size:11px;color:#999;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);white-space:nowrap;transition:all .35s ease}
+.tag:hover{background:rgba(200,149,108,.06);border-color:rgba(200,149,108,.15);color:#c8956c}
+
+.btn-wrap{display:flex;justify-content:center}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 36px;border-radius:12px;font-size:14px;font-weight:500;color:#0a0a0a;
+  background:linear-gradient(135deg,#c8956c,#b08055);border:none;cursor:pointer;
+  text-decoration:none;flex-shrink:0;
+  transition:all .35s cubic-bezier(.4,0,.2,1);
+  letter-spacing:.06em;position:relative;overflow:hidden;
+}
+.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent);opacity:0;transition:opacity .35s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(200,149,108,.22)}
+.btn:hover::before{opacity:1}
+.btn:active{transform:translateY(0)}
+
+.terminal{margin-top:24px;text-align:center;font-family:'SF Mono','Fira Code',monospace;font-size:10px;color:#222;letter-spacing:.04em;opacity:.7}
+.terminal .host{color:#444}.terminal .path{color:#333}.terminal .cmd{color:#c8956c;opacity:.5}
+.terminal .cursor{display:inline-block;width:5px;height:12px;background:#444;vertical-align:middle;margin-left:3px;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+</style>
+</head>
+<body>
+<canvas id="canvas-bg"></canvas>
+
+<div id="content">
+  <div class="card" id="card">
+    <div class="card-el brand" id="el-brand">
+      <span class="brand-icon">◆</span>
+      <span class="brand-text">AI4S.SWARM</span>
+    </div>
+    <div class="card-el" style="margin-top:28px" id="el-title">
+      <h1><span class="glint" id="title-glint">AI4S Data Agent Swarm</span></h1>
+    </div>
+    <div class="card-el sub" style="margin-top:8px" id="el-sub">
+      AI for Science 数据合成 · 多智能体协同编排平台
+    </div>
+    <div class="card-el tags" style="margin-top:28px" id="el-tags">
+      <span class="tag">Claude Agent SDK</span>
+      <span class="tag">MinerU</span>
+      <span class="tag">React</span>
+      <span class="tag">Node.js</span>
+    </div>
+    <div class="card-el btn-wrap" style="margin-top:28px" id="el-btn">
+      <a class="btn" href="auth.html" id="login-btn">
+        <span style="white-space:nowrap">开始使用</span>
+        <span style="transition:transform .3s">→</span>
+      </a>
+    </div>
+  </div>
+  <div class="terminal" id="terminal">
+    <span class="host">root@Agent_Team</span><span>:</span><span class="path">~/program</span><span>$</span>
+    <span class="cmd" id="terminal-cmd"> ai4s-swarm --init</span><span class="cursor"></span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   AI4S Data Agent Swarm — Cinematic Opening Sequence
+   ============================================================ */
+
+const canvas = document.getElementById('canvas-bg');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+
+/* ===== States ===== */
+const S_INTRO       = 0;  // 0-3000ms : nodes burst from center, rapid interconnection
+const S_CARD_REVEAL = 1;  // 3000-4500ms : card descends, nodes recede
+const S_TRANSITION  = 2;  // 4500-5500ms : inner nodes fade, outer nodes calm
+const S_AMBIENT     = 3;  // 5500ms+    : normal floating state
+
+let STATE = S_INTRO;
+let startTime = performance.now();
+
+/* ===== Card geometry (for node repulsion logic) ===== */
+let cardRect = { x:0, y:0, w:0, h:0, active:false };
+function updateCardRect() {
+  const c = document.getElementById('card');
+  if (!c) return;
+  const r = c.getBoundingClientRect();
+  cardRect = { x:r.left, y:r.top, w:r.width, h:r.height, active:true };
+}
+
+/* ===== Node ===== */
+const COLORS = ['#c8a06c','#d4b07a','#e0c08a','#c4956c','#b89060','#a08050','#d0b888','#e8cfa0'];
+const LABELS = [
+  { name: 'MinerU', weight: 5 },
+  { name: '智能体', weight: 3 },
+  { name: '编排', weight: 3 },
+  { name: '数据合成', weight: 3 },
+  { name: '数据清洗', weight: 3 },
+  { name: 'RAG', weight: 3 },
+  { name: '向量库', weight: 3 },
+  { name: '知识库', weight: 3 },
+  { name: '推理链', weight: 3 },
+  { name: '多模态', weight: 3 },
+  { name: '检索', weight: 3 },
+  { name: 'AIGC', weight: 3 },
+  { name: 'DeepSeek', weight: 3 },
+  { name: 'Kimi', weight: 3 },
+  { name: 'Qwen', weight: 3 },
+  { name: '数据标注', weight: 2 },
+  { name: '特征工程', weight: 2 },
+  { name: 'Embedding', weight: 2 },
+  { name: '数据治理', weight: 2 },
+  { name: '元数据', weight: 2 },
+  { name: '数据血缘', weight: 2 },
+  { name: '验证', weight: 2 },
+  { name: '实体链接', weight: 2 },
+  { name: '关系抽取', weight: 2 },
+  { name: '数据湖', weight: 2 },
+  { name: '数据仓库', weight: 2 },
+  { name: '时序数据', weight: 2 },
+  { name: 'ETL', weight: 2 },
+  { name: 'Claude', weight: 2 },
+  { name: 'Agent SDK', weight: 2 },
+  { name: 'React', weight: 2 },
+  { name: 'Node.js', weight: 2 },
+  { name: 'GPT-4', weight: 1 },
+  { name: 'Gemini', weight: 1 },
+  { name: 'Llama', weight: 1 },
+  { name: 'Mistral', weight: 1 },
+  { name: 'GLM', weight: 1 },
+  { name: 'Baichuan', weight: 1 },
+  { name: 'Yi', weight: 1 },
+  { name: 'LangChain', weight: 1 },
+  { name: 'AutoGen', weight: 1 },
+  { name: 'CrewAI', weight: 1 },
+  { name: 'Dify', weight: 1 },
+  { name: 'Ollama', weight: 1 },
+  { name: 'vLLM', weight: 1 },
+  { name: 'TensorRT', weight: 1 },
+  { name: 'Triton', weight: 1 },
+  { name: 'Ray', weight: 1 },
+  { name: 'Celery', weight: 1 },
+  { name: 'PyTorch', weight: 1 },
+  { name: 'JAX', weight: 1 },
+  { name: 'NumPy', weight: 1 },
+  { name: 'Pandas', weight: 1 },
+  { name: 'SciPy', weight: 1 },
+  { name: 'Matplotlib', weight: 1 },
+  { name: 'WandB', weight: 1 },
+  { name: 'MLflow', weight: 1 },
+  { name: 'ONNX', weight: 1 },
+  { name: 'Stable Diffusion', weight: 1 },
+  { name: 'Midjourney', weight: 1 },
+  { name: 'LoRA', weight: 1 },
+  { name: 'Fine-tune', weight: 1 },
+  { name: 'RLHF', weight: 1 },
+  { name: 'Sora', weight: 1 },
+  { name: 'ControlNet', weight: 1 },
+  { name: 'Kubernetes', weight: 1 },
+  { name: 'Docker', weight: 1 },
+  { name: 'Redis', weight: 1 },
+  { name: 'PostgreSQL', weight: 1 },
+  { name: 'Kafka', weight: 1 },
+  { name: 'ElasticSearch', weight: 1 },
+  { name: 'Prometheus', weight: 1 },
+  { name: 'Grafana', weight: 1 },
+  { name: 'MinIO', weight: 1 },
+  { name: 'Neo4j', weight: 1 },
+  { name: 'Milvus', weight: 1 },
+  { name: 'Weaviate', weight: 1 },
+  { name: 'Spark', weight: 1 },
+  { name: 'Flink', weight: 1 },
+  { name: 'Hadoop', weight: 1 },
+  { name: 'Iceberg', weight: 1 },
+  { name: 'Delta Lake', weight: 1 },
+  { name: 'ClickHouse', weight: 1 },
+  { name: 'Druid', weight: 1 },
+  { name: 'Airflow', weight: 1 },
+  { name: 'API网关', weight: 1 },
+  { name: '鉴权', weight: 1 },
+  { name: 'WebSocket', weight: 1 },
+  { name: 'gRPC', weight: 1 },
+  { name: 'REST', weight: 1 },
+  { name: 'GraphQL', weight: 1 },
+  { name: 'OAuth', weight: 1 },
+  { name: 'JWT', weight: 1 },
+  { name: 'CI/CD', weight: 1 },
+  { name: 'GitOps', weight: 1 },
+  { name: 'Terraform', weight: 1 },
+  { name: 'Ansible', weight: 1 },
+  { name: 'NLP', weight: 1 },
+  { name: 'CV', weight: 1 },
+  { name: 'ASR', weight: 1 },
+  { name: 'TTS', weight: 1 },
+  { name: 'OCR', weight: 1 },
+  { name: 'NER', weight: 1 },
+  { name: 'BERT', weight: 1 },
+  { name: 'Transformer', weight: 1 },
+  { name: 'Attention', weight: 1 },
+  { name: 'MCP', weight: 1 },
+  { name: 'Function Call', weight: 1 },
+  { name: 'Tool Use', weight: 1 },
+  { name: 'Code Interpreter', weight: 1 },
+  { name: 'Sandbox', weight: 1 }
+];
+
+// Precompute cumulative weights for fast random selection
+const totalWeight = LABELS.reduce((sum, l) => sum + l.weight, 0);
+function pickLabel() {
+  let r = Math.random() * totalWeight;
+  for (const item of LABELS) {
+    r -= item.weight;
+    if (r <= 0) return item.name;
+  }
+  return LABELS[LABELS.length - 1].name;
+}
+
+class Node {
+  constructor() {
+    this.resetIntro();
+  }
+
+  resetIntro() {
+    // Burst from a larger central cluster — range doubled
+    const angle = Math.random() * Math.PI * 2;
+    const spreadRadius = Math.min(W, H) * 0.44; // initial spread area (4x larger than V22)
+    const dist = Math.random() * spreadRadius;
+    this.x = W/2 + Math.cos(angle) * dist;
+    this.y = H/2 + Math.sin(angle) * dist;
+    
+    const speed = Math.random() * 3.5 + 1.5; // faster outward burst
+    this.vx = Math.cos(angle) * speed * (0.7 + Math.random() * 0.6);
+    this.vy = Math.sin(angle) * speed * (0.7 + Math.random() * 0.6);
+    
+    this.radius = Math.random() * 1.6 + 0.9;
+    this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.alpha = 0;
+    this.targetAlpha = Math.random() * 0.5 + 0.4; // brighter during intro
+    this.pulsePhase = Math.random() * Math.PI * 2;
+    this.pulseSpeed = Math.random() * 0.03 + 0.015; // faster pulse during intro
+    this.label = pickLabel();
+    this.showLabel = Math.random() < 0.15;
+    this.birthProgress = 0;
+    this.maxLife = Math.random() * 400 + 300;
+    this.age = 0;
+    this.introDriftAngle = angle; // remember direction for recoil
+    
+    // Label lottery: 30% get a label, purely random
+    this.hasLabel = Math.random() < 0.30;
+  }
+
+  resetAmbient() {
+    // Reborn at edge, drifting inward gently
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.min(W, H) * 0.45 + Math.random() * Math.min(W, H) * 0.1;
+    this.x = W/2 + Math.cos(angle) * dist;
+    this.y = H/2 + Math.sin(angle) * dist;
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.4;
+    this.radius = Math.random() * 1.8 + 1.0;
+    this.targetAlpha = Math.random() * 0.35 + 0.25;
+    this.pulseSpeed = Math.random() * 0.015 + 0.006;
+    this.birthProgress = 0;
+    this.age = 0;
+    this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.label = pickLabel();
+    this.showLabel = Math.random() < 0.2;
+    this.hasLabel = Math.random() < 0.30;
+  }
+
+  easeOutBack(t) {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  update() {
+    this.age++;
+    this.pulsePhase += this.pulseSpeed;
+
+    // Birth / respawn animation
+    if (this.birthProgress < 1) {
+      this.birthProgress += 0.025;
+      this.alpha = this.targetAlpha * this.easeOutBack(Math.min(this.birthProgress, 1));
+    } else {
+      this.alpha = this.targetAlpha + Math.sin(this.pulsePhase) * 0.04;
+    }
+
+    // State-specific behavior
+    if (STATE === S_INTRO) {
+      // Fast burst then slow down
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vx *= 0.97; // decelerate
+      this.vy *= 0.97;
+      // Slight radial gravity to keep them from flying off
+      const dx = this.x - W/2, dy = this.y - H/2;
+      this.vx -= dx * 0.0001;
+      this.vy -= dy * 0.0001;
+    }
+    else if (STATE === S_CARD_REVEAL) {
+      // Nodes repelled by card center, + gentle float
+      this.x += this.vx * 0.5; // slower
+      this.y += this.vy * 0.5;
+      if (cardRect.active) {
+        const cx = cardRect.x + cardRect.w/2;
+        const cy = cardRect.y + cardRect.h/2;
+        const dx = this.x - cx;
+        const dy = this.y - cy;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const repelRadius = Math.max(cardRect.w, cardRect.h) * 0.55;
+        if (dist < repelRadius) {
+          const force = (repelRadius - dist) / repelRadius;
+          this.vx += (dx / dist) * force * 0.8;
+          this.vy += (dy / dist) * force * 0.8;
+        }
+      }
+      this.vx *= 0.94;
+      this.vy *= 0.94;
+    }
+    else if (STATE === S_TRANSITION) {
+      // Inner nodes fade rapidly, outer nodes stabilize
+      if (cardRect.active && this.isInsideCard(80)) {
+        this.targetAlpha *= 0.95; // rapid fade
+        this.alpha *= 0.92;
+      }
+      this.x += this.vx * 0.3;
+      this.y += this.vy * 0.3;
+      this.vx *= 0.96;
+      this.vy *= 0.96;
+    }
+    else { // S_AMBIENT
+      // Normal floating
+      this.x += this.vx;
+      this.y += this.vy;
+      const dx = this.x - W/2, dy = this.y - H/2;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const maxDist = Math.max(W, H) * 0.55;
+      if (dist > maxDist) {
+        this.vx -= dx * 0.00006;
+        this.vy -= dy * 0.00006;
+      }
+      this.vx += (Math.random() - 0.5) * 0.006;
+      this.vy += (Math.random() - 0.5) * 0.006;
+      this.vx *= 0.998;
+      this.vy *= 0.998;
+      if (this.age > this.maxLife && Math.random() < 0.005) {
+        this.resetAmbient();
+      }
+    }
+  }
+
+  isInsideCard(pad) {
+    if (!cardRect.active) return false;
+    return this.x > cardRect.x - pad && this.x < cardRect.x + cardRect.w + pad &&
+           this.y > cardRect.y - pad && this.y < cardRect.y + cardRect.h + pad;
+  }
+
+  isDeepInsideCard() {
+    if (!cardRect.active) return false;
+    const pad = -20; // strictly inside
+    return this.x > cardRect.x - pad && this.x < cardRect.x + cardRect.w + pad &&
+           this.y > cardRect.y - pad && this.y < cardRect.y + cardRect.h + pad;
+  }
+
+  draw() {
+    const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+    const r = this.radius * pulse;
+    const displayAlpha = Math.max(0, Math.min(1, this.alpha));
+    if (displayAlpha < 0.005) return;
+
+    // Glow
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = r * (STATE <= S_CARD_REVEAL ? 10 : 6);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r * 0.7, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = displayAlpha;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Halo
+    const haloR = r * (STATE <= S_CARD_REVEAL ? 8 : 5);
+    const grad = ctx.createRadialGradient(this.x, this.y, r, this.x, this.y, haloR);
+    grad.addColorStop(0, this.color + (STATE <= S_CARD_REVEAL ? '35' : '20'));
+    grad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, haloR, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+
+    // Label (only in AMBIENT or if very bright)
+    if (this.showLabel && displayAlpha > 0.2 && (STATE === S_AMBIENT || STATE === S_TRANSITION) && Math.sin(this.pulsePhase * 0.3) > 0.2) {
+      ctx.font = '10px "SF Mono","Fira Code",monospace';
+      ctx.fillStyle = 'rgba(210,180,150,' + (displayAlpha * 0.3) + ')';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.label, this.x, this.y + r + 13);
+    }
+  }
+}
+
+/* ===== System ===== */
+const nodes = [];
+const MAX_NODES = 180;
+const INTRO_NODES = 160; // burst count
+let activeNodeCount = 0;
+
+function initNodes() {
+  nodes.length = 0;
+  for (let i = 0; i < MAX_NODES; i++) {
+    const n = new Node();
+    // stagger birth for cinematic reveal
+    n.birthProgress = -Math.random() * 2; // delayed start
+    nodes.push(n);
+  }
+  activeNodeCount = 0;
+}
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+function drawConnections() {
+  const rhythm = Math.sin(Date.now() * 0.0003) * 0.5 + 0.5;
+  const connDist = STATE <= S_INTRO ? 440 : 170;
+  const connAlphaMul = STATE <= S_INTRO ? 0.35 : 0.2;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i];
+    if (a.alpha < 0.05) continue;
+
+    // Check if line would cross card boundary during TRANSITION
+    const aInCard = a.isDeepInsideCard();
+
+    const connLimit = Math.floor(STATE <= S_INTRO ? 6 + rhythm * 6 : 4 + rhythm * 4);
+    let drawn = 0;
+
+    for (let j = i + 1; j < nodes.length; j++) {
+      if (drawn >= connLimit) break;
+      const b = nodes[j];
+      if (b.alpha < 0.05) continue;
+
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < connDist) {
+        // During transition, suppress lines that cross the card
+        if (STATE === S_TRANSITION) {
+          const bInCard = b.isDeepInsideCard();
+          if (aInCard !== bInCard) continue; // don't cross card boundary
+        }
+
+        const linkAlpha = (1 - dist / connDist) * Math.min(a.alpha, b.alpha) * connAlphaMul;
+        if (linkAlpha > 0.003) {
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          grad.addColorStop(0, a.color + '00');
+          const hex = Math.floor(linkAlpha * 255).toString(16).padStart(2, '0');
+          grad.addColorStop(0.5, a.color + hex);
+          grad.addColorStop(1, b.color + '00');
+          ctx.strokeStyle = grad;
+          ctx.globalAlpha = linkAlpha;
+          ctx.lineWidth = STATE <= S_INTRO ? 0.6 : 0.4;
+          ctx.stroke();
+          drawn++;
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // ===== 30% 节点纯随机标签 =====
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (!n.hasLabel) continue;
+    if (n.alpha < 0.15) continue;
+
+    // Skip if inside card during transition/ambient
+    if (STATE === S_TRANSITION || STATE === S_AMBIENT) {
+      if (n.isDeepInsideCard()) continue;
+    }
+
+    const r = n.radius * (Math.sin(n.pulsePhase) * 0.3 + 0.7);
+    const displayAlpha = Math.max(0, Math.min(1, n.alpha));
+    const labelAlpha = displayAlpha * 0.42;
+
+    ctx.font = '9px "SF Mono","Fira Code",monospace';
+    ctx.fillStyle = 'rgba(200,175,140,' + labelAlpha + ')';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, n.x, n.y - r - 8);
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawConnections();
+  for (const n of nodes) n.draw();
+}
+
+function loop() {
+  const now = performance.now();
+  const elapsed = now - startTime;
+
+  // State machine
+  if (STATE === S_INTRO && elapsed > 3000) {
+    STATE = S_CARD_REVEAL;
+    updateCardRect();
+    revealCard();
+  } else if (STATE === S_CARD_REVEAL && elapsed > 4500) {
+    STATE = S_TRANSITION;
+  } else if (STATE === S_TRANSITION && elapsed > 5500) {
+    STATE = S_AMBIENT;
+    // Thin out nodes inside card permanently
+    for (const n of nodes) {
+      if (n.isDeepInsideCard()) {
+        n.targetAlpha = 0.05;
+      }
+    }
+    document.getElementById('content').classList.add('interactive');
+    typeWriter(document.getElementById('terminal-cmd'), ' ai4s-swarm');
+  }
+
+  // Spawn nodes during intro
+  if (STATE === S_INTRO) {
+    activeNodeCount = Math.min(INTRO_NODES, Math.floor(elapsed / 15));
+  }
+
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (STATE === S_INTRO && i >= activeNodeCount) {
+      n.alpha = 0; // not born yet
+      continue;
+    }
+    n.update();
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ===== Terminal Typewriter — Per-Element Independent =====
+ * Each element has its own timer. No global state = no cross-page interference.
+ * Features: erase-before-type, human rhythm (burst/pause/jitter), interrupt-safe.
+ */
+window.typeWriter = function(el, text, options) {
+  if (!el) return;
+  options = options || {};
+  var baseSpeed = options.speed || 22;
+  var onDone = options.onDone || null;
+
+  // Interrupt any ongoing typing on THIS element only
+  if (el.__typingTimer) { clearTimeout(el.__typingTimer); el.__typingTimer = null; }
+  el.__typingText = text;
+
+  if (el.textContent.length > 0) {
+    eraseThenType(el, text, baseSpeed, onDone);
+  } else {
+    typeChar(el, text, 0, baseSpeed, onDone);
+  }
+};
+
+function eraseThenType(el, text, baseSpeed, onDone) {
+  var old = el.textContent;
+  var i = old.length;
+  function erase() {
+    if (i > 0) {
+      i--;
+      el.textContent = old.substring(0, i);
+      el.__typingTimer = setTimeout(erase, 10);
+    } else {
+      el.__typingTimer = setTimeout(function(){ typeChar(el, text, 0, baseSpeed, onDone); }, 80);
+    }
+  }
+  erase();
+}
+
+function typeChar(el, text, index, baseSpeed, onDone) {
+  // Safety: if this element started a new typing task, abandon the old one
+  if (el.__typingText !== text) return;
+  if (index >= text.length) {
+    el.__typingTimer = null;
+    el.__typingText = null;
+    if (onDone) onDone();
+    return;
+  }
+  var ch = text.charAt(index);
+  el.textContent += ch;
+  var delay = baseSpeed;
+  var prev = index > 0 ? text.charAt(index - 1) : '';
+  if (/[a-zA-Z0-9]/.test(prev) && /[a-zA-Z0-9]/.test(ch)) delay *= 0.7;
+  else if (/[-&|<>!$%]/.test(ch)) delay *= 2.2;
+  else if (ch === ' ') delay *= 1.4;
+  delay += (Math.random() - 0.5) * delay * 0.8;
+  delay = Math.max(8, Math.round(delay));
+  el.__typingTimer = setTimeout(function(){ typeChar(el, text, index + 1, baseSpeed, onDone); }, delay);
+}
+
+/* ===== Card Reveal Timeline ===== */
+function revealCard() {
+  const card = document.getElementById('card');
+  card.classList.add('revealed');
+
+  // Staggered element reveal
+  const els = [
+    { id: 'el-brand', delay: 200 },
+    { id: 'el-title', delay: 500 },
+    { id: 'el-sub', delay: 800 },
+    { id: 'el-tags', delay: 1100 },
+    { id: 'el-btn', delay: 1400 },
+  ];
+
+  els.forEach(({ id, delay }) => {
+    setTimeout(() => {
+      document.getElementById(id).classList.add('show');
+    }, delay);
+  });
+
+  // Title glint sweep
+  setTimeout(() => {
+    document.getElementById('title-glint').classList.add('sweep');
+  }, 900);
+
+  // Terminal update
+  typeWriter(document.getElementById('terminal-cmd'), ' ai4s-swarm auth --Create && Orchestrate');
+}
+
+/* ===== Resize ===== */
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  updateCardRect();
+}
+
+window.addEventListener('resize', resize);
+resize();
+initNodes();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

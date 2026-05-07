@@ -22,6 +22,24 @@ const DEFAULT_ALLOWED_TOOLS = [
 ];
 
 // ---------------------------------------------------------------------------
+// API Key security helpers
+// ---------------------------------------------------------------------------
+
+function maskApiKey(key: string): string {
+  if (!key || key.length <= 4) return "****";
+  return "****" + key.slice(-4);
+}
+
+function sanitizeAgentForResponse(agent: Agent): Record<string, unknown> {
+  const { apiKey, ...rest } = agent;
+  return {
+    ...rest,
+    hasApiKey: !!apiKey,
+    apiKey: apiKey ? maskApiKey(apiKey) : "",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Validation helpers
 // ---------------------------------------------------------------------------
 
@@ -69,7 +87,8 @@ export const agentsRouter = Router();
 
 // GET /api/agents
 agentsRouter.get("/", (_req, res) => {
-  res.json({ agents: agentStore.getAllAgents() });
+  const agents = agentStore.getAllAgents().map(sanitizeAgentForResponse);
+  res.json({ agents });
 });
 
 // GET /api/agents/:id
@@ -80,12 +99,12 @@ agentsRouter.get("/:id", (req, res) => {
       error: { code: "AGENT_NOT_FOUND", message: "Agent not found" },
     });
   }
-  res.json({ agent });
+  res.json({ agent: sanitizeAgentForResponse(agent) });
 });
 
 // POST /api/agents
 agentsRouter.post("/", (req, res) => {
-  const { name, avatar, role, prompt, projectId, maxTurns, maxBudgetUsd, allowedTools } = req.body;
+  const { name, avatar, role, prompt, projectId, maxTurns, maxBudgetUsd, allowedTools, model, apiKey, apiBaseUrl } = req.body;
 
   // Validate required fields
   const nameError = validateString(name, "name", 1, 50);
@@ -128,6 +147,9 @@ agentsRouter.post("/", (req, res) => {
     maxTurns: maxTurns ?? DEFAULT_MAX_TURNS,
     maxBudgetUsd: maxBudgetUsd ?? DEFAULT_MAX_BUDGET_USD,
     allowedTools: allowedTools ?? [...DEFAULT_ALLOWED_TOOLS],
+    model: typeof model === "string" ? model : "",
+    apiKey: typeof apiKey === "string" ? apiKey : "",
+    apiBaseUrl: typeof apiBaseUrl === "string" ? apiBaseUrl : "",
     taskCount: 0,
     stats: {
       totalTasksCompleted: 0,
@@ -141,8 +163,8 @@ agentsRouter.post("/", (req, res) => {
   };
 
   agentStore.createAgent(agent);
-  broadcast("agent:update", agent);
-  res.status(201).json({ agent });
+  broadcast("agent:update", sanitizeAgentForResponse(agent));
+  res.status(201).json({ agent: sanitizeAgentForResponse(agent) });
 });
 
 // PUT /api/agents/:id
@@ -165,11 +187,25 @@ agentsRouter.put("/:id", (req, res) => {
   const allowedFields = [
     "name", "avatar", "role", "prompt", "projectId",
     "maxTurns", "maxBudgetUsd", "allowedTools", "isEnabled",
+    "model", "apiBaseUrl",
   ];
 
   for (const field of allowedFields) {
     if (req.body[field] !== undefined) {
       patch[field] = req.body[field];
+    }
+  }
+
+  // Handle apiKey separately: empty/null = clear, "****" prefix = keep, other = update
+  if ("apiKey" in req.body) {
+    const rawKey = req.body.apiKey;
+    if (rawKey === "" || rawKey === null) {
+      patch.apiKey = "";
+    } else if (typeof rawKey === "string" && rawKey.startsWith("****")) {
+      // Placeholder from frontend — keep existing key
+      // Don't include in patch so existing key is preserved
+    } else {
+      patch.apiKey = rawKey;
     }
   }
 
@@ -186,8 +222,8 @@ agentsRouter.put("/:id", (req, res) => {
   }
 
   const updated = agentStore.updateAgent(req.params.id, patch);
-  broadcast("agent:update", updated);
-  res.json({ agent: updated });
+  broadcast("agent:update", sanitizeAgentForResponse(updated!));
+  res.json({ agent: sanitizeAgentForResponse(updated!) });
 });
 
 // GET /api/agents/:id/stats
@@ -247,4 +283,38 @@ agentsRouter.delete("/:id", (req, res) => {
   agentStore.deleteAgent(req.params.id);
   broadcast("agent:delete", { id: req.params.id });
   res.json({ ok: true });
+});
+
+// POST /api/agents/:id/start — enable agent
+agentsRouter.post("/:id/start", (req, res) => {
+  const existing = agentStore.getAgentById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({
+      error: { code: "AGENT_NOT_FOUND", message: "Agent not found" },
+    });
+  }
+
+  const updated = agentStore.updateAgent(req.params.id, {
+    isEnabled: true,
+    status: "idle",
+  });
+  broadcast("agent:update", sanitizeAgentForResponse(updated!));
+  res.json({ agent: sanitizeAgentForResponse(updated!) });
+});
+
+// POST /api/agents/:id/stop — disable agent
+agentsRouter.post("/:id/stop", (req, res) => {
+  const existing = agentStore.getAgentById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({
+      error: { code: "AGENT_NOT_FOUND", message: "Agent not found" },
+    });
+  }
+
+  const updated = agentStore.updateAgent(req.params.id, {
+    isEnabled: false,
+    status: "offline",
+  });
+  broadcast("agent:update", sanitizeAgentForResponse(updated!));
+  res.json({ agent: sanitizeAgentForResponse(updated!) });
 });

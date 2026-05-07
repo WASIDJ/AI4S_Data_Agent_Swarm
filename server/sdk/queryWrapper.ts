@@ -279,6 +279,33 @@ export function createCanUseToolCallback(
 }
 
 // ---------------------------------------------------------------------------
+// Apply agent-specific overrides to SDK options
+// ---------------------------------------------------------------------------
+
+function applyAgentOverrides(options: Options, agent: Agent): void {
+  // 1. Model override
+  if (agent.model) {
+    (options as Record<string, unknown>).model = agent.model;
+  }
+
+  // 2. API credentials override — pass via env to Claude Code subprocess
+  // All Claude Code compatible providers (GLM, DeepSeek, Mimo, MiniMax) use
+  // ANTHROPIC_AUTH_TOKEN. Anthropic official uses ANTHROPIC_API_KEY.
+  // We set both so the key works regardless of provider.
+  const env: Record<string, string | undefined> = {};
+  if (agent.apiKey) {
+    env.ANTHROPIC_API_KEY = agent.apiKey;
+    env.ANTHROPIC_AUTH_TOKEN = agent.apiKey;
+  }
+  if (agent.apiBaseUrl) {
+    env.ANTHROPIC_BASE_URL = agent.apiBaseUrl;
+  }
+  if (Object.keys(env).length > 0) {
+    options.env = { ...process.env as Record<string, string | undefined>, ...env };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // startQuery — main entry point
 // ---------------------------------------------------------------------------
 
@@ -321,6 +348,8 @@ export async function startQuery(
     options.allowedTools = tools;
   }
 
+  applyAgentOverrides(options, agent);
+
   const stream = sdkQuery({
     prompt: task.description,
     options,
@@ -358,6 +387,8 @@ export async function resumeQuery(
       append: agent.prompt,
     },
   };
+
+  applyAgentOverrides(options, agent);
 
   const stream = sdkQuery({
     prompt: message,

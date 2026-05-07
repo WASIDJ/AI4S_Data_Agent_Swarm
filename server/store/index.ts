@@ -1,11 +1,13 @@
 import path from "node:path";
 import { FileStore } from "./fileStore.js";
+import type { MigrationFn } from "./fileStore.js";
+import type { Agent } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 
@@ -25,10 +27,21 @@ function emptyEnvelope(collection: string): Record<string, unknown> {
 // Store instances (singleton per file)
 // ---------------------------------------------------------------------------
 
+const AGENTS_V1_TO_V2: MigrationFn = (data) => ({
+  ...data,
+  agents: ((data.agents as Agent[]) ?? []).map(a => ({
+    ...a,
+    model: a.model ?? "",
+    apiKey: a.apiKey ?? "",
+    apiBaseUrl: a.apiBaseUrl ?? "",
+  })),
+});
+
 export const agentsStore = new FileStore({
   filePath: dataPath("agents.json"),
   defaultValue: emptyEnvelope("agents"),
   currentVersion: SCHEMA_VERSION,
+  migrations: { 1: AGENTS_V1_TO_V2 },
 });
 
 export const tasksStore = new FileStore({
@@ -49,6 +62,12 @@ export const projectsStore = new FileStore({
   currentVersion: SCHEMA_VERSION,
 });
 
+export const usersStore = new FileStore({
+  filePath: dataPath("users.json"),
+  defaultValue: emptyEnvelope("users"),
+  currentVersion: SCHEMA_VERSION,
+});
+
 // ---------------------------------------------------------------------------
 // Re-exports: low-level file store
 // ---------------------------------------------------------------------------
@@ -64,12 +83,13 @@ export * as agentStore from "./agentStore.js";
 export * as taskStore from "./taskStore.js";
 export * as sessionStore from "./sessionStore.js";
 export * as projectStore from "./projectStore.js";
+export * as userStore from "./userStore.js";
 
 // ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------
 
-const ALL_FILE_STORES = [agentsStore, tasksStore, sessionsStore, projectsStore];
+const ALL_FILE_STORES = [agentsStore, tasksStore, sessionsStore, projectsStore, usersStore];
 
 /**
  * Load all file stores from disk (creating default files if needed),
@@ -85,11 +105,13 @@ export async function loadAllStores(): Promise<void> {
   const { loadTasks } = await import("./taskStore.js");
   const { loadSessions } = await import("./sessionStore.js");
   const { loadProjects } = await import("./projectStore.js");
+  const { loadUsers } = await import("./userStore.js");
 
   loadAgents();
   loadTasks();
   loadSessions();
   loadProjects();
+  loadUsers();
 }
 
 /**

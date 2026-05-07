@@ -4,10 +4,12 @@ import express from "express";
 import cors from "cors";
 import http from "node:http";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { loadAllStores } from "./store/index.js";
 import * as taskStore from "./store/taskStore.js";
 import * as agentStore from "./store/agentStore.js";
+import * as userStore from "./store/userStore.js";
 import { initWebSocket, closeWebSocket } from "./services/wsBroadcaster.js";
 import { projectsRouter } from "./routes/projects.js";
 import { agentsRouter } from "./routes/agents.js";
@@ -16,7 +18,34 @@ import { eventsRouter } from "./routes/events.js";
 import { copilotRouter } from "./routes/copilot.js";
 import { filesRouter } from "./routes/files.js";
 import { pipelineRouter } from "./routes/pipeline.js";
+import { authRouter, userRouter } from "./routes/auth.js";
+import { optionalAuth } from "./middleware/auth.js";
 import { sdkSessionManager } from "./services/sdkSessionManager.js";
+
+// ---------------------------------------------------------------------------
+// Seed default user
+// ---------------------------------------------------------------------------
+
+function seedDefaultUser(): void {
+  const users = userStore.getAllUsers();
+  if (users.length > 0) return;
+
+  const defaultEmail = process.env.DEFAULT_USER_EMAIL || "admin";
+  const defaultPassword = process.env.DEFAULT_USER_PASSWORD || "admin123";
+  const now = Date.now();
+
+  userStore.createUser({
+    id: crypto.randomUUID(),
+    name: "指挥员",
+    email: defaultEmail,
+    passwordHash: crypto.createHash("sha256").update(defaultPassword).digest("hex"),
+    role: "admin",
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  console.log(`[Seed] Default admin user created: ${defaultEmail}`);
+}
 
 // ---------------------------------------------------------------------------
 // Environment
@@ -122,10 +151,14 @@ app.use(
 
 app.use(express.json({ limit: "10mb" }));
 
+app.use(optionalAuth);
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 
+app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
 app.use("/api/projects", projectsRouter);
 app.use("/api/agents", agentsRouter);
 app.use("/api/tasks", tasksRouter);
@@ -253,11 +286,16 @@ export async function startServer(overridePort?: number): Promise<void> {
 
   await loadAllStores();
 
+  // Seed default admin user if no users exist
+  seedDefaultUser();
+
   // Serve frontend static files in production
   if (process.env.NODE_ENV === "production") {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     const webDist = path.resolve(__dirname, "../../web/dist");
     app.use(express.static(webDist));
+    const publicDir = path.resolve(__dirname, "../web/public");
+    app.use(express.static(publicDir));
     // SPA fallback: serve index.html for non-API routes
     app.get("*", (_req, res, next) => {
       if (_req.path.startsWith("/api") || _req.path === "/event") return next();

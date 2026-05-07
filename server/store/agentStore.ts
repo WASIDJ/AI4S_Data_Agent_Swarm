@@ -1,5 +1,5 @@
 import type { Agent, AgentStatus } from "./types.js";
-import { agentsStore } from "./index.js";
+import { agentsStore, SCHEMA_VERSION } from "./index.js";
 
 // ---------------------------------------------------------------------------
 // In-memory state
@@ -13,7 +13,7 @@ const agents = new Map<string, Agent>();
 
 function persist(): void {
   agentsStore.save({
-    _schema_version: 1,
+    _schema_version: SCHEMA_VERSION,
     agents: Array.from(agents.values()),
   });
 }

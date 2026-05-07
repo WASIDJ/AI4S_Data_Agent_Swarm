@@ -277,7 +277,7 @@ tasksRouter.post("/", (req, res) => {
     status: "Todo",
     agentId,
     projectId,
-    priority: (priority as 0 | 1 | 2) ?? 1,
+    priority: (priority as 0 | 1 | 2 | 3) ?? 1,
     tags: Array.isArray(tags) ? tags : [],
     eventCount: 0,
     turnCount: 0,

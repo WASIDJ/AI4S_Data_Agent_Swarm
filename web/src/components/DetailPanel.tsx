@@ -1,387 +1,665 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useAppState } from "../store/AppContext";
-import { ActivityTimeline } from "./ActivityTimeline";
-import { BudgetBar } from "./BudgetBar";
-import { ToolApproval } from "./ToolApproval";
-import { CopilotPanel } from "./CopilotPanel";
-import * as api from "../api/client";
-import type { Event, Agent, AgentStats } from "../types";
+import { useState } from "react";
+import {
+  PanelRightOpen,
+  PanelRightClose,
+  Pencil,
+  Trash2,
+  Play,
+  Square,
+  Check,
+  RotateCw,
+  MessageCircle,
+  Bot,
+  Cpu,
+  Coins,
+  Hash,
+  CalendarDays,
+} from "lucide-react";
+import type { Task, Agent } from "../types";
+import { PRIORITY_COLORS, AGENT_STATUS_COLORS } from "../types";
+import { TaskApi } from "../api";
+import { showToast } from "./NotificationContainer";
+import BudgetBar from "./shared/BudgetBar";
+import ActivityTimeline from "./shared/ActivityTimeline";
+import ToolApproval from "./shared/ToolApproval";
+import CopilotPanel from "./CopilotPanel";
 
-// ---------------------------------------------------------------------------
-// DetailPanel — with tab navigation: Task / Agent / Copilot
-// ---------------------------------------------------------------------------
+interface Props {
+  task: Task | null;
+  agent: Agent | null;
+  tasks: Task[];
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  onSelectTask: (id: string) => void;
+  onSelectAgent: (id: string) => void;
+  onEditTask: (task: Task) => void;
+  onEditAgent: (agent: Agent) => void;
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+}
 
-type DetailTab = "copilot" | "task" | "agent";
+export default function DetailPanel({
+  task,
+  agent,
+  tasks,
+  collapsed,
+  onToggleCollapse,
+  onSelectTask,
+  onSelectAgent,
+  onEditTask,
+  onEditAgent,
+  setTasks,
+}: Props) {
+  const [showCopilot, setShowCopilot] = useState(false);
 
-export function DetailPanel() {
-  const { selectedTaskId, selectedAgentId, tasks, agents } = useAppState();
-  const [activeTab, setActiveTab] = useState<DetailTab>("copilot");
-
-  const selectedTask = selectedTaskId ? tasks.get(selectedTaskId) : undefined;
-  const selectedAgent = selectedAgentId
-    ? agents.get(selectedAgentId)
-    : selectedTask
-      ? agents.get(selectedTask.agentId)
-      : undefined;
-
-  // Auto-switch tab when selection changes
-  useEffect(() => {
-    if (selectedTask) {
-      setActiveTab("task");
-    } else if (selectedAgent) {
-      setActiveTab("agent");
-    }
-  }, [selectedTask, selectedAgent]);
-
-  const availableTabs = useMemo(() => {
-    const tabs: Array<{ key: DetailTab; label: string; show: boolean }> = [
-      { key: "copilot", label: "Copilot", show: true },
-      { key: "task", label: "Task", show: !!selectedTask },
-      { key: "agent", label: "Agent", show: !!selectedAgent },
-    ];
-    return tabs.filter((t) => t.show);
-  }, [selectedTask, selectedAgent]);
+  if (collapsed) {
+    return (
+      <div
+        className="w-[52px] shrink-0 flex flex-col items-center py-4 gap-3 border-l"
+        style={{
+          background: "var(--bg-secondary)",
+          borderColor: "var(--border-subtle)",
+        }}
+      >
+        <button
+          onClick={onToggleCollapse}
+          className="p-1.5 rounded-lg hover:bg-white/[0.03] transition-colors"
+        >
+          <PanelRightOpen size={14} style={{ color: "var(--text-muted)" }} />
+        </button>
+        <button
+          onClick={() => setShowCopilot(!showCopilot)}
+          className={`p-1.5 rounded-lg transition-colors ${showCopilot ? "bg-white/10" : "hover:bg-white/[0.03]"}`}
+        >
+          <MessageCircle
+            size={14}
+            style={{ color: showCopilot ? "#ffa27a" : "var(--text-muted)" }}
+          />
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="detail-panel-wrapper">
-      {/* Tab bar */}
-      <div className="detail-tabs">
-        {availableTabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`detail-tab ${activeTab === tab.key ? "detail-tab-active" : ""}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div
+      className="w-[320px] shrink-0 flex flex-col border-l transition-all duration-300"
+      style={{
+        background: "var(--bg-secondary)",
+        borderColor: "var(--border-subtle)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="h-[48px] flex items-center px-4 gap-2 border-b shrink-0"
+        style={{ borderColor: "var(--border-subtle)" }}
+      >
+        <span
+          className="text-xs font-medium tracking-wider"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          {showCopilot ? "AI 助手" : "详情"}
+        </span>
+        <button
+          onClick={() => setShowCopilot(!showCopilot)}
+          className={`ml-auto p-1.5 rounded-lg transition-colors ${showCopilot ? "bg-white/10" : "hover:bg-white/[0.03]"}`}
+          title="AI 助手"
+        >
+          <MessageCircle
+            size={14}
+            style={{ color: showCopilot ? "#ffa27a" : "var(--text-muted)" }}
+          />
+        </button>
+        <button
+          onClick={onToggleCollapse}
+          className="p-1.5 rounded-lg hover:bg-white/[0.03] transition-colors"
+        >
+          <PanelRightClose size={14} style={{ color: "var(--text-muted)" }} />
+        </button>
       </div>
 
-      {/* Tab content */}
-      {activeTab === "copilot" && <CopilotPanel />}
-      {activeTab === "task" && selectedTask && (
-        <TaskDetailView
-          selectedTask={selectedTask}
-          selectedAgent={selectedAgent}
-        />
-      )}
-      {activeTab === "agent" && selectedAgent && (
-        <AgentDetailView
-          selectedAgent={selectedAgent}
-        />
-      )}
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {showCopilot ? (
+          <CopilotPanel />
+        ) : !task && !agent ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+            <Bot
+              size={32}
+              style={{ color: "var(--text-muted)", opacity: 0.3 }}
+            />
+            <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
+              选择一个任务或智能体查看详情
+            </p>
+          </div>
+        ) : task ? (
+          <TaskDetail
+            task={task}
+            agent={agent}
+            onSelectAgent={onSelectAgent}
+            onEditTask={onEditTask}
+            setTasks={setTasks}
+          />
+        ) : agent ? (
+          <AgentDetail
+            agent={agent}
+            tasks={tasks}
+            onSelectTask={onSelectTask}
+            onEditAgent={onEditAgent}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// TaskDetailView (wraps original task detail logic)
-// ---------------------------------------------------------------------------
-
-function TaskDetailView({
-  selectedTask,
-  selectedAgent,
-}: {
-  selectedTask: import("../types").Task;
-  selectedAgent?: Agent;
-}) {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
-
-  const loadTaskEvents = useCallback(
-    async (taskId: string, withLoading: boolean) => {
-      if (withLoading) {
-        setEventsLoading(true);
-      }
-
-      try {
-        const res = await api.getTaskEvents(taskId, { limit: 50 });
-        setEvents(res.events ?? res.items ?? []);
-      } catch {
-        setEvents([]);
-      } finally {
-        if (withLoading) {
-          setEventsLoading(false);
-        }
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    void loadTaskEvents(selectedTask.id, true);
-  }, [selectedTask.id, loadTaskEvents]);
-
-  useEffect(() => {
-    if (selectedTask.status !== "Running" && selectedTask.status !== "Stuck") {
+async function handleTaskAction(
+  taskId: string,
+  action: "start" | "stop" | "done" | "retry" | "delete",
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>
+) {
+  try {
+    if (action === "delete") {
+      await TaskApi.remove(taskId);
+      setTasks(prev => prev.filter(t => t.id !== taskId));
       return;
     }
-
-    const timer = setInterval(() => {
-      void loadTaskEvents(selectedTask.id, false);
-    }, 1500);
-
-    return () => clearInterval(timer);
-  }, [selectedTask.id, selectedTask.status, loadTaskEvents]);
-
-  return (
-    <TaskDetail
-      task={selectedTask}
-      agent={selectedAgent}
-      events={events}
-      eventsLoading={eventsLoading}
-    />
-  );
+    const apiFn =
+      action === "start"
+        ? TaskApi.start
+        : action === "stop"
+          ? TaskApi.stop
+          : action === "done"
+            ? TaskApi.complete
+            : TaskApi.retry;
+    const res = await apiFn(taskId);
+    if (res) {
+      setTasks(prev => prev.map(t => (t.id === taskId ? res : t)));
+    }
+  } catch (err) {
+    showToast("error", `操作失败: ${err}`);
+  }
 }
-
-// ---------------------------------------------------------------------------
-// AgentDetailView (wraps original agent detail logic)
-// ---------------------------------------------------------------------------
-
-function AgentDetailView({ selectedAgent }: { selectedAgent: Agent }) {
-  const [agentStats, setAgentStats] = useState<AgentStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setStatsLoading(true);
-    api
-      .getAgentStats(selectedAgent.id)
-      .then((res) => {
-        if (cancelled) return;
-        setAgentStats(res.stats);
-        setStatsLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setAgentStats(null);
-        setStatsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAgent.id]);
-
-  return (
-    <AgentDetail
-      agent={selectedAgent}
-      stats={agentStats}
-      statsLoading={statsLoading}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// TaskDetail
-// ---------------------------------------------------------------------------
 
 function TaskDetail({
   task,
   agent,
-  events,
-  eventsLoading,
+  onSelectAgent,
+  onEditTask,
+  setTasks,
 }: {
-  task: import("../types").Task;
-  agent?: Agent;
-  events: Event[];
-  eventsLoading: boolean;
+  task: Task;
+  agent: Agent | null;
+  onSelectAgent: (id: string) => void;
+  onEditTask: (t: Task) => void;
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }) {
   return (
-    <div className="detail-content">
-      <div className="detail-title-row">
-        <h2 className="detail-title">{task.title}</h2>
-        {eventsLoading && <span className="spinner spinner-sm" />}
-      </div>
-
-      {task.status === "Stuck" && (
-        <ToolApproval
-          taskId={task.id}
-          toolName="Unknown"
-          stuckReason={task.stuckReason}
-        />
-      )}
-
-      {task.status === "Stuck" && task.stuckReason && (
-        <div className="detail-stuck-reason">
-          <div className="detail-stuck-reason-label">Stuck 原因</div>
-          <div className="detail-stuck-reason-text">{task.stuckReason}</div>
-        </div>
-      )}
-
-      {task.status === "Done" && task.completedReason && task.completedReason !== "sdk_result" && task.completedReason !== "user_done" && (
-        <div className="detail-completion-reason">
-          <div className="detail-completion-reason-text">
-            {COMPLETION_REASON_LABELS[task.completedReason] ?? task.completedReason}
-          </div>
-        </div>
-      )}
-
-      <div className="detail-section">
-        <div className="detail-meta">
-          <span className={`detail-status detail-status-${task.status.toLowerCase()}`}>
-            {task.status}
+    <div className="p-4 space-y-5 animate-fade-in">
+      {/* Title section */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+            style={{
+              background: `${PRIORITY_COLORS[task.priority]}15`,
+              color: PRIORITY_COLORS[task.priority],
+            }}
+          >
+            {["P0", "P1", "P2", "P3"][task.priority]}
           </span>
-          {agent && (
-            <span className="detail-agent">
-              {agent.avatar} {agent.name}
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded"
+            style={{
+              background:
+                task.status === "Running"
+                  ? "rgba(91,141,239,0.1)"
+                  : task.status === "Stuck"
+                    ? "rgba(255,162,122,0.1)"
+                    : task.status === "Done"
+                      ? "rgba(61,220,132,0.1)"
+                      : "rgba(200,149,108,0.05)",
+              color:
+                task.status === "Running"
+                  ? "var(--accent-blue)"
+                  : task.status === "Stuck"
+                    ? "#ffa27a"
+                    : task.status === "Done"
+                      ? "var(--accent-green)"
+                      : "var(--text-muted)",
+            }}
+          >
+            {task.status === "Todo"
+              ? "待办"
+              : task.status === "Running"
+                ? "执行中"
+                : task.status === "Stuck"
+                  ? "卡住"
+                  : task.status === "Done"
+                    ? "完成"
+                    : "已取消"}
+          </span>
+        </div>
+        <h3
+          className="text-sm font-medium leading-relaxed"
+          style={{ color: "var(--text-primary)" }}
+        >
+          {task.title}
+        </h3>
+        <p
+          className="text-xs mt-1.5 leading-relaxed"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {task.description}
+        </p>
+      </div>
+
+      {/* Meta info grid */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <div
+            className="flex items-center gap-1.5"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <Cpu size={11} />
+            <span>智能体</span>
+          </div>
+          <button
+            onClick={() => agent && onSelectAgent(agent.id)}
+            className="flex items-center gap-1.5 transition-colors hover:opacity-80"
+            style={{ color: "#ffa27a" }}
+          >
+            <div
+              className="w-4 h-4 rounded flex items-center justify-center text-[9px]"
+              style={{
+                background: "rgba(255,162,122,0.1)",
+                color: "#ffa27a",
+              }}
+            >
+              {agent?.name.charAt(0) || "?"}
+            </div>
+            <span>{agent?.name || "未分配"}</span>
+          </button>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <div
+            className="flex items-center gap-1.5"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <Hash size={11} />
+            <span>项目</span>
+          </div>
+          <span style={{ color: "var(--text-secondary)" }}>
+            {task.projectId}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <div
+            className="flex items-center gap-1.5"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <CalendarDays size={11} />
+            <span>创建时间</span>
+          </div>
+          <span
+            className="text-[11px] font-mono"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {new Date(task.createdAt).toLocaleString("zh-CN")}
+          </span>
+        </div>
+      </div>
+
+      {/* Tags */}
+      {task.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {task.tags.map(tag => (
+            <span
+              key={tag}
+              className="text-[10px] px-2 py-1 rounded-lg"
+              style={{
+                background: "rgba(255,162,122,0.06)",
+                color: "rgba(255,162,122,0.7)",
+                border: "1px solid rgba(255,162,122,0.08)",
+              }}
+            >
+              {tag}
             </span>
-          )}
-        </div>
-
-        <div className="detail-times">
-          <span>创建: {formatTime(task.createdAt)}</span>
-          {task.startedAt && <span>启动: {formatTime(task.startedAt)}</span>}
-          {task.completedAt && (
-            <span>完成: {formatTime(task.completedAt)}</span>
-          )}
-        </div>
-      </div>
-
-      {task.description && (
-        <div className="detail-section">
-          <div className="detail-desc">{task.description}</div>
+          ))}
         </div>
       )}
 
-      {task.output && (
-        <div className="detail-section">
-          <h3 className="detail-section-title">输出</h3>
-          <pre className="detail-output">{task.output}</pre>
+      {/* Budget */}
+      {task.maxBudgetUsd && (
+        <div
+          className="rounded-xl p-3"
+          style={{
+            background:
+              "linear-gradient(175deg, rgba(200,149,108,0.02) 0%, rgba(200,149,108,0.005) 100%)",
+            border: "1px solid rgba(200,149,108,0.04)",
+          }}
+        >
+          <div className="flex items-center gap-1.5 mb-2">
+            <Coins size={11} style={{ color: "var(--text-muted)" }} />
+            <h4
+              className="text-[10px] font-medium tracking-wider uppercase"
+              style={{ color: "var(--text-muted)" }}
+            >
+              预算与轮次
+            </h4>
+          </div>
+          <BudgetBar
+            used={task.budgetUsed}
+            limit={task.maxBudgetUsd}
+            turns={task.turnCount}
+            maxTurns={task.maxTurns || 0}
+          />
         </div>
       )}
 
-      <div className="detail-section">
-        <h3 className="detail-section-title">资源消耗</h3>
-        <BudgetBar
-          budgetUsed={task.budgetUsed}
-          maxBudgetUsd={task.maxBudgetUsd}
-          turnCount={task.turnCount}
-          maxTurns={task.maxTurns}
-        />
+      {/* Tool Approval */}
+      {task.status === "Stuck" && <ToolApproval taskId={task.id} />}
+
+      {/* Timeline */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-2">
+          <CalendarDays size={11} style={{ color: "var(--text-muted)" }} />
+          <h4
+            className="text-[10px] font-medium tracking-wider uppercase"
+            style={{ color: "var(--text-muted)" }}
+          >
+            活动时间线
+          </h4>
+        </div>
+        <ActivityTimeline taskId={task.id} />
       </div>
 
-      <div className="detail-section">
-        <h3 className="detail-section-title">活动时间线</h3>
-        <ActivityTimeline events={events} />
+      {/* Actions */}
+      <div className="flex flex-wrap gap-2 pt-2">
+        {task.status === "Todo" && (
+          <button
+            onClick={() => handleTaskAction(task.id, "start", setTasks)}
+            className="btn-gold text-xs flex items-center gap-1.5 py-1.5 px-3"
+          >
+            <Play size={12} /> 开始
+          </button>
+        )}
+        {task.status === "Running" && (
+          <>
+            <button
+              onClick={() => handleTaskAction(task.id, "stop", setTasks)}
+              className="btn-ghost text-xs flex items-center gap-1.5 py-1.5 px-3"
+            >
+              <Square size={12} /> 停止
+            </button>
+            <button
+              onClick={() => handleTaskAction(task.id, "done", setTasks)}
+              className="btn-gold text-xs flex items-center gap-1.5 py-1.5 px-3"
+            >
+              <Check size={12} /> 完成
+            </button>
+          </>
+        )}
+        {task.status === "Stuck" && (
+          <button
+            onClick={() => handleTaskAction(task.id, "retry", setTasks)}
+            className="btn-gold text-xs flex items-center gap-1.5 py-1.5 px-3"
+          >
+            <RotateCw size={12} /> 重试
+          </button>
+        )}
+        <button
+          onClick={() => onEditTask(task)}
+          className="btn-ghost text-xs flex items-center gap-1.5 py-1.5 px-3 ml-auto"
+        >
+          <Pencil size={12} /> 编辑
+        </button>
+        <button
+          onClick={() => handleTaskAction(task.id, "delete", setTasks)}
+          className="btn-ghost text-xs flex items-center gap-1.5 py-1.5 px-3"
+          style={{
+            color: "var(--accent-red)",
+            borderColor: "rgba(239,68,68,0.2)",
+          }}
+        >
+          <Trash2 size={12} /> 删除
+        </button>
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// AgentDetail
-// ---------------------------------------------------------------------------
-
-function AgentDetail({ agent, stats, statsLoading }: { agent: Agent; stats: AgentStats | null; statsLoading: boolean }) {
-  const [showPrompt, setShowPrompt] = useState(false);
+function AgentDetail({
+  agent,
+  tasks,
+  onSelectTask,
+  onEditAgent,
+}: {
+  agent: Agent;
+  tasks: Task[];
+  onSelectTask: (id: string) => void;
+  onEditAgent: (a: Agent) => void;
+}) {
+  const agentTasks = tasks
+    .filter((t: Task) => t.agentId === agent.id)
+    .slice(0, 5);
+  const totalTasks = tasks.filter((t: Task) => t.agentId === agent.id);
+  const doneCount = totalTasks.filter((t: Task) => t.status === "Done").length;
 
   return (
-    <div className="detail-content">
-      <div className="detail-spinner">
-        {statsLoading && <span className="spinner spinner-sm" />}
-      </div>
-      <div className="detail-agent-header">
-        <span className="detail-agent-avatar">{agent.avatar}</span>
+    <div className="p-4 space-y-5 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-semibold"
+          style={{
+            background: "rgba(255,162,122,0.08)",
+            color: "#ffa27a",
+            border: "1px solid rgba(255,162,122,0.12)",
+            boxShadow: "0 0 12px rgba(255,162,122,0.06)",
+          }}
+        >
+          {agent.name.charAt(0)}
+        </div>
         <div>
-          <h2 className="detail-title">{agent.name}</h2>
-          <p className="detail-agent-role">{agent.role}</p>
-        </div>
-      </div>
-
-      <div className="detail-section">
-        <div className="detail-meta">
-          <span className={`detail-status detail-status-${agent.status}`}>
-            {agent.status}
-          </span>
-          <span className="detail-enabled">
-            {agent.isEnabled ? "已启用" : "已禁用"}
-          </span>
-        </div>
-      </div>
-
-      <div className="detail-section">
-        <h3 className="detail-section-title">Prompt</h3>
-        <div className="detail-prompt">
-          {showPrompt ? agent.prompt : truncate(agent.prompt, 150)}
-          {agent.prompt.length > 150 && (
-            <button
-              className="detail-expand-btn"
-              onClick={() => setShowPrompt(!showPrompt)}
+          <h3
+            className="text-sm font-medium"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {agent.name}
+          </h3>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: AGENT_STATUS_COLORS[agent.status],
+                boxShadow:
+                  agent.status === "working"
+                    ? `0 0 6px ${AGENT_STATUS_COLORS[agent.status]}`
+                    : "none",
+              }}
+            />
+            <span
+              className="text-[10px]"
+              style={{ color: AGENT_STATUS_COLORS[agent.status] }}
             >
-              {showPrompt ? "收起" : "展开"}
-            </button>
-          )}
+              {agent.status === "idle"
+                ? "空闲"
+                : agent.status === "working"
+                  ? "工作中"
+                  : agent.status === "stuck"
+                    ? "卡住"
+                    : "离线"}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="detail-section">
-        <h3 className="detail-section-title">配置</h3>
-        <div className="detail-config">
-          <span>最大轮次: {agent.maxTurns ?? 200}</span>
-          <span>预算上限: ${(agent.maxBudgetUsd ?? 5).toFixed(2)}</span>
-          <span>任务数: {agent.taskCount}</span>
+      {/* Config */}
+      <div
+        className="rounded-xl p-3 space-y-2.5"
+        style={{
+          background:
+            "linear-gradient(175deg, rgba(200,149,108,0.025) 0%, rgba(200,149,108,0.01) 100%)",
+          border: "1px solid rgba(200,149,108,0.04)",
+        }}
+      >
+        <h4
+          className="text-[10px] font-medium tracking-wider uppercase mb-1"
+          style={{ color: "var(--text-muted)" }}
+        >
+          配置
+        </h4>
+        <div className="flex justify-between text-xs">
+          <span style={{ color: "var(--text-muted)" }}>模型</span>
+          <span
+            className="font-mono"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {agent.model || "默认"}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span style={{ color: "var(--text-muted)" }}>API Key</span>
+          <span
+            style={{
+              color: agent.hasApiKey
+                ? "var(--accent-green)"
+                : "var(--text-muted)",
+            }}
+          >
+            {agent.hasApiKey ? "已配置" : "未配置"}
+          </span>
+        </div>
+        {agent.apiBaseUrl && (
+          <div className="flex justify-between text-xs">
+            <span style={{ color: "var(--text-muted)" }}>Base URL</span>
+            <span
+              className="font-mono text-[10px] max-w-[140px] truncate"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              {agent.apiBaseUrl}
+            </span>
+          </div>
+        )}
+        <div className="flex justify-between text-xs">
+          <span style={{ color: "var(--text-muted)" }}>最大轮次</span>
+          <span
+            className="font-mono"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {agent.maxTurns}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span style={{ color: "var(--text-muted)" }}>预算上限</span>
+          <span
+            className="font-mono"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            ${agent.maxBudgetUsd}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span style={{ color: "var(--text-muted)" }}>允许工具</span>
+          <span style={{ color: "var(--text-secondary)" }}>
+            {agent.allowedTools.join(", ")}
+          </span>
         </div>
       </div>
 
-      {stats && (
-        <div className="detail-section">
-          <h3 className="detail-section-title">统计</h3>
-          <div className="detail-stats">
-            <div className="detail-stat">
-              <span className="detail-stat-value">
-                {stats.totalTasksCompleted}
-              </span>
-              <span className="detail-stat-label">已完成</span>
-            </div>
-            <div className="detail-stat">
-              <span className="detail-stat-value">
-                {stats.totalTasksCancelled}
-              </span>
-              <span className="detail-stat-label">已取消</span>
-            </div>
-            <div className="detail-stat">
-              <span className="detail-stat-value">
-                ${stats.totalCostUsd.toFixed(2)}
-              </span>
-              <span className="detail-stat-label">总费用</span>
-            </div>
-            <div className="detail-stat">
-              <span className="detail-stat-value">
-                {stats.avgDurationMs > 0
-                  ? `${(stats.avgDurationMs / 1000 / 60).toFixed(1)}min`
-                  : "-"}
-              </span>
-              <span className="detail-stat-label">平均时长</span>
-            </div>
+      {/* Stats */}
+      <div
+        className="rounded-xl p-3 grid grid-cols-3 gap-3 text-center"
+        style={{
+          background:
+            "linear-gradient(175deg, rgba(200,149,108,0.025) 0%, rgba(200,149,108,0.01) 100%)",
+          border: "1px solid rgba(200,149,108,0.04)",
+        }}
+      >
+        <div>
+          <div
+            className="text-lg font-medium font-mono"
+            style={{ color: "#ffa27a" }}
+          >
+            {totalTasks.length}
+          </div>
+          <div
+            className="text-[9px] mt-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            总任务
+          </div>
+        </div>
+        <div>
+          <div
+            className="text-lg font-medium font-mono"
+            style={{ color: "var(--accent-green)" }}
+          >
+            {doneCount}
+          </div>
+          <div
+            className="text-[9px] mt-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            已完成
+          </div>
+        </div>
+        <div>
+          <div
+            className="text-lg font-medium font-mono"
+            style={{ color: "var(--accent-blue)" }}
+          >
+            {totalTasks.length > 0
+              ? Math.round((doneCount / totalTasks.length) * 100)
+              : 0}
+            %
+          </div>
+          <div
+            className="text-[9px] mt-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            成功率
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Tasks */}
+      {agentTasks.length > 0 && (
+        <div>
+          <h4
+            className="text-[10px] font-medium mb-2 tracking-wider uppercase"
+            style={{ color: "var(--text-muted)" }}
+          >
+            最近任务
+          </h4>
+          <div className="space-y-1.5">
+            {agentTasks.map(t => (
+              <button
+                key={t.id}
+                onClick={() => onSelectTask(t.id)}
+                className="w-full text-left rounded-lg px-3 py-2 text-xs transition-all duration-300"
+                style={{
+                  background:
+                    "linear-gradient(175deg, rgba(200,149,108,0.02) 0%, rgba(200,149,108,0.008) 100%)",
+                  border: "1px solid rgba(200,149,108,0.03)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                {t.title}
+              </button>
+            ))}
           </div>
         </div>
       )}
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => onEditAgent(agent)}
+          className="btn-gold text-xs flex-1 flex items-center justify-center gap-1.5 py-2"
+        >
+          <Pencil size={12} /> 编辑智能体
+        </button>
+      </div>
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleString("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen) + "...";
-}
-
-// Completion reason display labels
-const COMPLETION_REASON_LABELS: Record<string, string> = {
-  max_budget: "已达到预算上限，任务自动停止",
-  max_turns: "已达到轮次上限，任务自动停止",
-  error: "执行过程中发生错误",
-};

@@ -1,407 +1,576 @@
-import { useState, useEffect, useCallback } from "react";
-import type { Agent, CreateAgentData, UpdateAgentData } from "../../types";
-import { useAppState, useAppDispatch } from "../../store/AppContext";
-import * as api from "../../api/client";
+import { useState } from "react";
+import {
+  X,
+  Loader2,
+  Check,
+  Bot,
+  Hash,
+  Type,
+  BrainCircuit,
+  Gauge,
+  DollarSign,
+  Wrench,
+  Folder,
+  Key,
+  Eye,
+  EyeOff,
+  Globe,
+} from "lucide-react";
+import type { Agent } from "../../types";
+import { MODEL_OPTIONS, TOOL_OPTIONS } from "../../types";
+import { showToast } from "../NotificationContainer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const PRESET_EMOJIS = [
-  "\u{1F916}", "\u{1F4BB}", "\u{1F52C}", "\u{1F4DA}", "\u{1F3AF}",
-  "\u{1F6E0}\uFE0F", "\u{1F4CA}", "\u{1F50D}", "\u{1F4DD}", "\u{1F310}",
-  "\u{1F9D1}\u200D\u{1F4BC}", "\u{1F468}\u200D\u{1F4BB}", "\u{1F916}", "\u{1F98B}", "\u{1F41C}",
-  "\u{1F40B}", "\u{1F41A}", "\u{1F413}", "\u{1F422}", "\u{1F40E}",
-];
-
-const ALL_TOOLS = [
-  "Bash",
-  "Read",
-  "Write",
-  "Edit",
-  "Grep",
-  "Glob",
-  "WebFetch",
-];
-
-const DEFAULT_TOOLS = ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "WebFetch"];
-
-const DEFAULT_FORM: FormState = {
-  name: "",
-  avatar: PRESET_EMOJIS[0],
-  role: "",
-  prompt: "",
-  projectId: "",
-  maxTurns: 200,
-  maxBudgetUsd: 5.0,
-  allowedTools: [...DEFAULT_TOOLS],
-};
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface FormState {
-  name: string;
-  avatar: string;
-  role: string;
-  prompt: string;
-  projectId: string;
-  maxTurns: number;
-  maxBudgetUsd: number;
-  allowedTools: string[];
-}
-
-interface FormErrors {
-  name?: string;
-  avatar?: string;
-  role?: string;
-  prompt?: string;
-  maxTurns?: string;
-  maxBudgetUsd?: string;
-}
-
-interface AgentFormModalProps {
-  agent?: Agent;
+interface Props {
+  agent: Agent | null;
+  projects: { id: string; name: string; path: string; description?: string }[];
   onClose: () => void;
+  onSave: (agent: Agent, apiKey?: string) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
+// Predefined model values (for detecting if a model is custom)
+const PREDEFINED_MODEL_VALUES = MODEL_OPTIONS.filter(
+  m => m.value && m.value !== "__custom__"
+).map(m => m.value);
 
-function validate(form: FormState): FormErrors {
-  const errors: FormErrors = {};
-  const name = form.name.trim();
-  const role = form.role.trim();
-  const prompt = form.prompt.trim();
-
-  if (!name) {
-    errors.name = "名称不能为空";
-  } else if (name.length > 50) {
-    errors.name = "名称不能超过 50 个字符";
-  }
-
-  if (!form.avatar) {
-    errors.avatar = "头像不能为空";
-  }
-
-  if (!role) {
-    errors.role = "角色描述不能为空";
-  } else if (role.length > 200) {
-    errors.role = "角色描述不能超过 200 个字符";
-  }
-
-  if (!prompt) {
-    errors.prompt = "提示词不能为空";
-  } else if (prompt.length < 10) {
-    errors.prompt = "提示词至少 10 个字符";
-  } else if (prompt.length > 5000) {
-    errors.prompt = "提示词不能超过 5000 个字符";
-  }
-
-  if (form.maxTurns < 1 || form.maxTurns > 500) {
-    errors.maxTurns = "最大轮次范围: 1-500";
-  }
-
-  if (form.maxBudgetUsd < 0.1 || form.maxBudgetUsd > 50) {
-    errors.maxBudgetUsd = "预算上限范围: 0.1-50.0";
-  }
-
-  return errors;
+// Get the preset config for a model value
+function getPresetModel(value: string) {
+  return MODEL_OPTIONS.find(m => m.value === value);
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+export default function AgentFormModal({
+  agent,
+  projects,
+  onClose,
+  onSave,
+}: Props) {
+  const isEditing = !!agent;
 
-export function AgentFormModal({ agent, onClose }: AgentFormModalProps) {
-  const isEdit = !!agent;
-  const { projects } = useAppState();
-  const dispatch = useAppDispatch();
+  // Determine initial mode based on existing agent config
+  const agentModelIsPredefined = agent?.model
+    ? PREDEFINED_MODEL_VALUES.includes(agent.model)
+    : false;
 
-  const [form, setForm] = useState<FormState>(() => {
-    if (agent) {
-      return {
-        name: agent.name,
-        avatar: agent.avatar,
-        role: agent.role,
-        prompt: agent.prompt,
-        projectId: agent.projectId ?? "",
-        maxTurns: agent.maxTurns ?? 200,
-        maxBudgetUsd: agent.maxBudgetUsd ?? 5.0,
-        allowedTools: agent.allowedTools ?? [...DEFAULT_TOOLS],
-      };
+  const [name, setName] = useState(agent?.name || "");
+  const [modelSelect, setModelSelect] = useState(
+    agentModelIsPredefined ? agent!.model : ""
+  );
+  // Custom model name — only used when modelSelect === "__custom__"
+  const [customModel, setCustomModel] = useState(
+    agentModelIsPredefined ? "" : agent?.model || ""
+  );
+  const [prompt, setPrompt] = useState(agent?.systemPrompt || "");
+  const [maxTurns, setMaxTurns] = useState(agent?.maxTurns?.toString() || "50");
+  const [maxBudget, setMaxBudget] = useState(
+    agent?.maxBudgetUsd?.toString() || "10"
+  );
+  const [tools, setTools] = useState<string[]>(agent?.allowedTools || ["file"]);
+  const [projectId, setProjectId] = useState(
+    agent?.projectId || projects[0]?.id || ""
+  );
+  const [apiKey, setApiKey] = useState("");
+  const [apiBaseUrl, setApiBaseUrl] = useState(
+    agent?.apiBaseUrl && !agentModelIsPredefined ? agent.apiBaseUrl : ""
+  );
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const isCustom = modelSelect === "__custom__";
+  const preset = getPresetModel(modelSelect);
+
+  // Show API config when:
+  // - Custom mode selected
+  // - A preset model with a provider baseUrl (non-Anthropic)
+  const needsApiConfig =
+    isCustom || !!(preset && "baseUrl" in preset && preset.baseUrl);
+
+  // The effective base URL: preset's baseUrl (locked) or user-typed custom URL
+  const effectiveBaseUrl = isCustom
+    ? apiBaseUrl
+    : preset && "baseUrl" in preset
+      ? (preset.baseUrl as string)
+      : "";
+
+  // Determine API key placeholder based on state
+  const apiKeyPlaceholder = isEditing
+    ? agent?.hasApiKey
+      ? "已配置 (留空保持不变，清空则删除)"
+      : "输入该平台的 API Key"
+    : "输入该平台的 API Key";
+
+  const handleSave = () => {
+    if (!name.trim() || name.trim().length < 2 || name.trim().length > 50) {
+      showToast("error", "名称需为2-50个字符");
+      return;
     }
-    return { ...DEFAULT_FORM, allowedTools: [...DEFAULT_TOOLS] };
-  });
+    if (
+      !prompt.trim() ||
+      prompt.trim().length < 5 ||
+      prompt.trim().length > 10000
+    ) {
+      showToast("error", "系统提示词需为5-10000个字符");
+      return;
+    }
+    if (tools.length === 0) {
+      showToast("error", "至少选择一个允许的工具");
+      return;
+    }
+    if (!projectId) {
+      showToast("error", "请选择所属项目");
+      return;
+    }
+    if (isCustom && !customModel.trim()) {
+      showToast("error", "自定义模型名称不能为空");
+      return;
+    }
+    setSaving(true);
 
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    // Resolve final model value
+    const resolvedModel = isCustom ? customModel.trim() : modelSelect;
 
-  // Real-time validation
-  const validateForm = useCallback(() => {
-    setErrors(validate(form));
-  }, [form]);
-
-  useEffect(() => {
-    validateForm();
-  }, [validateForm]);
-
-  const hasErrors = Object.values(errors).some((e) => !!e);
-
-  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setSubmitError(null);
-  }
-
-  function toggleTool(tool: string) {
-    setForm((prev) => ({
-      ...prev,
-      allowedTools: prev.allowedTools.includes(tool)
-        ? prev.allowedTools.filter((t) => t !== tool)
-        : [...prev.allowedTools, tool],
-    }));
-    setSubmitError(null);
-  }
-
-  async function handleSubmit() {
-    const validationErrors = validate(form);
-    setErrors(validationErrors);
-    if (Object.values(validationErrors).some((e) => !!e)) return;
-
-    setSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      if (isEdit && agent) {
-        const data: UpdateAgentData = {
-          name: form.name.trim(),
-          avatar: form.avatar,
-          role: form.role.trim(),
-          prompt: form.prompt.trim(),
-          maxTurns: form.maxTurns,
-          maxBudgetUsd: form.maxBudgetUsd,
-          allowedTools: form.allowedTools,
-        };
-        const res = await api.updateAgent(agent.id, data);
-        dispatch({ type: "UPDATE_AGENT", agent: res.agent });
+    // Resolve API key
+    let resolvedApiKey: string | undefined;
+    if (needsApiConfig) {
+      if (isEditing && agent?.hasApiKey && !apiKey) {
+        // Keep existing key — send masked placeholder so backend ignores
+        resolvedApiKey = "****";
       } else {
-        const data: CreateAgentData = {
-          name: form.name.trim(),
-          avatar: form.avatar,
-          role: form.role.trim(),
-          prompt: form.prompt.trim(),
-          projectId: form.projectId || undefined,
-          maxTurns: form.maxTurns,
-          maxBudgetUsd: form.maxBudgetUsd,
-          allowedTools: form.allowedTools,
-        };
-        const res = await api.createAgent(data);
-        dispatch({ type: "UPDATE_AGENT", agent: res.agent });
+        resolvedApiKey = apiKey || "";
       }
-      onClose();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "操作失败";
-      setSubmitError(msg);
-    } finally {
-      setSubmitting(false);
+    } else if (isEditing && agent?.hasApiKey) {
+      // Switched away from API config — clear existing key
+      resolvedApiKey = "";
+    } else {
+      resolvedApiKey = "";
     }
-  }
 
-  function handleBackdropClick(e: React.MouseEvent) {
-    if (e.target === e.currentTarget) onClose();
-  }
+    onSave(
+      {
+        id: agent?.id || `agent-${Date.now()}`,
+        name: name.trim(),
+        avatar: name.trim().charAt(0),
+        model: resolvedModel,
+        systemPrompt: prompt.trim(),
+        maxTurns: parseInt(maxTurns) || 50,
+        maxBudgetUsd: parseFloat(maxBudget) || 10,
+        allowedTools: tools,
+        projectId,
+        status: agent?.status || "idle",
+        taskCount: agent?.taskCount || 0,
+        lastEventAt: Date.now(),
+        apiBaseUrl: effectiveBaseUrl || undefined,
+        hasApiKey: agent?.hasApiKey,
+      },
+      resolvedApiKey
+    );
+  };
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdropClick}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 className="modal-title">{isEdit ? "编辑 Agent" : "创建 Agent"}</h2>
-          <button className="modal-close" onClick={onClose}>
-            {"\u00D7"}
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: "rgba(2,3,10,0.7)", backdropFilter: "blur(8px)" }}
+      />
+      <div
+        className="relative w-[520px] max-h-[85vh] overflow-y-auto animate-scale-in rounded-2xl"
+        style={{
+          background:
+            "linear-gradient(175deg, rgba(5,8,18,0.98) 0%, rgba(3,5,12,0.98) 100%)",
+          border: "1px solid rgba(200,149,108,0.05)",
+          boxShadow:
+            "0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,162,122,0.03)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
+          <div className="flex items-center gap-2">
+            <Bot size={16} style={{ color: "#ffa27a" }} />
+            <h3
+              className="text-sm font-medium tracking-wider"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {agent ? "编辑智能体" : "创建智能体"}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/[0.03] transition-colors"
+          >
+            <X size={16} style={{ color: "var(--text-muted)" }} />
           </button>
         </div>
 
-        <div className="modal-body">
-          {/* Avatar + Name row */}
-          <div className="modal-row">
-            <div className="modal-field modal-field-avatar">
-              <label className="form-label">
-                头像
-                <div className="avatar-picker">
+        {/* Form */}
+        <div className="p-6 space-y-5">
+          {/* Name */}
+          <div>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <Type size={10} /> 名称 *
+            </label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full text-xs px-3 py-2.5 rounded-lg outline-none transition-all"
+              style={{
+                background: "rgba(200,149,108,0.04)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-primary)",
+              }}
+              placeholder="智能体名称"
+            />
+          </div>
+
+          {/* Model */}
+          <div>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <BrainCircuit size={10} /> 模型
+            </label>
+            <Select
+              value={modelSelect || "_default"}
+              onValueChange={v => {
+                const val = v === "_default" ? "" : v;
+                setModelSelect(val);
+                // Reset API key when switching models
+                setApiKey("");
+                if (val !== "__custom__") {
+                  setApiBaseUrl("");
+                }
+              }}
+            >
+              <SelectTrigger
+                className="w-full text-xs rounded-lg"
+                style={{
+                  background: "rgba(200,149,108,0.04)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
+                  height: "auto",
+                  minHeight: "34px",
+                }}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" className="z-[300]">
+                {MODEL_OPTIONS.map(m => (
+                  <SelectItem
+                    key={m.value || "_default"}
+                    value={m.value || "_default"}
+                  >
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* API Configuration — visible for third-party models and custom */}
+          {needsApiConfig && (
+            <div
+              className="rounded-xl p-3.5 space-y-3 animate-fade-in"
+              style={{
+                background:
+                  "linear-gradient(175deg, rgba(200,149,108,0.02) 0%, rgba(200,149,108,0.008) 100%)",
+                border: "1px solid rgba(200,149,108,0.04)",
+              }}
+            >
+              <div className="flex items-center gap-1.5">
+                <Key size={10} style={{ color: "var(--text-muted)" }} />
+                <span
+                  className="text-[10px] font-medium tracking-wider uppercase"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {isCustom ? "自定义模型配置" : "API 配置"}
+                </span>
+              </div>
+
+              {/* Custom Model Name — only in custom mode */}
+              {isCustom && (
+                <div>
+                  <label
+                    className="flex items-center gap-1 text-[10px] mb-1.5"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <BrainCircuit size={9} /> 模型名称 *
+                  </label>
+                  <input
+                    type="text"
+                    value={customModel}
+                    onChange={e => setCustomModel(e.target.value)}
+                    className="w-full text-xs px-3 py-2.5 rounded-lg outline-none transition-all"
+                    style={{
+                      background: "rgba(200,149,108,0.04)",
+                      border: "1px solid var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    placeholder="如 gpt-4o, deepseek-chat, qwen-max ..."
+                  />
+                </div>
+              )}
+
+              {/* API Key */}
+              <div>
+                <label
+                  className="flex items-center gap-1 text-[10px] mb-1.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                    className="w-full text-xs px-3 py-2.5 pr-8 rounded-lg outline-none transition-all"
+                    style={{
+                      background: "rgba(200,149,108,0.04)",
+                      border: "1px solid var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    placeholder={apiKeyPlaceholder}
+                  />
                   <button
                     type="button"
-                    className="avatar-preview"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/[0.03] transition-colors"
                   >
-                    {form.avatar}
+                    {showApiKey ? (
+                      <EyeOff
+                        size={12}
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                    ) : (
+                      <Eye size={12} style={{ color: "var(--text-muted)" }} />
+                    )}
                   </button>
-                  {showEmojiPicker && (
-                    <div className="emoji-grid">
-                      {PRESET_EMOJIS.map((emoji, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className={`emoji-option ${form.avatar === emoji ? "emoji-option-selected" : ""}`}
-                          onClick={() => {
-                            updateField("avatar", emoji);
-                            setShowEmojiPicker(false);
-                          }}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
-                {errors.avatar && <span className="form-error">{errors.avatar}</span>}
-              </label>
+              </div>
+
+              {/* API Base URL — locked for preset models, editable for custom */}
+              <div>
+                <label
+                  className="flex items-center gap-1 text-[10px] mb-1.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <Globe size={9} /> Base URL
+                </label>
+                {isCustom ? (
+                  <input
+                    type="text"
+                    value={apiBaseUrl}
+                    onChange={e => setApiBaseUrl(e.target.value)}
+                    className="w-full text-xs px-3 py-2.5 rounded-lg outline-none transition-all"
+                    style={{
+                      background: "rgba(200,149,108,0.04)",
+                      border: "1px solid var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    placeholder="https://api.anthropic.com"
+                  />
+                ) : (
+                  <div
+                    className="w-full text-xs px-3 py-2.5 rounded-lg font-mono"
+                    style={{
+                      background: "rgba(200,149,108,0.02)",
+                      border: "1px solid rgba(200,149,108,0.06)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {effectiveBaseUrl}
+                  </div>
+                )}
+              </div>
             </div>
+          )}
 
-            <div className="modal-field modal-field-name">
-              <label className="form-label">
-                名称
-                <input
-                  className={`form-input ${errors.name ? "form-input-error" : ""}`}
-                  value={form.name}
-                  onChange={(e) => updateField("name", e.target.value)}
-                  placeholder="Agent 名称"
-                  maxLength={50}
-                />
-                <span className="form-count">{form.name.length}/50</span>
-                {errors.name && <span className="form-error">{errors.name}</span>}
-              </label>
-            </div>
-          </div>
-
-          {/* Role */}
-          <label className="form-label">
-            角色描述
-            <input
-              className={`form-input ${errors.role ? "form-input-error" : ""}`}
-              value={form.role}
-              onChange={(e) => updateField("role", e.target.value)}
-              placeholder="例如：数据合成专家，负责爬取和解析论文"
-              maxLength={200}
-            />
-            <span className="form-count">{form.role.length}/200</span>
-            {errors.role && <span className="form-error">{errors.role}</span>}
-          </label>
-
-          {/* Prompt */}
-          <label className="form-label">
-            系统提示词
-            <textarea
-              className={`form-textarea ${errors.prompt ? "form-input-error" : ""}`}
-              value={form.prompt}
-              onChange={(e) => updateField("prompt", e.target.value)}
-              placeholder="描述 Agent 的行为规范、工作流程和专业领域（至少 10 个字符）"
-              rows={5}
-              maxLength={5000}
-            />
-            <span className="form-count">{form.prompt.length}/5000</span>
-            {errors.prompt && <span className="form-error">{errors.prompt}</span>}
-          </label>
-
-          {/* Project */}
-          <label className="form-label">
-            默认 Project
-            <select
-              className="form-select"
-              value={form.projectId}
-              onChange={(e) => updateField("projectId", e.target.value)}
+          {/* System Prompt */}
+          <div>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+              style={{ color: "var(--text-muted)" }}
             >
-              <option value="">不指定</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <Hash size={10} /> 系统提示词 *
+            </label>
+            <textarea
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              rows={4}
+              className="w-full text-xs px-3 py-2.5 rounded-lg outline-none transition-all resize-none"
+              style={{
+                background: "rgba(200,149,108,0.04)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-primary)",
+              }}
+              placeholder="定义智能体的角色和行为..."
+            />
+          </div>
 
-          {/* Config row */}
-          <div className="modal-row">
-            <div className="modal-field">
-              <label className="form-label">
-                最大轮次
-                <input
-                  type="number"
-                  className={`form-input ${errors.maxTurns ? "form-input-error" : ""}`}
-                  value={form.maxTurns}
-                  onChange={(e) => updateField("maxTurns", Number(e.target.value))}
-                  min={1}
-                  max={500}
-                />
-                {errors.maxTurns && <span className="form-error">{errors.maxTurns}</span>}
+          {/* Max Turns + Budget */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <Gauge size={10} /> 最大轮次
               </label>
+              <input
+                type="number"
+                value={maxTurns}
+                onChange={e => setMaxTurns(e.target.value)}
+                min={1}
+                max={500}
+                className="w-full text-xs px-3 py-2.5 rounded-lg outline-none"
+                style={{
+                  background: "rgba(200,149,108,0.04)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
+              />
             </div>
-            <div className="modal-field">
-              <label className="form-label">
-                预算上限 (USD)
-                <input
-                  type="number"
-                  className={`form-input ${errors.maxBudgetUsd ? "form-input-error" : ""}`}
-                  value={form.maxBudgetUsd}
-                  onChange={(e) => updateField("maxBudgetUsd", Number(e.target.value))}
-                  min={0.1}
-                  max={50}
-                  step={0.1}
-                />
-                {errors.maxBudgetUsd && <span className="form-error">{errors.maxBudgetUsd}</span>}
+            <div>
+              <label
+                className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <DollarSign size={10} /> 预算上限
               </label>
+              <input
+                type="number"
+                value={maxBudget}
+                onChange={e => setMaxBudget(e.target.value)}
+                min={0.1}
+                max={50}
+                step={0.1}
+                className="w-full text-xs px-3 py-2.5 rounded-lg outline-none"
+                style={{
+                  background: "rgba(200,149,108,0.04)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
+              />
             </div>
           </div>
 
-          {/* Allowed tools */}
-          <div className="form-label">
-            允许工具
-            <div className="tool-checkboxes">
-              {ALL_TOOLS.map((tool) => (
-                <label key={tool} className="tool-checkbox">
+          {/* Tools */}
+          <div>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <Wrench size={10} /> 允许的工具 *
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {TOOL_OPTIONS.map(t => (
+                <label
+                  key={t.key}
+                  className="flex items-center gap-1.5 cursor-pointer text-xs px-2.5 py-1.5 rounded-lg transition-all"
+                  style={{
+                    background: tools.includes(t.key)
+                      ? "rgba(255,162,122,0.08)"
+                      : "rgba(200,149,108,0.03)",
+                    border: `1px solid ${tools.includes(t.key) ? "rgba(255,162,122,0.2)" : "var(--border-subtle)"}`,
+                    color: tools.includes(t.key)
+                      ? "#ffa27a"
+                      : "var(--text-muted)",
+                  }}
+                >
                   <input
                     type="checkbox"
-                    checked={form.allowedTools.includes(tool)}
-                    onChange={() => toggleTool(tool)}
+                    checked={tools.includes(t.key)}
+                    onChange={e =>
+                      setTools(prev =>
+                        e.target.checked
+                          ? [...prev, t.key]
+                          : prev.filter(x => x !== t.key)
+                      )
+                    }
+                    className="sr-only"
                   />
-                  <span>{tool}</span>
+                  {tools.includes(t.key) && <Check size={10} />}
+                  <span>{t.label}</span>
                 </label>
               ))}
             </div>
           </div>
+
+          {/* Project */}
+          <div>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase mb-2"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <Folder size={10} /> 项目 *
+            </label>
+            <Select value={projectId} onValueChange={setProjectId}>
+              <SelectTrigger
+                className="w-full text-xs rounded-lg"
+                style={{
+                  background: "rgba(200,149,108,0.04)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
+                  height: "auto",
+                  minHeight: "34px",
+                }}
+              >
+                <SelectValue placeholder="选择项目" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="z-[300]">
+                {projects.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="modal-footer">
-          {submitError && (
-            <span className="modal-error">{submitError}</span>
-          )}
-          <div className="modal-actions">
-            <button
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={submitting}
-            >
-              取消
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSubmit}
-              disabled={submitting || hasErrors}
-            >
-              {submitting ? (
-                <span className="btn-loading">
-                  <span className="spinner spinner-sm spinner-white" />
-                  {isEdit ? "保存中" : "创建中"}
-                </span>
-              ) : (
-                isEdit ? "保存" : "创建"
-              )}
-            </button>
-          </div>
+        <div
+          className="flex justify-end gap-3 px-6 py-4 border-t"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-xs transition-all"
+            style={{
+              border: "1px solid var(--border-medium)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all disabled:opacity-50"
+            style={{
+              background: "linear-gradient(135deg, #c8956c, #a07850)",
+              color: "#0a0a0a",
+              boxShadow: "0 2px 12px rgba(200,149,108,0.2)",
+            }}
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : null}
+            {saving ? "保存中..." : agent ? "保存" : "创建"}
+          </button>
         </div>
       </div>
     </div>

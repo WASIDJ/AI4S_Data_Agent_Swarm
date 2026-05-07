@@ -2721,3 +2721,147 @@ Task #97: 前端 — Agent 状态警告
 
 - 从剩余 27 篇电力系统论文继续分批生成 Sci-Evo 数据
 - 编写自动化调度脚本实现不间断运行
+
+---
+
+## 前端重构适配 — 架构师代码迁移 + 后端适配
+
+**日期**: 2026-05-07
+**状态**: 🔄 进行中（约 85%）
+
+### 背景
+
+架构师在 `E:\Agent_Team\` 中完成了前端重构（116 版本迭代），将整个前端从自定义组件迁移到 shadcn/ui + Tailwind CSS 架构。需要将重构代码适配到 `E:\2026Mineru比赛` 项目中，同时更新后端接口。
+
+### 架构变更
+
+- **旧架构**: 自定义组件 + useWebSocket/useCopilot hooks + AppContext + 旧 API client
+- **新架构**: shadcn/ui (60+组件) + Tailwind CSS + 统一 API 层 + React Router HashRouter + JWT 认证
+
+### 已完成内容
+
+#### 1. 前端基础设施（✅）
+- Tailwind CSS 配置 (`tailwind.config.js`, `postcss.config.js`)
+- shadcn/ui 组件库集成 (`web/src/components/ui/`, 60+ 组件)
+- 工具函数 (`web/src/lib/utils.ts`, cn() 类名合并)
+- CSS 主题变量 (Dark Gold Void 主题, `index.css`)
+
+#### 2. API 适配层（✅）
+- `web/src/api/index.ts` — 前后端数据格式转换
+- Agent/Task/Event 字段映射
+- WebSocket 消息类型转换
+- 工具类别映射（file → Read/Write/Glob/Grep 等）
+- Mock 数据 fallback (`web/src/data.ts`)
+
+#### 3. 核心布局组件（✅）
+- `Dashboard.tsx` — 主布局容器
+- `TopBar.tsx` — 顶部导航栏（项目选择器、用户菜单）
+- `StatusBar.tsx` — 底部状态栏（智能体数量、运行状态、WebSocket 状态）
+- `ScreenGuard.tsx` — 屏幕尺寸检测（≥1280px）
+
+#### 4. 功能组件适配（✅）
+- `AgentPanel.tsx` — 智能体列表（适配新 API）
+- `KanbanBoard.tsx` — 任务看板（适配新 API）
+- `DetailPanel.tsx` — 详情面板（适配新 API）
+- `CopilotPanel.tsx` — AI 助手面板（适配新 API）
+
+#### 5. 共享组件迁移（✅）
+- `shared/ActivityTimeline.tsx` — 从根目录迁移到 shared/
+- `shared/BudgetBar.tsx` — 从根目录迁移到 shared/
+- `shared/ToolApproval.tsx` — 从根目录迁移到 shared/
+
+#### 6. 弹窗组件适配（✅）
+- `AgentFormModal.tsx` — 适配 shadcn/ui Dialog + Form
+- `TaskFormModal.tsx` — 适配 shadcn/ui Dialog + Form
+- `UserProfileModal.tsx` — 新增用户资料弹窗
+
+#### 7. 后端新增（✅）
+- `server/routes/auth.ts` — 登录/注册/用户信息 API
+- `server/middleware/auth.ts` — JWT 认证中间件
+- `server/store/userStore.ts` — 用户数据 JSON 存储
+- `server/store/types.ts` — 扩展类型定义
+- `server/store/index.ts` — 适配新字段
+- `server/routes/agents.ts` — 适配前端新接口
+- `server/routes/tasks.ts` — 适配前端新接口
+- `server/app.ts` — 注册 auth 路由
+
+#### 8. 静态页面（✅）
+- `public/landing.html` — 着陆页
+- `public/auth.html` — 登录/注册页
+- `public/oauth-callback.html` — OAuth 回调页
+- `public/images/` — 图片资源
+- `public/assets/` — 静态资源
+
+#### 9. 已删除的旧代码
+- 旧组件: AgentCard, TaskCard, ConfirmDialog, CopilotChat, CopilotInput, NotificationToast, WelcomeScreen
+- 旧 hooks: useWebSocket, useCopilot
+- 旧 store: AppContext
+- 旧 API: api/client.ts
+- 旧测试: __tests__/*.test.tsx
+- 旧弹窗: DataPipelineModal, ProjectFormModal
+- 备份目录: web_old/
+
+### 待完成内容
+
+1. **Copilot API 真实对接** — `CopilotPanel.tsx` 可能仍使用 mock 数据
+2. **构建验证** — 确认 TypeScript 编译和 Vite 构建无错误
+3. **运行时验证** — 启动前后端确认功能正常
+4. **测试补全** — 旧测试已删除，新测试待编写
+5. **web_old/ 清理** — 确认稳定后删除备份
+6. **Git 提交** — 将所有变更提交到仓库
+
+### 文件变更统计
+
+| 类型 | 数量 | 示例 |
+|------|------|------|
+| 新增 (??) | ~30+ | ui/, shared/, auth.ts, userStore.ts, landing.html 等 |
+| 修改 (M) | ~20+ | App.tsx, KanbanBoard.tsx, types.ts, vite.config.ts 等 |
+| 删除 (D) | ~20+ | AgentCard.tsx, useWebSocket.ts, AppContext.tsx 等 |
+
+### 下一步
+
+- 启动多智能体团队验证构建、补全功能、提交代码
+
+---
+
+## Bug 修复与项目清理
+
+**日期**: 2026-05-07
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **清理测试项目**
+   - 通过 API 删除 26 个测试项目（test-project, ep-test-proj, update-test 等）
+   - 重建默认项目 AI4S-Data-Swarm
+   - 5 个预置 Agent 关联到新项目
+
+2. **修复"新建项目"按钮**
+   - `Dashboard.tsx` 中 `onNewProject` 之前被硬编码为空函数 `() => {}`
+   - 改为调用 `App.tsx` 中的 `handleNewProject`，通过 API 创建项目
+   - 去掉"项目路径"输入框，自动使用工作目录
+
+3. **消除 WebSocket 控制台报错**
+   - `api/index.ts` 中 `ws.onerror` 去除 `console.error` 输出
+   - 页面加载瞬时的 WS 连接抖动不再刷红色错误
+   - 重连机制正常工作，连接建立后状态正常
+
+4. **更新 README**
+   - 新增默认账号密码说明
+   - 新增认证系统、Landing Page、项目切换等界面功能描述
+   - 新增项目结构说明
+   - 新增近期更新日志
+
+### 文件变更
+
+| 文件 | 变更 |
+|------|------|
+| `web/src/App.tsx` | 新增 `handleNewProject`，传入 Dashboard |
+| `web/src/components/Dashboard.tsx` | `onNewProject` prop 从空函数改为真实回调 |
+| `web/src/api/index.ts` | `ws.onerror` 静默处理 |
+| `web/src/data.ts` | 更新 fallback projectId |
+| `README.md` | 更新项目说明 |
+
+### 下一步
+
+- 重新截图替换 README 中的旧截图

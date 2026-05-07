@@ -27,3 +27,7 @@ skills-lock.json
 .envrc
 examples/*
 out/
+%TEMP%*
+*.pdf
+papers/
+web_old/

@@ -37,6 +37,9 @@ export interface Agent {
   maxTurns?: number;
   maxBudgetUsd?: number;
   allowedTools?: string[];
+  model?: string;        // SDK 模型 ID，如 'claude-sonnet-4-5-20250929'
+  apiKey?: string;       // 自定义 API Key（明文存储，仅本地使用）
+  apiBaseUrl?: string;   // 自定义 API Base URL
   taskCount: number;
   stats: AgentStats;
   lastEventAt: number;
@@ -65,7 +68,7 @@ export interface Task {
     | "user_cancelled"
     | "user_done"
     | "error";
-  priority: 0 | 1 | 2;
+  priority: 0 | 1 | 2 | 3;
   tags: string[];
   eventCount: number;
   turnCount: number;
@@ -150,4 +153,21 @@ export interface SessionsEnvelope extends SchemaEnvelope<Session> {
 
 export interface ProjectsEnvelope extends SchemaEnvelope<Project> {
   projects: Project[];
+}
+
+// ---- User -------------------------------------------------------------------
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  avatar?: string;
+  role: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface UsersEnvelope extends SchemaEnvelope<User> {
+  users: User[];
 }

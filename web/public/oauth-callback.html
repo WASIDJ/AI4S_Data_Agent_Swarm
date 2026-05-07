@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI4S — Github 授权回调</title>
+<style>
+  html,body{position:fixed;top:0;left:0;width:100%;height:100%;background:#000}
+  .canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
+  .canvas-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none}
+</style>
+<style>
+/**
+ * base.css — AI4S Swarm 公共基础样式
+ * ====================================
+ * 重置 + 全局字体 + 公共动画 + 终端提示组件
+ */
+
+/* ===== Reset ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+  background: #000;
+}
+
+/* ===== Canvas Layers ===== */
+.canvas-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.canvas-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ===== Terminal Component ===== */
+.terminal {
+  margin-top: 24px;
+  text-align: center;
+  font-family: 'SF Mono', 'Fira Code', 'Menlo', monospace;
+  font-size: 10px;
+  color: #222;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  user-select: none;
+}
+
+.terminal .host  { color: #444; }
+.terminal .path  { color: #333; }
+.terminal .cmd   { color: #c8956c; opacity: 0.5; }
+.terminal .cursor {
+  display: inline-block;
+  width: 5px;
+  height: 12px;
+  background: #444;
+  vertical-align: middle;
+  margin-left: 3px;
+  animation: terminal-pulse 1.2s infinite;
+}
+
+@keyframes terminal-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
+}
+
+/* ===== Liquid Glass Card Base ===== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  backdrop-filter: blur(52px) saturate(160%);
+  -webkit-backdrop-filter: blur(52px) saturate(160%);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 10%, rgba(200, 149, 108, 0.3), transparent 90%);
+}
+
+/* ===== Primary Button — Full Width with Sheen ===== */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 36px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0a0a0a;
+  background: linear-gradient(135deg, #c8956c, #b08055);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.15em;
+  position: relative;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(200, 149, 108, 0.25);
+}
+
+.btn-primary:hover::before { left: 100%; }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
+
+/* ===== Secondary Button ===== */
+.btn-secondary {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #555;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.06em;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #888;
+  transform: translateY(-1px);
+}
+
+/* ===== Form Inputs ===== */
+.form-input {
+  width: 100%;
+  padding: 12px 0 12px 2px;
+  font-size: 14px;
+  color: #d0d0d0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  outline: none;
+  transition: all 0.3s ease;
+  letter-spacing: 0.02em;
+  font-family: inherit;
+}
+
+.form-input::placeholder {
+  color: #444;
+  transition: color 0.3s;
+  letter-spacing: 0.04em;
+}
+
+.form-input:hover::placeholder { color: #555; }
+.form-input:focus::placeholder { color: #333; }
+.form-input:focus { border-bottom-color: rgba(200, 149, 108, 0.3); }
+
+/* Input underline glow */
+.input-line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c8956c, transparent);
+  transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 6px rgba(200, 149, 108, 0.2);
+}
+
+.form-input:focus ~ .input-line {
+  left: 0;
+  width: 100%;
+}
+
+/* ===== Error States ===== */
+.form-group.error .form-input { border-bottom-color: rgba(239, 68, 68, 0.3); }
+.form-group.error .input-line {
+  background: linear-gradient(90deg, transparent, #ef4444, transparent);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.15);
+}
+
+.error-msg {
+  color: #ef4444;
+  font-size: 11px;
+  margin-top: 6px;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transition: opacity 0.3s;
+  height: 0;
+  overflow: hidden;
+}
+
+.form-group.error .error-msg { opacity: 1; height: auto; }
+
+/* ===== Custom Checkbox ===== */
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-wrap input { display: none; }
+
+.checkbox-custom {
+  width: 15px;
+  height: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-custom::after {
+  content: '✓';
+  font-size: 10px;
+  color: #0a0a0a;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-weight: bold;
+}
+
+.checkbox-wrap input:checked + .checkbox-custom {
+  background: linear-gradient(135deg, #c8956c, #b08055);
+  border-color: transparent;
+}
+
+.checkbox-wrap input:checked + .checkbox-custom::after { opacity: 1; }
+
+/* ===== Loading Spinner ===== */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(200, 149, 108, 0.15);
+  border-top-color: #c8956c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Progress Bar ===== */
+.progress-bar {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #c8956c, #d4b07a);
+  border-radius: 1px;
+  transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>
+<style>
+/**
+ * oauth-callback.css — OAuth授权回调页专属样式
+ * =============================================
+ */
+
+#content {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.callback-card {
+  position: relative;
+  overflow: hidden;
+  padding: 48px 42px 40px;
+  width: 100%;
+  max-width: 420px;
+  min-width: 300px;
+  text-align: center;
+  border-radius: 22px;
+  background:
+    linear-gradient(175deg, rgba(255,255,255,0.032) 0%, rgba(255,255,255,0.012) 40%, rgba(200,149,108,0.008) 100%);
+  backdrop-filter: blur(60px) saturate(180%);
+  -webkit-backdrop-filter: blur(60px) saturate(180%);
+  border: none;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.5),
+    0 4px 16px rgba(0,0,0,0.3),
+    0 0 80px rgba(200,149,108,0.03),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(255,255,255,0.015);
+}
+
+/* Gradient border — liquid-glass rim */
+.callback-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  padding: 1px;
+  background: linear-gradient(175deg,
+    rgba(255,255,255,0.18) 0%,
+    rgba(255,255,255,0.06) 25%,
+    rgba(255,255,255,0.02) 50%,
+    rgba(200,149,108,0.06) 75%,
+    rgba(255,255,255,0.08) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Inner warm glow */
+.callback-card::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -30%;
+  width: 160%;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(200,149,108,0.025) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+/* ===== Card Rim — Dual-Pole Pendulum Glow ===== */
+.card-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 顶层：顶部亮模式 */
+.card-rim::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(200,149,108,0.04) 0deg,
+    rgba(200,149,108,0.10) 60deg,
+    rgba(200,149,108,0.22) 90deg,
+    rgba(200,149,108,0.38) 120deg,
+    rgba(200,149,108,0.50) 160deg,
+    rgba(200,149,108,0.55) 180deg,
+    rgba(200,149,108,0.50) 200deg,
+    rgba(200,149,108,0.38) 240deg,
+    rgba(200,149,108,0.22) 270deg,
+    rgba(200,149,108,0.10) 300deg,
+    rgba(200,149,108,0.04) 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: top-pole 4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* 底层：底部亮模式 */
+.card-rim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(200,149,108,0.04) 0deg,
+    rgba(200,149,108,0.10) 60deg,
+    rgba(200,149,108,0.22) 90deg,
+    rgba(200,149,108,0.38) 120deg,
+    rgba(200,149,108,0.50) 160deg,
+    rgba(200,149,108,0.55) 180deg,
+    rgba(200,149,108,0.50) 200deg,
+    rgba(200,149,108,0.38) 240deg,
+    rgba(200,149,108,0.22) 270deg,
+    rgba(200,149,108,0.10) 300deg,
+    rgba(200,149,108,0.04) 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: bottom-pole 4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* 顶部极点：吸气时明亮，呼气时收敛 */
+@keyframes top-pole {
+  0%, 100% { opacity: 0.75; filter: blur(0.2px) brightness(1.1); }
+  25%      { opacity: 0.50; filter: blur(0.5px) brightness(1.0); }
+  50%      { opacity: 0.15; filter: blur(0.2px) brightness(0.9); }
+  75%      { opacity: 0.40; filter: blur(0.6px) brightness(1.0); }
+}
+
+/* 底部极点：与顶部呈镜像呼吸 */
+@keyframes bottom-pole {
+  0%, 100% { opacity: 0.15; filter: blur(0.2px) brightness(0.9); }
+  25%      { opacity: 0.40; filter: blur(0.6px) brightness(1.0); }
+  50%      { opacity: 0.75; filter: blur(0.2px) brightness(1.1); }
+  75%      { opacity: 0.50; filter: blur(0.5px) brightness(1.0); }
+}
+
+/* ===== Brand ===== */
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.brand-icon {
+  color: #c8956c;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+  text-shadow: 0 0 12px rgba(200,149,108,0.25), 0 0 4px rgba(200,149,108,0.15);
+  transition: text-shadow 0.6s ease;
+}
+.brand-text {
+  color: #a08050;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0.7;
+  transition: opacity 0.6s ease;
+}
+
+/* ===== Status Text ===== */
+#loading-state h1,
+#success-state h1 {
+  color: #e0e0e0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+#loading-state p,
+#success-state p {
+  color: #555;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  margin-bottom: 24px;
+}
+
+/* ===== Loading State ===== */
+.loader-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ===== Success State ===== */
+.success-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #22c55e;
+  font-size: 24px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.success-icon.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ===== User Info ===== */
+.user-info {
+  display: none;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.user-info.show {
+  display: block;
+  animation: fade-in-up 0.4s ease;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  border: 2px solid rgba(200, 149, 108, 0.2);
+  display: block;
+}
+
+.user-name {
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.user-email {
+  color: #555;
+  font-size: 12px;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+/* ===== Card Entrance Animation ===== */
+@keyframes card-enter {
+  0%   { opacity: 0; transform: translateY(24px) scale(0.97); }
+  60%  { transform: translateY(-2px) scale(1.005); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Staggered Element Reveal ===== */
+.brand            { opacity: 0; animation: fade-up 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+#loading-state    { opacity: 0; animation: fade-up 0.6s 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.terminal         { opacity: 0; animation: fade-up 0.6s 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<canvas id="canvas-bg" class="canvas-bg"></canvas>
+<canvas id="node-canvas" class="canvas-overlay"></canvas>
+
+<div id="content">
+  <div class="glass-card callback-card">
+    <div class="card-rim"></div>
+    <div class="brand">
+      <span class="brand-icon">◆</span>
+      <span class="brand-text">AI4S.SWARM</span>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state">
+      <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor" width="56" height="56" style="margin:0 auto 20px;color:#c8956c;opacity:.9">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+      </svg>
+      <h1 id="status-title">正在连接 Github...</h1>
+      <p id="status-desc">授权验证中，请稍候</p>
+      <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+      <div class="loader-wrap" id="loader"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Success State -->
+    <div id="success-state" style="display:none">
+      <div class="success-icon" id="success-icon">✓</div>
+      <div class="user-info" id="user-info">
+        <img class="user-avatar" id="avatar" src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="avatar">
+        <div class="user-name" id="user-name">Github User</div>
+        <div class="user-email" id="user-email">user@github.com</div>
+      </div>
+      <h1 id="success-title">授权成功</h1>
+      <p id="success-desc">正在进入工作台...</p>
+      <a class="btn-primary" href="auth.html">进入工作台</a>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <span class="host">root@Agent_Team</span><span>:</span><span class="path">~/program</span><span>$</span>
+    <span class="cmd" id="terminal-cmd"></span><span class="cursor"></span>
+  </div>
+</div>
+
+<script>
+/**
+ * moonlit-ripple.js — WebGL月光水面渲染器
+ * ==========================================
+ * 全屏WebGL着色器：月夜 + 涟漪水面 + 鼠标交互
+ * 所有页面共享此背景
+ */
+
+(function(global) {
+  'use strict';
+
+  const VERT = 'attribute vec2 a_pos;\nvoid main(){gl_Position=vec4(a_pos,0.0,1.0);}';
+
+  const FRAG = [
+    'precision highp float;',
+    'uniform float u_time;',
+    'uniform vec2 u_res;',
+    'uniform vec2 u_mouse;',
+    '#define PI 3.14159265359',
+    '#define WAVE_LAYERS 7',
+    '',
+    'vec4 sea(vec2 p,float t){',
+    '  float h=0.0;vec2 dh=vec2(0.0);',
+    '  float freq=1.0,amp=0.15,angle=0.0;',
+    '  float decay=0.5;',
+    '  for(int i=0;i\x3cWAVE_LAYERS;i++){',
+    '    float c=cos(angle),s=sin(angle);',
+    '    vec2 pp=vec2(c*p.x+s*p.y,-s*p.x+c*p.y);',
+    '    float fi=float(i);',
+    '    float spd=sqrt(freq)*0.8;',
+    '    float phase=(pp.y+fi)*freq-t*spd;',
+    '    float sn=sin(phase),cn=cos(phase);',
+    '    h+=sn*amp;',
+    '    float dy=freq*amp*cn;',
+    '    dh+=vec2(-s*dy,c*dy);',
+    '    angle+=fi+1.2;',
+    '    freq*=1.3;amp*=decay;',
+    '  }',
+    '  vec3 N=normalize(vec3(-dh.x,1.0,-dh.y));',
+    '  return vec4(h,N);',
+    '}',
+    '',
+    'vec3 moonDir(){return normalize(vec3(0.15,0.35,1.0));}',
+    'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+    '',
+    'vec3 skyColor(vec3 rd){',
+    '  vec3 sky=mix(vec3(0.05,0.04,0.035),vec3(0.025,0.02,0.015),max(rd.y,0.0));',
+    '  return sky;',
+    '}',
+    '',
+    'void main(){',
+    '  float aspect=u_res.x/u_res.y;',
+    '  vec2 uv=-1.0+2.0*gl_FragCoord.xy/u_res;',
+    '  uv.x*=aspect;',
+    '  float t=u_time*0.5;',
+    '  float tiltRad=0.15*0.7;',
+    '  vec3 ro=vec3(0.0,8.0,0.0);',
+    '  vec3 ww=normalize(vec3(0.0,-sin(tiltRad),cos(tiltRad)));',
+    '  vec3 uu=normalize(cross(vec3(0.0,1.0,0.0),ww));',
+    '  vec3 vv=normalize(cross(ww,uu));',
+    '  vec3 rd=normalize(uv.x*uu+uv.y*vv+2.5*ww);',
+    '  vec3 md=moonDir();',
+    '  vec3 mc=vec3(0.9,0.9,0.92);',
+    '  vec3 sky=skyColor(rd);',
+    '  vec3 col=sky;',
+    '  float dsea=-ro.y/rd.y;',
+    '  if(dsea\x3e0.0){',
+    '    vec3 wp=ro+dsea*rd;',
+    '    vec4 s=sea(wp.xz,t);',
+    '    float h=s.x;vec3 nor=s.yzw;',
+    '    nor=mix(nor,vec3(0.0,1.0,0.0),smoothstep(0.0,300.0,dsea));',
+    '    float fre=clamp(1.0-dot(-nor,rd),0.0,1.0);',
+    '    fre=pow(fre,3.0);',
+    '    float dif=mix(0.25,1.0,max(dot(nor,md),0.0));',
+    '    vec3 refl=skyColor(reflect(rd,nor));',
+    '    vec3 seaCol1=vec3(0.04,0.03,0.015);',
+    '    vec3 seaCol2=vec3(0.09,0.06,0.03);',
+    '    vec3 refr=seaCol1+dif*mc*seaCol2*0.12;',
+    '    col=mix(refr,0.9*refl,fre);',
+    '    float atten=max(1.0-dsea*dsea*0.0005,0.0);',
+    '    col+=seaCol2*(wp.y-h)*1.5*atten;',
+    '    col=mix(col,sky,1.0-exp(-0.008*dsea));',
+    '  }',
+    '  col=pow(max(col,vec3(0.0)),vec3(0.85));',
+    '  float lum=dot(col,vec3(0.299,0.587,0.114));',
+    '  col=vec3(lum)*0.7;',
+    '  gl_FragColor=vec4(col,1.0);',
+    '  }',
+  ].join('\n');
+
+  function compileShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+    }
+    return shader;
+  }
+
+  /**
+   * MoonlitRipple — 启动月光水面渲染
+   * @param {HTMLCanvasElement} canvas — 目标canvas元素
+   */
+  function MoonlitRipple(canvas) {
+    const gl = canvas.getContext('webgl', { alpha: false, antialias: false });
+    if (!gl) {
+      console.warn('WebGL not supported');
+      return;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, compileShader(gl, gl.VERTEX_SHADER, VERT));
+    gl.attachShader(prog, compileShader(gl, gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+
+    const aPos = gl.getAttribLocation(prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uRes  = gl.getUniformLocation(prog, 'u_res');
+    const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+    let mx = -1, my = -1;
+    let needsResize = true;
+    let running = true;
+    let animId = 0;
+
+    function resize() {
+      needsResize = false;
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      gl.viewport(0, 0, W, H);
+      gl.uniform2f(uRes, W, H);
+    }
+
+    function render(now) {
+      if (!running) return;
+      if (needsResize) resize();
+      gl.uniform1f(uTime, now * 0.001);
+      gl.uniform2f(uMouse, mx, my);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      animId = requestAnimationFrame(render);
+    }
+
+    // Mouse interaction
+    canvas.addEventListener('mousemove', e => {
+      mx = e.clientX;
+      my = canvas.clientHeight - e.clientY;
+    });
+    canvas.addEventListener('mouseleave', () => {
+      mx = -1; my = -1;
+    });
+
+    window.addEventListener('resize', () => { needsResize = true; });
+
+    // Visibility pause
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(animId);
+      } else {
+        running = true;
+        animId = requestAnimationFrame(render);
+      }
+    });
+
+    resize();
+    animId = requestAnimationFrame(render);
+  }
+
+  // Expose to global
+  global.MoonlitRipple = MoonlitRipple;
+
+})(window);
+</script>
+<script>
+/**
+ * node-network.js — Knowledge Graph Particle Network (Reliable Edition)
+ * ===================================================================
+ * 架构：极简帧内计算，无持久连接对象，零泄漏风险
+ * 特性：
+ *   1. 节点分布自动避开中间卡片区域
+ *   2. 每帧实时计算距离，最多1-4条连线/节点
+ *   3. 节点死亡→alpha渐变到0→完全消失→重生（无跳变）
+ *   4. 鼠标磁场吸引 + 最近节点放大
+ *   5. 连线独立alpha = 两端节点alpha乘积（自然生灭同步）
+ */
+
+(function(global) {
+  'use strict';
+
+  const COLORS = ['#c8a06c','#d4b07a','#e0c08a','#c4956c','#b89060','#a08050','#d0b888'];
+  const LABELS = [
+    { name: 'MinerU', weight: 5 },
+    { name: '智能体', weight: 3 },
+    { name: '编排', weight: 3 },
+    { name: '数据合成', weight: 3 },
+    { name: '数据清洗', weight: 3 },
+    { name: 'RAG', weight: 3 },
+    { name: '向量库', weight: 3 },
+    { name: '知识库', weight: 3 },
+    { name: '推理链', weight: 3 },
+    { name: '多模态', weight: 3 },
+    { name: '检索', weight: 3 },
+    { name: 'AIGC', weight: 3 },
+    { name: 'DeepSeek', weight: 3 },
+    { name: 'Kimi', weight: 3 },
+    { name: 'Qwen', weight: 3 },
+    { name: '数据标注', weight: 2 },
+    { name: '特征工程', weight: 2 },
+    { name: 'Embedding', weight: 2 },
+    { name: '数据治理', weight: 2 },
+    { name: '元数据', weight: 2 },
+    { name: '数据血缘', weight: 2 },
+    { name: '验证', weight: 2 },
+    { name: '实体链接', weight: 2 },
+    { name: '关系抽取', weight: 2 },
+    { name: '数据湖', weight: 2 },
+    { name: '数据仓库', weight: 2 },
+    { name: '时序数据', weight: 2 },
+    { name: 'ETL', weight: 2 },
+    { name: 'Claude', weight: 2 },
+    { name: 'Agent SDK', weight: 2 },
+    { name: 'React', weight: 2 },
+    { name: 'Node.js', weight: 2 },
+    { name: 'GPT-4', weight: 1 },
+    { name: 'Gemini', weight: 1 },
+    { name: 'Llama', weight: 1 },
+    { name: 'Mistral', weight: 1 },
+    { name: 'GLM', weight: 1 },
+    { name: 'Baichuan', weight: 1 },
+    { name: 'Yi', weight: 1 },
+    { name: 'LangChain', weight: 1 },
+    { name: 'AutoGen', weight: 1 },
+    { name: 'CrewAI', weight: 1 },
+    { name: 'Dify', weight: 1 },
+    { name: 'Ollama', weight: 1 },
+    { name: 'vLLM', weight: 1 },
+    { name: 'TensorRT', weight: 1 },
+    { name: 'Triton', weight: 1 },
+    { name: 'Ray', weight: 1 },
+    { name: 'Celery', weight: 1 },
+    { name: 'PyTorch', weight: 1 },
+    { name: 'JAX', weight: 1 },
+    { name: 'NumPy', weight: 1 },
+    { name: 'Pandas', weight: 1 },
+    { name: 'SciPy', weight: 1 },
+    { name: 'Matplotlib', weight: 1 },
+    { name: 'WandB', weight: 1 },
+    { name: 'MLflow', weight: 1 },
+    { name: 'ONNX', weight: 1 },
+    { name: 'Stable Diffusion', weight: 1 },
+    { name: 'Midjourney', weight: 1 },
+    { name: 'LoRA', weight: 1 },
+    { name: 'Fine-tune', weight: 1 },
+    { name: 'RLHF', weight: 1 },
+    { name: 'Sora', weight: 1 },
+    { name: 'ControlNet', weight: 1 },
+    { name: 'Kubernetes', weight: 1 },
+    { name: 'Docker', weight: 1 },
+    { name: 'Redis', weight: 1 },
+    { name: 'PostgreSQL', weight: 1 },
+    { name: 'Kafka', weight: 1 },
+    { name: 'ElasticSearch', weight: 1 },
+    { name: 'Prometheus', weight: 1 },
+    { name: 'Grafana', weight: 1 },
+    { name: 'MinIO', weight: 1 },
+    { name: 'Neo4j', weight: 1 },
+    { name: 'Milvus', weight: 1 },
+    { name: 'Weaviate', weight: 1 },
+    { name: 'Spark', weight: 1 },
+    { name: 'Flink', weight: 1 },
+    { name: 'Hadoop', weight: 1 },
+    { name: 'Iceberg', weight: 1 },
+    { name: 'Delta Lake', weight: 1 },
+    { name: 'ClickHouse', weight: 1 },
+    { name: 'Druid', weight: 1 },
+    { name: 'Airflow', weight: 1 },
+    { name: 'API网关', weight: 1 },
+    { name: '鉴权', weight: 1 },
+    { name: 'WebSocket', weight: 1 },
+    { name: 'gRPC', weight: 1 },
+    { name: 'REST', weight: 1 },
+    { name: 'GraphQL', weight: 1 },
+    { name: 'OAuth', weight: 1 },
+    { name: 'JWT', weight: 1 },
+    { name: 'CI/CD', weight: 1 },
+    { name: 'GitOps', weight: 1 },
+    { name: 'Terraform', weight: 1 },
+    { name: 'Ansible', weight: 1 },
+    { name: 'NLP', weight: 1 },
+    { name: 'CV', weight: 1 },
+    { name: 'ASR', weight: 1 },
+    { name: 'TTS', weight: 1 },
+    { name: 'OCR', weight: 1 },
+    { name: 'NER', weight: 1 },
+    { name: 'BERT', weight: 1 },
+    { name: 'Transformer', weight: 1 },
+    { name: 'Attention', weight: 1 },
+    { name: 'MCP', weight: 1 },
+    { name: 'Function Call', weight: 1 },
+    { name: 'Tool Use', weight: 1 },
+    { name: 'Code Interpreter', weight: 1 },
+    { name: 'Sandbox', weight: 1 }
+  ];
+
+  const totalWeight = LABELS.reduce((sum, l) => sum + l.weight, 0);
+  function pickLabel() {
+    let r = Math.random() * totalWeight;
+    for (const item of LABELS) {
+      r -= item.weight;
+      if (r <= 0) return item.name;
+    }
+    return LABELS[LABELS.length - 1].name;
+  }
+
+  /* ===== Node Class ===== */
+  class Node {
+    constructor(w, h, cardRect) {
+      this.w = w;
+      this.h = h;
+      this.cardRect = cardRect;
+      this.spawn();
+    }
+
+    spawn() {
+      // Spawn position: outside the card area, in the surrounding space
+      const cx = this.w / 2;
+      const cy = this.h / 2;
+      const cr = this.cardRect;
+      // Card avoidance padding
+      const pad = 30;
+      const cardL = cr ? cr.left - pad : cx - 250;
+      const cardR = cr ? cr.right + pad : cx + 250;
+      const cardT = cr ? cr.top - pad : cy - 200;
+      const cardB = cr ? cr.bottom + pad : cy + 200;
+
+      // Try up to 20 times to find a position outside the card
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const angle = Math.random() * Math.PI * 2;
+        // Distance: closer to edges for depth, some near center
+        const distBase = Math.min(this.w, this.h) * 0.2;
+        const distRange = Math.min(this.w, this.h) * 0.35;
+        const dist = distBase + Math.random() * distRange;
+        this.x = cx + Math.cos(angle) * dist;
+        this.y = cy + Math.sin(angle) * dist;
+        // Accept if outside card
+        if (this.x < cardL || this.x > cardR || this.y < cardT || this.y > cardB) {
+          break;
+        }
+      }
+
+      this.vx = (Math.random() - 0.5) * 0.3;
+      this.vy = (Math.random() - 0.5) * 0.3;
+      this.radius = Math.random() * 1.4 + 0.8;
+      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      this.alpha = 0;
+      this.targetAlpha = (Math.random() * 0.35 + 0.24) * 1.3;
+      this.pulsePhase = Math.random() * Math.PI * 2;
+      this.pulseSpeed = Math.random() * 0.01 + 0.004;
+      this.label = pickLabel();
+      this.hasLabel = Math.random() < 0.36;
+      this.maxLife = Math.random() * 600 + 400;
+      this.age = 0;
+      this.connBoost = 0;
+      this.mouseScale = 1.0;
+      // State: 'alive' | 'dying'
+      this.state = 'alive';
+    }
+
+    easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    update(mouse, mouseActive, closestDist) {
+      this.age++;
+      this.pulsePhase += this.pulseSpeed;
+
+      if (this.state === 'alive') {
+        // Birth: fade in over ~70 frames
+        if (this.age < 70) {
+          const t = this.age / 70;
+          this.alpha = this.targetAlpha * this.easeOutCubic(t);
+        } else {
+          this.alpha = this.targetAlpha + Math.sin(this.pulsePhase * 0.5) * 0.03;
+          // Natural death trigger
+          if (this.age > this.maxLife) {
+            this.state = 'dying';
+            this.deathAge = 0;
+          }
+        }
+      } else if (this.state === 'dying') {
+        this.deathAge++;
+        // Fade out over ~60 frames, then fully respawn
+        const t = this.deathAge / 60;
+        this.alpha = this.targetAlpha * (1 - this.easeOutCubic(Math.min(t, 1)));
+        if (this.deathAge >= 60) {
+          this.spawn();
+        }
+      }
+
+      // Movement
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Mouse magnetic attraction
+      if (mouseActive) {
+        const mdx = mouse.x - this.x;
+        const mdy = mouse.y - this.y;
+        const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+        const attractRadius = 180;
+        if (mdist < attractRadius && mdist > 3) {
+          const falloff = Math.pow(1 - mdist / attractRadius, 3);
+          const force = falloff * 0.018;
+          this.vx += (mdx / mdist) * force;
+          this.vy += (mdy / mdist) * force;
+        }
+      }
+
+      // Center gravity
+      const dx = this.x - this.w / 2;
+      const dy = this.y - this.h / 2;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxDist = Math.max(this.w, this.h) * 0.55;
+      if (dist > maxDist) {
+        this.vx -= dx * 0.00005;
+        this.vy -= dy * 0.00005;
+      }
+
+      // Random drift + damping
+      this.vx += (Math.random() - 0.5) * 0.005;
+      this.vy += (Math.random() - 0.5) * 0.005;
+      this.vx *= 0.998;
+      this.vy *= 0.998;
+
+      // Connection glow decay
+      this.connBoost *= 0.94;
+
+      // Mouse hover scale
+      const targetScale = (closestDist < 100) ? 1.35 : 1.0;
+      this.mouseScale += (targetScale - this.mouseScale) * 0.06;
+    }
+
+    draw(ctx, connAlphaScale) {
+      const pulse = Math.sin(this.pulsePhase) * 0.25 + 0.75;
+      const r = this.radius * pulse * (1 + this.connBoost * 0.25) * this.mouseScale;
+      const displayAlpha = Math.max(0, Math.min(1, this.alpha + this.connBoost * 0.15));
+      if (displayAlpha < 0.01) return;
+
+      // Glow
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = r * (4 + this.connBoost * 8);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * 0.65, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = displayAlpha;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Halo
+      const haloR = r * 3.5;
+      const grad = ctx.createRadialGradient(this.x, this.y, r * 0.5, this.x, this.y, haloR);
+      grad.addColorStop(0, this.color + '15');
+      grad.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, haloR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.globalAlpha = 1;
+
+      // Label
+      if (this.hasLabel && displayAlpha > 0.18 && Math.sin(this.pulsePhase * 0.2) > 0.3) {
+        ctx.font = '9px "SF Mono","Fira Code",monospace';
+        ctx.fillStyle = 'rgba(200,175,140,' + (displayAlpha * 0.38 * connAlphaScale) + ')';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.label, this.x, this.y - r - 8);
+      }
+    }
+  }
+
+  /* ===== System ===== */
+  function NodeNetwork(canvas, options) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let W = 0, H = 0;
+    const nodes = [];
+    const COUNT = options.count || 65;
+    const CONN_DIST = options.connDist || 150;
+    let mouse = { x: -1000, y: -1000 };
+    let mouseActive = false;
+    let mouseLeaveTimer = null;
+
+    // Progressive reveal
+    const startTime = performance.now();
+
+    // Card rectangle (for node distribution avoidance)
+    let cardRect = null;
+
+    function getCardRect() {
+      const card = document.querySelector('.auth-card, .callback-card');
+      if (!card) return null;
+      const r = card.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    }
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      cardRect = getCardRect();
+      for (const n of nodes) { n.w = W; n.h = H; n.cardRect = cardRect; }
+    }
+
+    function init() {
+      resize();
+      nodes.length = 0;
+      cardRect = getCardRect();
+      for (let i = 0; i < COUNT; i++) {
+        const n = new Node(W, H, cardRect);
+        // Stagger initial spawn
+        n.age = Math.floor(Math.random() * -30); // brief pre-born delay
+        n.alpha = 0;
+        nodes.push(n);
+      }
+    }
+
+    // Frame-level connection drawing — NO persistent connection objects
+    // Each frame: find nearest neighbors, draw lines, done.
+    // Zero memory accumulation, zero leak risk.
+    function drawFrameConnections(connAlphaScale) {
+      const time = Date.now() * 0.001;
+
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        if (a.alpha < 0.05) continue;
+
+        // Find all neighbors within CONN_DIST
+        const neighbors = [];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          if (b.alpha < 0.05) continue;
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < CONN_DIST) {
+            neighbors.push({ idx: j, dist: d });
+          }
+        }
+
+        if (neighbors.length === 0) continue;
+
+        // Sort by distance
+        neighbors.sort((a, b) => a.dist - b.dist);
+
+        // Connect to 1-4 closest (randomized for organic feel)
+        const maxLinks = 1 + Math.floor(Math.random() * 4); // 1 to 4
+        const limit = Math.min(maxLinks, neighbors.length);
+
+        for (let k = 0; k < limit; k++) {
+          const b = nodes[neighbors[k].idx];
+          const dist = neighbors[k].dist;
+          const distFade = 1 - dist / CONN_DIST;
+
+          // Connection alpha = product of both nodes' alpha (synced life/death)
+          const minAlpha = Math.min(a.alpha, b.alpha);
+          let baseAlpha = distFade * minAlpha * 0.7 * connAlphaScale;
+
+          // Node brightness boost
+          const linkStrength = distFade * 0.06;
+          a.connBoost = Math.min(1, a.connBoost + linkStrength);
+          b.connBoost = Math.min(1, b.connBoost + linkStrength);
+
+          // Breathing
+          const breathe = Math.sin(time * 0.7 + i * 0.5 + k * 0.3) * 0.15 + 0.85;
+          const linkAlpha = baseAlpha * breathe;
+
+          if (linkAlpha < 0.002) continue;
+
+          // Draw
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          grad.addColorStop(0, a.color + '00');
+          const hex = Math.floor(Math.min(1, linkAlpha * 6) * 255).toString(16).padStart(2, '0');
+          grad.addColorStop(0.5, a.color + hex);
+          grad.addColorStop(1, b.color + '00');
+          ctx.strokeStyle = grad;
+          ctx.globalAlpha = Math.min(1, linkAlpha * 3);
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      // Mouse-to-node tendrils
+      if (mouseActive) {
+        for (const n of nodes) {
+          if (n.alpha < 0.1) continue;
+          const dxm = mouse.x - n.x;
+          const dym = mouse.y - n.y;
+          const distm = Math.sqrt(dxm * dxm + dym * dym);
+          if (distm < 160) {
+            const ma = (1 - distm / 160) * n.alpha * 0.14 * connAlphaScale;
+            ctx.beginPath();
+            ctx.moveTo(n.x, n.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.strokeStyle = n.color;
+            ctx.globalAlpha = ma;
+            ctx.lineWidth = 0.3;
+            ctx.stroke();
+          }
+        }
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      const elapsed = performance.now() - startTime;
+      const connAlphaScale = Math.min(1, elapsed / 500);
+      drawFrameConnections(connAlphaScale);
+      for (const n of nodes) n.draw(ctx, connAlphaScale);
+    }
+
+    function loop() {
+      // Update card rect periodically (responsive to window changes)
+      if (Math.random() < 0.02) cardRect = getCardRect();
+
+      let closestNode = null;
+      let closestDist = Infinity;
+      if (mouseActive) {
+        for (const n of nodes) {
+          const d = Math.sqrt((mouse.x - n.x) ** 2 + (mouse.y - n.y) ** 2);
+          if (d < closestDist) { closestDist = d; closestNode = n; }
+        }
+      }
+
+      for (const n of nodes) {
+        n.update(mouse, mouseActive, (n === closestNode) ? closestDist : Infinity);
+      }
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('mousemove', e => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouseActive = true;
+      if (mouseLeaveTimer) { clearTimeout(mouseLeaveTimer); mouseLeaveTimer = null; }
+    });
+    window.addEventListener('mouseleave', () => {
+      mouseLeaveTimer = setTimeout(() => {
+        mouseActive = false;
+        mouse.x = -1000;
+        mouse.y = -1000;
+      }, 800);
+    });
+    window.addEventListener('resize', () => { resize(); });
+
+    init();
+    loop();
+  }
+
+  global.NodeNetwork = NodeNetwork;
+})(window);
+</script>
+<script>
+MoonlitRipple(document.getElementById('canvas-bg'));
+NodeNetwork(document.getElementById('node-canvas'), { count: 55, connDist: 140 });
+</script>
+<script src="assets/js/pages/oauth-callback.js"></script>
+<script>
+/* ===== Terminal Typewriter — Per-Element Independent ===== */
+window.typeWriter = function(el, text, options) {
+  if (!el) return;
+  options = options || {};
+  var baseSpeed = options.speed || 22;
+  var onDone = options.onDone || null;
+
+  if (el.__typingTimer) { clearTimeout(el.__typingTimer); el.__typingTimer = null; }
+  el.__typingText = text;
+
+  if (el.textContent.length > 0) {
+    eraseThenType(el, text, baseSpeed, onDone);
+  } else {
+    typeChar(el, text, 0, baseSpeed, onDone);
+  }
+};
+
+function eraseThenType(el, text, baseSpeed, onDone) {
+  var old = el.textContent;
+  var i = old.length;
+  function erase() {
+    if (i > 0) { i--; el.textContent = old.substring(0, i); el.__typingTimer = setTimeout(erase, 10); }
+    else { el.__typingTimer = setTimeout(function(){ typeChar(el, text, 0, baseSpeed, onDone); }, 80); }
+  }
+  erase();
+}
+
+function typeChar(el, text, index, baseSpeed, onDone) {
+  if (el.__typingText !== text) return;
+  if (index >= text.length) { el.__typingTimer = null; el.__typingText = null; if (onDone) onDone(); return; }
+  var ch = text.charAt(index);
+  el.textContent += ch;
+  var delay = baseSpeed;
+  var prev = index > 0 ? text.charAt(index - 1) : '';
+  if (/[a-zA-Z0-9]/.test(prev) && /[a-zA-Z0-9]/.test(ch)) delay *= 0.7;
+  else if (/[-&|<>!$%]/.test(ch)) delay *= 2.2;
+  else if (ch === ' ') delay *= 1.4;
+  delay += (Math.random() - 0.5) * delay * 0.8;
+  delay = Math.max(8, Math.round(delay));
+  el.__typingTimer = setTimeout(function(){ typeChar(el, text, index + 1, baseSpeed, onDone); }, delay);
+}
+</script>
+<script>
+(function(){
+  var term = document.getElementById('terminal-cmd');
+  var urlParams = new URLSearchParams(window.location.search);
+  var mode = urlParams.get('mode') || 'login';
+  var cmd = ' ai4s-swarm auth --callback' + (mode === 'register' ? ' --register' : ' --login');
+  setTimeout(function(){ window.typeWriter(term, cmd); }, 300);
+})();
+</script>
+
+</body>
+</html>
+elay));
+  el.__typi
