@@ -119,6 +119,7 @@ export default function Dashboard(props: Props) {
           <AgentFormModal
             agent={props.editingAgent}
             projects={props.projects}
+            existingAgents={props.agents}
             onClose={() => {
               props.setShowAgentModal(false);
               props.setEditingAgent(null);

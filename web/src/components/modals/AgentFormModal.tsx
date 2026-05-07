@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   X,
   Loader2,
@@ -32,40 +32,60 @@ import {
 interface Props {
   agent: Agent | null;
   projects: { id: string; name: string; path: string; description?: string }[];
+  existingAgents?: Agent[];
   onClose: () => void;
   onSave: (agent: Agent, apiKey?: string) => void;
 }
 
-// Predefined model values (for detecting if a model is custom)
-const PREDEFINED_MODEL_VALUES = MODEL_OPTIONS.filter(
-  m => m.value && m.value !== "__custom__"
-).map(m => m.value);
-
-// Get the preset config for a model value
-function getPresetModel(value: string) {
-  return MODEL_OPTIONS.find(m => m.value === value);
+/** Build a model preset entry from an agent's saved model config. */
+function agentToModelOption(a: Agent) {
+  return {
+    value: a.model,
+    label: a.model,
+    provider: undefined as string | undefined,
+    baseUrl: a.apiBaseUrl || undefined,
+  };
 }
 
 export default function AgentFormModal({
   agent,
   projects,
+  existingAgents,
   onClose,
   onSave,
 }: Props) {
   const isEditing = !!agent;
 
-  // Determine initial mode based on existing agent config
-  const agentModelIsPredefined = agent?.model
-    ? PREDEFINED_MODEL_VALUES.includes(agent.model)
+  // Merge predefined model options with previously saved custom models
+  const mergedModelOptions = useMemo(() => {
+    const seen = new Set(MODEL_OPTIONS.map(m => m.value));
+    const extras: typeof MODEL_OPTIONS = [];
+    for (const a of existingAgents ?? []) {
+      const m = a.model;
+      if (m && !seen.has(m)) {
+        seen.add(m);
+        extras.push(agentToModelOption(a));
+      }
+    }
+    // Insert saved custom models before the "__custom__" divider
+    const customIdx = MODEL_OPTIONS.findIndex(m => m.value === "__custom__");
+    const before = MODEL_OPTIONS.slice(0, customIdx >= 0 ? customIdx : MODEL_OPTIONS.length);
+    const after = customIdx >= 0 ? MODEL_OPTIONS.slice(customIdx) : [];
+    return [...before, ...extras, ...after];
+  }, [existingAgents]);
+
+  // Determine initial mode: known if model appears in the merged options
+  const agentModelIsKnown = agent?.model
+    ? mergedModelOptions.some(m => m.value === agent.model && m.value !== "" && m.value !== "__custom__")
     : false;
 
   const [name, setName] = useState(agent?.name || "");
   const [modelSelect, setModelSelect] = useState(
-    agentModelIsPredefined ? agent!.model : ""
+    agentModelIsKnown ? agent!.model : (agent?.model ? "__custom__" : "")
   );
   // Custom model name — only used when modelSelect === "__custom__"
   const [customModel, setCustomModel] = useState(
-    agentModelIsPredefined ? "" : agent?.model || ""
+    agentModelIsKnown ? "" : agent?.model || ""
   );
   const [prompt, setPrompt] = useState(agent?.systemPrompt || "");
   const [maxTurns, setMaxTurns] = useState(agent?.maxTurns?.toString() || "50");
@@ -78,7 +98,7 @@ export default function AgentFormModal({
   );
   const [apiKey, setApiKey] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState(
-    agent?.apiBaseUrl && !agentModelIsPredefined ? agent.apiBaseUrl : ""
+    !agentModelIsKnown && agent?.apiBaseUrl ? agent.apiBaseUrl : ""
   );
   const [showApiKey, setShowApiKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,7 +106,7 @@ export default function AgentFormModal({
   const [testResult, setTestResult] = useState<{ ok: boolean; message?: string; error?: string } | null>(null);
 
   const isCustom = modelSelect === "__custom__";
-  const preset = getPresetModel(modelSelect);
+  const preset = mergedModelOptions.find(m => m.value === modelSelect && m.value !== "__custom__");
 
   // Show API config when:
   // - Custom mode selected
@@ -273,7 +293,7 @@ export default function AgentFormModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent position="popper" className="z-[300]">
-                {MODEL_OPTIONS.map(m => (
+                {mergedModelOptions.map(m => (
                   <SelectItem
                     key={m.value || "_default"}
                     value={m.value || "_default"}
