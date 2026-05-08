@@ -5,7 +5,11 @@
 </p>
 
 <p align="center">
-  <img src="screenshots/00-landing-page.png" width="600" />
+  <img src="docs/screenshots/banner.png" width="800" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/Swarm.png" width="800" />
 </p>
 
 ---
