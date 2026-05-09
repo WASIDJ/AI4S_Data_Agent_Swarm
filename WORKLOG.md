@@ -2989,3 +2989,257 @@ Task #97: 前端 — Agent 状态警告
 - OpenAI 兼容端点路由正确（Kimi 等）
 - 前端 TypeScript 编译无错误
 - 后端 agents 路由测试全部通过
+
+---
+
+## Task #N: Autodata 弱-强对抗验证集成
+
+**日期**: 2026-05-08
+**状态**: ✅ 完成
+
+### 完成内容
+
+基于 Meta Autodata 论文的 weak-strong solver 对抗验证方法论，将核心数据质量控制能力集成到 Agent Swarm 平台。
+
+1. **数据模型扩展**
+   - `Task.pipelineType` 联合类型新增 `"autodata"` 值
+   - `Task.autodataMeta` 新增字段：`{ groupId, round, role }` 标识迭代组、轮次、角色
+   - 后端 `server/store/types.ts` 和前端 `web/src/types.ts` 同步更新
+
+2. **持久化迭代组存储**（`server/store/autodataStore.ts`）
+   - `AutodataGroup` 接口：groupId、4 个角色 Agent ID、各轮次记录、评分、状态
+   - JSON 文件持久化至 `data/autodata_groups.json`，避免重启后状态丢失
+   - 注册到 `store/index.ts` 的 `loadAllStores()` 中
+
+3. **核心编排服务**（`server/services/autodataService.ts`）
+   - `createAutodataPipeline()` — 创建整个 pipeline，自动启动第一轮 Challenger
+   - `onTaskCompleted()` — Task 完成回调，按角色路由到对应处理函数
+   - 文件中间传递：各角色输出写入 `data/autodata/{groupId}/round_N_role.json`
+   - 自动启动：编排器在 Agent 空闲时调用 `taskManager.startTask()`
+   - 迭代循环：默认 5 轮，通过标准 `weakScore ≤ 65% && strongScore ≥ 60% && gap ≥ 20%`
+   - 反馈注入：失败轮次的 `failureReason` 自动注入到下一轮 Challenger prompt
+   - Prompt 运行时覆盖：通过 `task.description` 注入，不修改 Agent 原始配置
+
+4. **SDK 回调集成**（`server/services/sdkSessionManager.ts`）
+   - `finalizeTask()` 末尾新增异步 autodata 回调，使用动态 import 避免循环依赖
+
+5. **REST API 路由**（`server/routes/autodata.ts`）
+   - `POST /api/autodata/create` — 创建 pipeline（验证 projectId、inputFiles、4 个 Agent）
+   - `GET /api/autodata/groups` — 列出所有迭代组
+   - `GET /api/autodata/groups/:id` — 查询单个迭代组详情（含 Task 状态摘要）
+   - `POST /api/autodata/groups/:id/retry` — 手动重试失败/错误的迭代组
+
+6. **前端集成**
+   - API 客户端：`AutodataApi.create/listGroups/getGroup/retry`
+   - 创建弹窗（`AutodataCreateModal.tsx`）：4 个 Agent 下拉选择 + 文件输入 + 轮次配置
+   - 状态卡片（`AutodataGroupCard.tsx`）：轮次评分展示 + 重试按钮
+   - KanbanBoard 头部新增 "Autodata" 按钮，触发创建弹窗
+
+### 文件变更
+
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 修改 | `server/store/types.ts` | +3 行：`pipelineType` 扩展 + `autodataMeta` 字段 |
+| 修改 | `server/store/index.ts` | +3 行：注册并加载 autodataStore |
+| 修改 | `server/services/sdkSessionManager.ts` | +7 行：finalizeTask 末尾添加 autodata 回调 |
+| 修改 | `server/app.ts` | +2 行：注册 `/api/autodata` 路由 |
+| 修改 | `web/src/types.ts` | +6 行：前端 Task 类型同步 |
+| 修改 | `web/src/api/index.ts` | +70 行：Autodata API 客户端 + 类型扩展 |
+| 修改 | `web/src/components/Dashboard.tsx` | +15 行：集成 AutodataCreateModal |
+| 修改 | `web/src/components/KanbanBoard.tsx` | +20 行：新增 Autodata 按钮 |
+| 修改 | `web/src/App.tsx` | +10 行：Autodata 弹窗状态管理 |
+| 新增 | `server/store/autodataStore.ts` | 持久化迭代组存储 |
+| 新增 | `server/services/autodataService.ts` | 核心编排服务 |
+| 新增 | `server/routes/autodata.ts` | REST API 路由 |
+| 新增 | `web/src/components/autodata/AutodataCreateModal.tsx` | 创建弹窗 |
+| 新增 | `web/src/components/autodata/AutodataGroupCard.tsx` | 状态卡片 |
+
+### 验证结果
+
+- 后端 TypeScript 类型检查：autodata 相关文件零错误
+- 前端 TypeScript 类型检查：零错误
+- 服务启动正常：http://127.0.0.1:3456
+
+### 下一步
+
+- 端到端测试：创建完整 pipeline 并观察自动编排闭环
+
+---
+
+## Task #N+1: Autodata 角色分配改为模型选择 + 文件选择器
+
+**日期**: 2026-05-08
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **角色分配从"选 Agent"改为"选模型"**
+   - 每个角色（Challenger/Weak Solver/Strong Solver/Judge）改为模型下拉选择
+   - 使用与 `AgentFormModal` 一致的 `MODEL_OPTIONS` + shadcn Select 组件
+   - 非 Anthropic 模型自动展开 API Key + Base URL 配置区
+   - 支持自定义模型（`__custom__`）
+   - 合并已有 Agent 的自定义模型到下拉选项
+
+2. **后端自动创建角色 Agent**
+   - 新增 `createRoleAgent()` 函数，接收模型配置自动创建临时 Agent
+   - 每个角色创建独立 Agent（带模型、API Key、Base URL）
+   - Prompt 在运行时通过 `task.description` 注入，不使用 Agent 原始 prompt
+   - 创建的 Agent 出现在 Agent Panel，状态实时更新
+
+3. **文件选择改为 PDF 列表勾选**
+   - 新增 `FileApi`（`web/src/api/index.ts`）：封装 `GET /api/files/:projectId` 和上传
+   - 切换项目时自动加载 `uploads/` 和 `papers/` 目录下的 PDF
+   - 每个文件显示：文件名 + 大小 + 来源标签（"爬取" / "上传"）
+   - 支持全选/取消全选 + 勾选式多选
+   - 无文件时引导用户通过「论文爬取专家」下载或上传 PDF
+
+### 文件变更
+
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 重写 | `web/src/components/autodata/AutodataCreateModal.tsx` | 角色→模型选择 + PDF 勾选列表 |
+| 修改 | `web/src/api/index.ts` | 新增 FileApi + AutodataRoleModel 类型 + API 参数改为模型配置 |
+| 修改 | `server/routes/autodata.ts` | 接收模型配置而非 Agent ID |
+| 修改 | `server/services/autodataService.ts` | 新增 createRoleAgent() 自动创建 Agent |
+
+### 验证结果
+
+- 前端 TypeScript 编译：零错误
+- 后端 autodata 文件：零类型错误
+
+---
+
+## Pixel World 素材准备
+
+**日期**: 2026-05-09
+**状态**: ✅ 素材就位，待开发渲染代码
+
+### 完成内容
+
+1. **设计文档**（上一会话完成）
+   - `docs/pixel-world/01-architecture-overview.md` — 架构总览
+   - `docs/pixel-world/02-frontend-design.md` — 前端设计
+   - `docs/pixel-world/03-backend-design.md` — 后端设计
+   - `docs/pixel-world/04-asset-specification.md` — 素材规格
+
+2. **角色精灵图**（3 张，已抠背景）
+   - `web/public/assets/world/sprites/default.png` — 绿幕蜜蜂精灵图，1408×768，透明 61.2%
+   - `web/public/assets/world/sprites/character-001.png` — 黑幕蓝体蜜蜂精灵图，1376×768，透明 17.3%
+   - `web/public/assets/world/sprites/character-002.png` — 绿幕多色蜜蜂精灵图，1024×1024，透明 75.5%
+   - 自动检测背景色（绿色/黑色）并抠除，脚本：`scripts/chromakey.py`
+
+3. **地图背景**
+   - `web/public/assets/world/background.png` — Gemini 生成的像素风蜂巢科技工作室，2752×1536
+   - 包含 5 个功能区：花粉大厅、编程蜂巢（4工位）、服务器蜂房、蜂后会议室、花蜜图书馆
+
+4. **碰撞地图**
+   - `web/public/assets/world/collision.png` — 86×48 像素，可通行 23.1%
+   - 自动分析背景像素生成，脚本：`scripts/gen_collision.py`
+   - 预览图：`collision_preview.png`（8x 缩放）
+
+5. **世界配置**
+   - `web/public/assets/world/config.json` — 含区域坐标、tag 映射、精灵图映射、工位 slot 坐标
+
+### 素材验证结果
+
+- config.json 解析正常，尺寸与实际图片匹配
+- background.png 2752×1536 与 config 声明一致
+- collision.png 86×48 与 config 网格一致
+- 3 张精灵图全部 RGBA，透明度正常
+- 无文件缺失或格式错误
+
+### 下一步
+
+- **用 Phaser 替换 KanbanBoard 组件**：将 `web/src/components/KanbanBoard.tsx` 替换为像素世界渲染组件
+- 核心工作项：
+  1. 安装 Phaser 依赖（`npm install phaser`）
+  2. 创建 PixelWorld 组件（Phaser Game 实例）
+  3. 实现 BeeSprite（蜜蜂角色 + 飞行动画）
+  4. 实现 WorldScene（地图渲染 + 碰撞 + 区域）
+  5. 对接 Task/Agent 状态 → 蜜蜂行为（idle=大厅悬停, running=工位工作, stuck=问号, done=星星）
+  6. WebSocket 实时更新蜜蜂位置和状态
+
+### 文件变更
+
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 新增 | `web/public/assets/world/background.png` | 地图背景（2752×1536） |
+| 新增 | `web/public/assets/world/collision.png` | 碰撞网格（86×48） |
+| 新增 | `web/public/assets/world/config.json` | 世界配置 |
+| 新增 | `web/public/assets/world/sprites/default.png` | 默认蜜蜂精灵图 |
+| 新增 | `web/public/assets/world/sprites/character-001.png` | 蓝体蜜蜂精灵图 |
+| 新增 | `web/public/assets/world/sprites/character-002.png` | 多色蜜蜂精灵图 |
+| 新增 | `scripts/chromakey.py` | 自动抠背景脚本 |
+| 新增 | `scripts/gen_collision.py` | 自动生成碰撞地图脚本 |
+
+---
+
+## Pixel World 前后端集成 — 将看板替换为像素世界
+
+**日期**: 2026-05-09
+**状态**: ✅ 完成
+
+### 完成内容
+
+1. **Phaser 3 集成**
+   - 安装 `phaser` 依赖到 web 项目
+   - 创建 `web/src/pixel/main.ts` — Phaser Game 入口（RESIZE 模式，pixelArt 渲染）
+   - 创建 `web/src/pixel/types.ts` — 共享类型定义（WorldConfig, AgentWorldData 等）
+
+2. **Phaser 场景**
+   - `web/src/pixel/scenes/BootScene.ts` — 资源加载场景（背景、碰撞图、精灵图、config.json）
+   - `web/src/pixel/scenes/WorldScene.ts` — 主世界场景（渲染背景、碰撞网格、角色管理、事件监听、区域标签）
+
+3. **Phaser 系统**
+   - `web/src/pixel/systems/WorldEventBus.ts` — React ↔ Phaser 双向事件总线
+   - `web/src/pixel/systems/MapManager.ts` — 碰撞网格解析、区域查询、坐标校验
+   - `web/src/pixel/systems/CameraController.ts` — 拖拽平移、滚轮缩放、跟随角色
+   - `web/src/pixel/systems/ActionMapper.ts` — 状态→动画映射、工具名称中文化
+
+4. **角色精灵**
+   - `web/src/pixel/objects/AgentSprite.ts` — 完整角色系统（阴影、精灵体、名字标签、状态圆点、动作气泡）
+   - 支持 idle/working/stuck/offline/celebrate/moving 6种视觉状态
+   - 120px/s 移动速度，自动朝向计算
+
+5. **React 组件**
+   - `web/src/components/PixelWorldView.tsx` — Phaser 容器组件（生命周期管理、状态同步）
+   - `web/src/components/WorldOverlay.tsx` — UI 叠加层（统计、视图切换按钮、选中角色信息）
+   - 修改 `web/src/components/Dashboard.tsx` — 添加 kanban/world 视图切换（默认世界视图）
+
+6. **后端扩展**
+   - `server/store/worldStore.ts` — 世界状态持久化（Agent 位置、区域分配）
+   - `server/routes/world.ts` — 世界 REST API（config、agent 状态、手动移动）
+   - `server/services/worldSimulator.ts` — 状态→动作映射服务（spawn、move、visual、bubble、celebrate、despawn）
+   - 修改 `server/store/types.ts` — 新增 WorldConfig、WorldArea、AgentWorldState 类型
+   - 修改 `server/store/index.ts` — 导出 worldStore + 启动时加载
+   - 修改 `server/app.ts` — 注册 /api/world 路由 + worldSimulator 初始化
+
+### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 前端 TypeScript 编译 | ✅ 零错误 |
+| 前端 Vite 构建 | ✅ 构建成功 |
+| 后端编译（新增文件无错误） | ✅ |
+| 后端启动 | ✅ WorldSimulator 初始化 5 个 agent |
+| 前端启动 | ✅ Vite 开发服务器就绪 |
+| GET /api/world/config | ✅ 返回完整世界配置 |
+| GET /api/health | ✅ 服务正常 |
+| 静态资源访问 | ✅ config.json / background.png / sprites 均可访问 |
+| 视图切换按钮 | ✅ 右上角可切换看板/世界 |
+
+### 架构亮点
+
+- **事件驱动**: React 通过 WorldEventBus 单例与 Phaser 双向通信，零耦合
+- **碰撞系统**: 从 collision.png 解析像素级碰撞网格，支持 isWalkable 查询
+- **状态映射**: Agent 的真实状态（idle/working/stuck/offline）自动映射到角色动画
+- **优雅降级**: config.json 不存在时服务器正常启动，像素世界功能禁用
+- **P0 完成**: 基础渲染 + 静态地图 + 角色精灵 + 视图切换
+
+### 下一步
+
+- P1: 完善状态映射 — WebSocket 事件驱动角色移动和动画切换
+- P2: A* 寻路 — 角色平滑移动到目标区域
+- P3: 相机交互优化 — 点击选择 Agent + 键盘快捷键
+- P4: UI 叠加层完善 — 工具调用气泡、事件通知
+- P5: 制作正式 Tiled 地图（可选）

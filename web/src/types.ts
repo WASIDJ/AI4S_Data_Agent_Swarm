@@ -67,13 +67,18 @@ export interface Task {
   createdAt: number;
   /** Backend fields — optional for frontend compatibility */
   sessionId?: string;
-  pipelineType?: "qa" | "scievo";
+  pipelineType?: "qa" | "scievo" | "autodata";
   inputFiles?: string[];
   eventCount?: number;
   startedAt?: number;
   completedAt?: number;
   stuckReason?: string;
   completedReason?: string;
+  autodataMeta?: {
+    groupId: string;
+    round: number;
+    role: "challenger" | "weak_solver" | "strong_solver" | "judge";
+  };
 }
 
 export interface Event {

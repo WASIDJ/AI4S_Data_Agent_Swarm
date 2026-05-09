@@ -82,8 +82,13 @@ export interface Task {
   completedAt?: number;
   stuckReason?: string;
   lastEventAt?: number;
-  pipelineType?: "qa" | "scievo";
+  pipelineType?: "qa" | "scievo" | "autodata";
   inputFiles?: string[];
+  autodataMeta?: {
+    groupId: string;
+    round: number;
+    role: "challenger" | "weak_solver" | "strong_solver" | "judge";
+  };
 }
 
 // ---- Event -----------------------------------------------------------------
@@ -171,4 +176,48 @@ export interface User {
 
 export interface UsersEnvelope extends SchemaEnvelope<User> {
   users: User[];
+}
+
+// ---- World ------------------------------------------------------------------
+
+export interface WorldArea {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface WorldConfig {
+  backgroundImage: string;
+  collisionImage: string;
+  backgroundWidth: number;
+  backgroundHeight: number;
+  tileWidth: number;
+  tileHeight: number;
+  mapWidth: number;
+  mapHeight: number;
+  defaultSpritesheet: string;
+  areas: WorldArea[];
+  tagAreaMapping: Record<string, string>;
+  agentSpriteMapping: Record<string, string>;
+  agentSlots: Record<string, { x: number; y: number }[]>;
+}
+
+export interface AgentWorldState {
+  agentId: string;
+  currentAreaId: string;
+  position: { x: number; y: number };
+  facing: "left" | "right" | "up" | "down";
+  visualState: "idle" | "working" | "stuck" | "offline" | "celebrate";
+  actionLabel: string | null;
+  updatedAt: number;
+}
+
+export interface WorldStateEnvelope {
+  _schema_version: number;
+  agents: AgentWorldState[];
 }

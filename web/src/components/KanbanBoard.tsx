@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   GripVertical,
   Clock,
+  RotateCcw,
 } from "lucide-react";
 import type { Task, Agent } from "../types";
 import { PRIORITY_COLORS, PRIORITY_LABELS } from "../types";
@@ -28,6 +29,7 @@ interface Props {
   onCreateTask: (agentId?: string) => void;
   onEditTask: (task: Task) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  onOpenAutodata?: () => void;
 }
 
 const COLUMNS = [
@@ -362,6 +364,7 @@ export default function KanbanBoard({
   onCreateTask,
   onEditTask,
   setTasks,
+  onOpenAutodata,
 }: Props) {
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
@@ -429,6 +432,19 @@ export default function KanbanBoard({
           <Workflow size={12} style={{ color: "#ffa27a" }} />
           <span>流水线</span>
         </button>
+        {onOpenAutodata && (
+          <button
+            onClick={onOpenAutodata}
+            className="flex items-center gap-1.5 text-xs py-1 px-2.5 rounded-lg transition-all ml-1"
+            style={{
+              border: "1px solid var(--border-medium)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <RotateCcw size={12} style={{ color: "#ffa27a" }} />
+            <span>Autodata</span>
+          </button>
+        )}
 
         <div className="flex-1" />
 

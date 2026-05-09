@@ -1,0 +1,336 @@
+import Phaser from "phaser";
+import type { WorldConfig, AgentWorldData } from "../types";
+import { MapManager } from "../systems/MapManager";
+import { CameraController } from "../systems/CameraController";
+import { worldEventBus } from "../systems/WorldEventBus";
+import { AgentSprite } from "../objects/AgentSprite";
+
+/**
+ * All sprite sheet keys that need animations registered.
+ * Each key maps to a loaded spritesheet in BootScene.
+ */
+const SPRITE_KEYS = [
+  "character-default",
+  "character-001",
+  "character-002",
+] as const;
+
+export class WorldScene extends Phaser.Scene {
+  private cameraController!: CameraController;
+  private worldConfig!: WorldConfig;
+
+  /** Agent sprites indexed by agentId */
+  private agents: Map<string, AgentSprite> = new Map();
+
+  /** Unsubscribe functions for event bus */
+  private cleanups: Array<() => void> = [];
+
+  constructor() {
+    super({ key: "WorldScene" });
+  }
+
+  create(): void {
+    this.worldConfig = this.cache.json.get("world-config") as WorldConfig;
+
+    // --- Background ---
+    this.add.image(0, 0, "world-bg").setOrigin(0, 0);
+
+    // --- Systems ---
+    // MapManager parses collision grid from collision.png texture.
+    // Stored in scene data for access by agents during movement / pathfinding.
+    const mapManager = new MapManager(this, this.worldConfig);
+    this.data.set("mapManager", mapManager);
+    this.cameraController = new CameraController(this);
+
+    // --- Camera: fit entire map into viewport ---
+    this.cameraController.fitMapToViewport(
+      this.worldConfig.backgroundWidth,
+      this.worldConfig.backgroundHeight
+    );
+
+    // --- Register sprite animations for all character sheets ---
+    this.registerAnimations();
+
+    // --- Set camera world bounds ---
+    this.cameras.main.setBounds(
+      0,
+      0,
+      this.worldConfig.backgroundWidth,
+      this.worldConfig.backgroundHeight
+    );
+
+    // --- Listen to React events ---
+    this.setupEventListeners();
+
+    // --- Draw area labels ---
+    this.drawAreaLabels();
+
+    // --- Notify React that the scene is ready ---
+    worldEventBus.emit("scene:ready", undefined);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Animation registration
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Register animations for every loaded spritesheet.
+   * Keys follow the pattern: `{spriteKey}-{animName}` so that
+   * AgentSprite.playAnimation() can find them.
+   *
+   * Frame layout (6 cols x 5 rows, 170x204 per frame):
+   *   Row 0: Walk-L   (frames 0-5)
+   *   Row 1: Walk-D   (frames 6-11)
+   *   Row 2: Walk-U   (frames 12-17)
+   *   Row 3: Idle     (frames 18-21: down, up, left, right)
+   *   Row 4: Work-D   (frames 24-29)
+   */
+  private registerAnimations(): void {
+    for (const spriteKey of SPRITE_KEYS) {
+      const prefix = spriteKey;
+
+      // Walk Left — Row 0 (frames 0-5)
+      this.anims.create({
+        key: `${prefix}-walk-left`,
+        frames: this.anims.generateFrameNumbers(spriteKey as string, {
+          start: 0,
+          end: 5,
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+
+      // Walk Down — Row 1 (frames 6-11)
+      this.anims.create({
+        key: `${prefix}-walk-down`,
+        frames: this.anims.generateFrameNumbers(spriteKey as string, {
+          start: 6,
+          end: 11,
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+
+      // Walk Up — Row 2 (frames 12-17)
+      this.anims.create({
+        key: `${prefix}-walk-up`,
+        frames: this.anims.generateFrameNumbers(spriteKey as string, {
+          start: 12,
+          end: 17,
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+
+      // Idle — Row 3 (frames 18-21)
+      this.anims.create({
+        key: `${prefix}-idle-down`,
+        frames: [{ key: spriteKey as string, frame: 18 }],
+        frameRate: 1,
+      });
+      this.anims.create({
+        key: `${prefix}-idle-up`,
+        frames: [{ key: spriteKey as string, frame: 19 }],
+        frameRate: 1,
+      });
+      this.anims.create({
+        key: `${prefix}-idle-left`,
+        frames: [{ key: spriteKey as string, frame: 20 }],
+        frameRate: 1,
+      });
+      this.anims.create({
+        key: `${prefix}-idle-right`,
+        frames: [{ key: spriteKey as string, frame: 21 }],
+        frameRate: 1,
+      });
+
+      // Work Down — Row 4 (frames 24-29)
+      this.anims.create({
+        key: `${prefix}-work-down`,
+        frames: this.anims.generateFrameNumbers(spriteKey as string, {
+          start: 24,
+          end: 29,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Area labels
+  // ---------------------------------------------------------------------------
+
+  private drawAreaLabels(): void {
+    for (const area of this.worldConfig.areas) {
+      const centerX = area.x + area.width / 2;
+      const centerY = area.y + 16;
+
+      this.add
+        .text(centerX, centerY, area.name, {
+          fontSize: "14px",
+          color: "#ffffff",
+          backgroundColor: "#00000066",
+          padding: { x: 6, y: 3 },
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(1);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Event bus listeners
+  // ---------------------------------------------------------------------------
+
+  private setupEventListeners(): void {
+    const onAgentAdded = (data: AgentWorldData) => this.addAgent(data);
+    const onAgentUpdated = (data: AgentWorldData) => this.updateAgent(data);
+    const onAgentRemoved = (agentId: string) => this.removeAgent(agentId);
+    const onSelectAgent = (agentId: string) => this.focusOnAgent(agentId);
+    const onCameraFocus = (pos: { x: number; y: number }) => {
+      this.cameraController.focusAgent(pos.x, pos.y);
+    };
+
+    const unsub1 = worldEventBus.on("agent:added", onAgentAdded);
+    const unsub2 = worldEventBus.on("agent:updated", onAgentUpdated);
+    const unsub3 = worldEventBus.on("agent:removed", onAgentRemoved);
+    const unsub4 = worldEventBus.on("select:agent", onSelectAgent);
+    const unsub5 = worldEventBus.on("camera:focus", onCameraFocus);
+
+    this.cleanups.push(unsub1, unsub2, unsub3, unsub4, unsub5);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Agent lifecycle
+  // ---------------------------------------------------------------------------
+
+  private addAgent(data: AgentWorldData): void {
+    if (this.agents.has(data.agentId)) {
+      this.updateAgent(data);
+      return;
+    }
+
+    const spriteKey = data.spriteKey || "character-default";
+
+    const agentSprite = new AgentSprite(
+      this,
+      data.agentId,
+      data.agentName,
+      data.x,
+      data.y,
+      spriteKey
+    );
+
+    agentSprite.setDepth(10);
+
+    // Click detection on the container
+    agentSprite.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, 60, 70),
+      Phaser.Geom.Rectangle.Contains
+    );
+    agentSprite.on("pointerdown", () => {
+      worldEventBus.emit("agent:clicked", data.agentId);
+    });
+
+    // Set initial visual state (map from our state names to AgentSprite's state names)
+    agentSprite.setVisualState(this.mapVisualState(data.visualState));
+
+    // If the agent needs to move to a target position, start movement
+    if (data.targetX !== data.x || data.targetY !== data.y) {
+      agentSprite.navigateTo(data.targetX, data.targetY);
+    }
+
+    this.agents.set(data.agentId, agentSprite);
+  }
+
+  private updateAgent(data: AgentWorldData): void {
+    const existing = this.agents.get(data.agentId);
+    if (!existing) {
+      this.addAgent(data);
+      return;
+    }
+
+    // Update name if changed
+    if (existing.agentName !== data.agentName) {
+      existing.setName(data.agentName);
+    }
+
+    // Update sprite key if changed
+    if (data.spriteKey && existing.spriteKey !== data.spriteKey) {
+      existing.setSpriteKey(data.spriteKey);
+    }
+
+    // Map AgentWorldData visual state to AgentSprite visual state
+    const visualState = this.mapVisualState(data.visualState);
+    existing.setVisualState(visualState);
+
+    // Move to target if position changed
+    if (data.targetX !== existing.x || data.targetY !== existing.y) {
+      existing.navigateTo(data.targetX, data.targetY);
+    }
+  }
+
+  /** Map our AgentVisualState to the AgentSprite's visual state enum. */
+  private mapVisualState(
+    state: AgentWorldData["visualState"]
+  ): "idle" | "working" | "stuck" | "offline" | "celebrate" | "moving" {
+    switch (state) {
+      case "idle":
+        return "idle";
+      case "working":
+        return "working";
+      case "stuck":
+        return "stuck";
+      case "offline":
+        return "offline";
+      case "celebrating":
+        return "celebrate";
+      case "walking":
+        return "moving";
+      default:
+        return "idle";
+    }
+  }
+
+  private removeAgent(agentId: string): void {
+    const existing = this.agents.get(agentId);
+    if (!existing) return;
+
+    existing.destroy(true);
+    this.agents.delete(agentId);
+  }
+
+  private focusOnAgent(agentId: string): void {
+    const existing = this.agents.get(agentId);
+    if (!existing) return;
+    this.cameraController.focusAgent(existing.x, existing.y);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Game loop
+  // ---------------------------------------------------------------------------
+
+  update(time: number, delta: number): void {
+    // Drive each AgentSprite's per-frame update (movement, etc.)
+    for (const agent of this.agents.values()) {
+      agent.update(time, delta);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cleanup
+  // ---------------------------------------------------------------------------
+
+  shutdown(): void {
+    for (const cleanup of this.cleanups) {
+      cleanup();
+    }
+    this.cleanups = [];
+    this.cameraController.destroy();
+
+    for (const agent of this.agents.values()) {
+      agent.destroy(true);
+    }
+    this.agents.clear();
+  }
+}

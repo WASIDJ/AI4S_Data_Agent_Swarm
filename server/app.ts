@@ -18,9 +18,12 @@ import { eventsRouter } from "./routes/events.js";
 import { copilotRouter } from "./routes/copilot.js";
 import { filesRouter } from "./routes/files.js";
 import { pipelineRouter } from "./routes/pipeline.js";
+import { autodataRouter } from "./routes/autodata.js";
+import { worldRouter } from "./routes/world.js";
 import { authRouter, userRouter } from "./routes/auth.js";
 import { optionalAuth } from "./middleware/auth.js";
 import { sdkSessionManager } from "./services/sdkSessionManager.js";
+import { worldSimulator } from "./services/worldSimulator.js";
 
 // ---------------------------------------------------------------------------
 // Seed default user
@@ -165,6 +168,8 @@ app.use("/api/tasks", tasksRouter);
 app.use("/api/copilot", copilotRouter);
 app.use("/api/files", filesRouter);
 app.use("/api/pipeline", pipelineRouter);
+app.use("/api/autodata", autodataRouter);
+app.use("/api/world", worldRouter);
 app.use("/", eventsRouter);
 
 // ---------------------------------------------------------------------------
@@ -308,6 +313,16 @@ export async function startServer(overridePort?: number): Promise<void> {
 
   // Initialise WebSocket on the same HTTP server
   initWebSocket(server, MAX_WS_CLIENTS);
+
+  // Initialise world simulator (sync agents into world state)
+  try {
+    worldSimulator.init();
+  } catch (err) {
+    console.warn(
+      "[Agent Swarm] World simulator init skipped (world config not found):",
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   const host = process.env.HOST || "127.0.0.1";
   return new Promise((resolve) => {

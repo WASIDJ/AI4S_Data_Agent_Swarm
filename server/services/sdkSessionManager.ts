@@ -440,6 +440,15 @@ class SDKSessionManager {
       completedReason,
       budgetUsed: totalCostUsd,
     });
+
+    // Autodata 编排回调 — 异步触发，不阻塞当前 finalize
+    if (task.pipelineType === "autodata" && task.autodataMeta) {
+      import("../services/autodataService.js").then((autodataService) => {
+        autodataService.onTaskCompleted(taskId).catch((err) => {
+          console.error(`[Autodata] orchestrator error for task ${taskId}:`, err);
+        });
+      });
+    }
   }
 
   // -----------------------------------------------------------------------

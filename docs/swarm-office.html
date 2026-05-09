@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI4S Data Agent Swarm — Swarm 办公室</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    #game-container { width: 100vw; height: 100vh; position: relative; }
+
+    /* Top bar */
+    .top-bar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px;
+      background: rgba(26,26,46,0.85); backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(200,149,108,0.08);
+    }
+    .top-bar h1 {
+      font-size: 14px; font-weight: 600; color: #e8e0d6;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .top-bar h1 span.badge {
+      font-size: 10px; padding: 2px 8px; border-radius: 10px;
+      background: rgba(255,162,122,0.1); color: #ffa27a;
+      border: 1px solid rgba(255,162,122,0.15);
+    }
+    .top-bar .stats { display: flex; gap: 12px; }
+    .top-bar .stat {
+      font-size: 11px; color: #8a7e74; display: flex; align-items: center; gap: 4px;
+    }
+    .stat .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .dot-green { background: #4ade80; }
+    .dot-blue { background: #60a5fa; }
+    .dot-yellow { background: #fbbf24; }
+
+    /* Bottom info */
+    .bottom-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center; gap: 24px;
+      padding: 8px 16px;
+      background: rgba(26,26,46,0.85); backdrop-filter: blur(6px);
+      border-top: 1px solid rgba(200,149,108,0.08);
+    }
+    .area-tag {
+      font-size: 11px; padding: 3px 10px; border-radius: 6px;
+      background: rgba(200,149,108,0.05); color: #c8956c;
+      border: 1px solid rgba(200,149,108,0.1);
+    }
+
+    /* Legend */
+    .legend {
+      position: absolute; bottom: 48px; right: 16px; z-index: 10;
+      background: rgba(26,26,46,0.9); backdrop-filter: blur(6px);
+      border: 1px solid rgba(200,149,108,0.08); border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .legend h3 { font-size: 10px; color: #8a7e74; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .legend-label { font-size: 11px; color: #c8956c; }
+
+    .loading {
+      position: absolute; inset: 0; z-index: 20;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #1a1a2e; color: #8a7e74;
+      transition: opacity 0.5s;
+    }
+    .loading.hidden { opacity: 0; pointer-events: none; }
+    .loading-spinner {
+      width: 32px; height: 32px; border: 2px solid rgba(200,149,108,0.1);
+      border-top-color: #ffa27a; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="loading" id="loading">
+      <div class="loading-spinner"></div>
+      <div style="font-size: 13px;">正在加载 Swarm 办公室...</div>
+    </div>
+
+    <div class="top-bar">
+      <h1>
+        🐝 Swarm 办公室
+        <span class="badge">Live</span>
+      </h1>
+      <div class="stats">
+        <div class="stat"><div class="dot dot-green"></div> 5 蜂蜂在线</div>
+        <div class="stat"><div class="dot dot-blue"></div> 0 工作中</div>
+        <div class="stat"><div class="dot dot-yellow"></div> 0 空闲</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <h3>区域</h3>
+      <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div><span class="legend-label">花粉大厅 — 休息区</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div><span class="legend-label">编程蜂巢 — 工作站</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div><span class="legend-label">服务器蜂房 — 部署区</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div><span class="legend-label">蜂后会议室 — 协作区</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div><span class="legend-label">花蜜图书馆 — 文档区</span></div>
+    </div>
+
+    <div class="bottom-bar">
+      <span class="area-tag">拖拽平移</span>
+      <span class="area-tag">滚轮缩放</span>
+      <span class="area-tag">点击选择蜂蜂</span>
+      <span class="area-tag">AI4S Data Agent Swarm v0.1</span>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@4.1.0/dist/phaser.min.js"></script>
+  <script>
+    // ── Config ──
+    const CONFIG_URL = 'https://raw.githubusercontent.com/GitHub-Ninghai/AI4S_Data_Agent_Swarm/main/web/public/assets/world/config.json';
+    const ASSETS_BASE = 'https://raw.githubusercontent.com/GitHub-Ninghai/AI4S_Data_Agent_Swarm/main/web/public/assets/world/';
+
+    const SPRITE_KEYS = ['character-default', 'character-001', 'character-002'];
+    const FRAME_W = 170, FRAME_H = 204;
+
+    // ── Demo agents ──
+    const DEMO_AGENTS = [
+      { id: 'a1', name: '论文爬取蜂', sprite: 'character-001', area: 'lobby', slot: 0, state: 'idle' },
+      { id: 'a2', name: 'PDF解析蜂', sprite: 'character-002', area: 'workstation', slot: 0, state: 'working' },
+      { id: 'a3', name: '数据合成蜂', sprite: 'character-default', area: 'workstation', slot: 1, state: 'working' },
+      { id: 'a4', name: '质检蜂', sprite: 'character-001', area: 'meeting-room', slot: 0, state: 'idle' },
+      { id: 'a5', name: '流程编排蜂', sprite: 'character-002', area: 'library', slot: 0, state: 'idle' },
+    ];
+
+    let worldConfig = null;
+
+    // ── BootScene ──
+    class BootScene extends Phaser.Scene {
+      constructor() { super('Boot'); }
+
+      preload() {
+        const barW = 300, barH = 8;
+        const cx = this.cameras.main.width / 2;
+        const cy = this.cameras.main.height / 2;
+        const bg = this.add.graphics().fillStyle(0x222244).fillRect(cx - barW/2, cy, barW, barH);
+        const bar = this.add.graphics();
+
+        this.load.on('progress', (v) => {
+          bar.clear().fillStyle(0xffa27a).fillRect(cx - barW/2, cy, barW * v, barH);
+        });
+
+        this.load.image('world-bg', ASSETS_BASE + 'background.png');
+        this.load.image('world-collision', ASSETS_BASE + 'collision.png');
+
+        for (const key of SPRITE_KEYS) {
+          this.load.spritesheet(key, ASSETS_BASE + 'sprites/' + key.replace('character-','character-') + '.png', {
+            frameWidth: FRAME_W, frameHeight: FRAME_H
+          });
+        }
+      }
+
+      create() {
+        this.scene.start('World');
+      }
+    }
+
+    // ── WorldScene ──
+    class WorldScene extends Phaser.Scene {
+      constructor() { super('World'); }
+      agentSprites = new Map();
+
+      create() {
+        // Background
+        this.add.image(0, 0, 'world-bg').setOrigin(0, 0);
+
+        // Camera bounds
+        this.cameras.main.setBounds(0, 0, 2752, 1536);
+        this.fitCamera();
+
+        // Register animations
+        for (const key of SPRITE_KEYS) {
+          this.anims.create({ key: key + '-walk-left', frames: this.anims.generateFrameNumbers(key, { start: 0, end: 5 }), frameRate: 8, repeat: -1 });
+          this.anims.create({ key: key + '-walk-down', frames: this.anims.generateFrameNumbers(key, { start: 6, end: 11 }), frameRate: 8, repeat: -1 });
+          this.anims.create({ key: key + '-walk-up', frames: this.anims.generateFrameNumbers(key, { start: 12, end: 17 }), frameRate: 8, repeat: -1 });
+          this.anims.create({ key: key + '-idle-down', frames: [{ key, frame: 18 }] });
+          this.anims.create({ key: key + '-idle-up', frames: [{ key, frame: 19 }] });
+          this.anims.create({ key: key + '-work-down', frames: this.anims.generateFrameNumbers(key, { start: 24, end: 29 }), frameRate: 6, repeat: -1 });
+        }
+
+        // Create demo agents
+        for (const agent of DEMO_AGENTS) {
+          this.createAgent(agent);
+        }
+
+        // Camera controls
+        this.setupCameraControls();
+
+        // Hide loading
+        document.getElementById('loading').classList.add('hidden');
+      }
+
+      createAgent(agent) {
+        const slots = {
+          'lobby': [{ x: 200, y: 300 }, { x: 400, y: 400 }, { x: 300, y: 550 }],
+          'workstation': [{ x: 850, y: 300 }, { x: 1100, y: 300 }, { x: 1350, y: 300 }, { x: 1600, y: 300 }],
+          'server-room': [{ x: 2200, y: 250 }],
+          'meeting-room': [{ x: 2250, y: 750 }, { x: 2400, y: 800 }],
+          'library': [{ x: 2250, y: 1200 }],
+        };
+
+        const areaSlots = slots[agent.area] || slots['lobby'];
+        const slot = areaSlots[agent.slot % areaSlots.length];
+
+        const container = this.add.container(slot.x, slot.y);
+        container.setScale(0.35);
+
+        // Shadow
+        const shadow = this.add.ellipse(0, 0, 50, 16, 0x000000, 0.2);
+        container.add(shadow);
+
+        // Body
+        const body = this.add.sprite(0, -70, agent.sprite).setOrigin(0.5, 0.85);
+        const animKey = agent.state === 'working' ? agent.sprite + '-work-down' : agent.sprite + '-idle-down';
+        body.play(animKey);
+        container.add(body);
+
+        // Name label
+        const nameBg = this.add.graphics().fillStyle(0x000000, 0.4).fillRoundedRect(-30, -130, 60, 16, 3);
+        container.add(nameBg);
+        const name = this.add.text(0, -122, agent.name, { fontSize: '10px', color: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
+        container.add(name);
+
+        // Status dot
+        const dotColor = agent.state === 'working' ? 0x60a5fa : 0x4ade80;
+        const dot = this.add.circle(-22, -122, 3, dotColor);
+        container.add(dot);
+
+        // Idle breathing animation
+        if (agent.state === 'idle') {
+          this.tweens.add({ targets: body, scaleY: 1.02, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
+
+        // Click handler
+        container.setSize(60, 80);
+        container.setInteractive();
+        container.on('pointerdown', () => {
+          this.cameras.main.pan(container.x, container.y, 600, 'Quad.easeInOut', true, (cam, progress) => {
+            if (progress >= 1) cam.setZoom(1.5);
+          });
+        });
+
+        this.agentSprites.set(agent.id, container);
+      }
+
+      fitCamera() {
+        const cam = this.cameras.main;
+        const vw = cam.width, vh = cam.height;
+        const mw = 2752, mh = 1536;
+        const scale = Math.min(vw / mw, vh / mh) * 0.95;
+        cam.setZoom(scale);
+        cam.centerOn(mw / 2, mh / 2);
+      }
+
+      setupCameraControls() {
+        let dragging = false, startX, startY, startScrollX, startScrollY;
+
+        this.input.on('pointerdown', (pointer) => {
+          if (pointer.rightButtonDown() || (pointer.leftButtonDown() && !this.agentSprites.has(pointer.downElement?.parentElement))) {
+            dragging = true;
+            startX = pointer.x; startY = pointer.y;
+            startScrollX = this.cameras.main.scrollX;
+            startScrollY = this.cameras.main.scrollY;
+          }
+        });
+
+        this.input.on('pointermove', (pointer) => {
+          if (!dragging) return;
+          const zoom = this.cameras.main.zoom;
+          this.cameras.main.scrollX = startScrollX - (pointer.x - startX) / zoom;
+          this.cameras.main.scrollY = startScrollY - (pointer.y - startY) / zoom;
+        });
+
+        this.input.on('pointerup', () => { dragging = false; });
+
+        this.input.on('wheel', (pointer, gos, dx, dy) => {
+          const cam = this.cameras.main;
+          const newZoom = Phaser.Math.Clamp(cam.zoom - dy * 0.001, 0.3, 2.0);
+          cam.setZoom(newZoom);
+        });
+
+        // Double-click to reset
+        this.input.on('pointerdown', (pointer) => {
+          if (pointer.getDuration() < 300 && pointer.getDistance() < 5) {
+            // Could detect double click but keep simple
+          }
+        });
+      }
+
+      update(time, delta) {
+        // Future: agent movement updates
+      }
+    }
+
+    // ── Launch ──
+    const game = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: 'game-container',
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundColor: '#1a1a2e',
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
+      scene: [BootScene, WorldScene],
+      pixelArt: true,
+      roundPixels: true,
+      antialias: false,
+    });
+  </script>
+</body>
+</html>

@@ -58,6 +58,7 @@ function AppRoutes() {
   const [preselectAgentId, setPreselectAgentId] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showAutodataModal, setShowAutodataModal] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -326,6 +327,13 @@ function AppRoutes() {
       setUser={setUser}
       setShowUserModal={setShowUserModal}
       onLogout={handleLogout}
+      showAutodataModal={showAutodataModal}
+      onOpenAutodata={() => setShowAutodataModal(true)}
+      onCloseAutodata={() => setShowAutodataModal(false)}
+      onAutodataCreated={async () => {
+        await refreshTasks();
+        await refreshAgents();
+      }}
     />
   );
 

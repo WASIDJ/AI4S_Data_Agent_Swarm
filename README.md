@@ -74,7 +74,9 @@ docker compose up --build -d
 
 ## 主界面
 
-三栏布局：**Agent 面板**（左） · **任务看板**（中） · **详情面板**（右）
+三栏布局：**Agent 面板**（左） · **Swarm 办公室 / 任务看板**（中） · **详情面板**（右）
+
+> 🐝 **[在线体验 Swarm 办公室](https://github-ninghai.github.io/AI4S_Data_Agent_Swarm/swarm-office.html)** — 像素风蜜蜂工作室实时预览
 
 <table>
   <tr>
@@ -86,7 +88,7 @@ docker compose up --build -d
     <td><img src="screenshots/auth-login.png" width="420" /></td>
   </tr>
   <tr>
-    <td align="center"><b>主界面</b></td>
+    <td align="center"><b>Swarm 办公室（新）</b></td>
     <td align="center"><b>Agent 详情</b></td>
   </tr>
   <tr>
@@ -113,10 +115,11 @@ docker compose up --build -d
 
 功能特性：
 
+- **Swarm 办公室** — 像素风蜜蜂工作室，Agent 实时位置与状态可视化（Phaser 4）
+- **看板视图** — Todo / Running / Done / Stuck 四列拖拽，一键切换
 - **Landing Page** — 项目介绍与登录入口
 - **登录/注册** — JWT 认证，支持账号密码登录
 - **项目切换** — 顶部项目下拉菜单，支持新建项目
-- **看板视图** — Todo / Running / Done / Stuck 四列拖拽
 - **实时更新** — WebSocket 推送任务状态变更
 - **Copilot 助手** — 右侧 AI 对话面板
 
@@ -127,7 +130,7 @@ docker compose up --build -d
 | 层 | 技术 |
 |----|------|
 | 后端 | Express 4 + ws 8 + @anthropic-ai/claude-agent-sdk |
-| 前端 | React 19 + Vite 6 + TypeScript 5.7 + Tailwind CSS |
+| 前端 | React 19 + Vite 6 + TypeScript 5.7 + Tailwind CSS + Phaser 4 |
 | 认证 | JWT（登录/注册/个人资料） |
 | UI 组件 | shadcn/ui + Radix UI + Lucide Icons |
 | 存储 | JSON 文件（无数据库） |
@@ -145,9 +148,10 @@ server/
   store/           # JSON 持久化层
   middleware/       # JWT 认证中间件
 web/
-  src/components/  # UI 组件（Dashboard, TopBar, KanbanBoard, AgentPanel...）
+  src/components/  # UI 组件（Dashboard, TopBar, KanbanBoard, PixelWorldView, AgentPanel...）
   src/components/ui/    # shadcn/ui 基础组件
   src/components/modals/ # 弹窗（AgentForm, TaskForm, UserProfile）
+  src/pixel/       # Phaser 像素世界模块（scenes, systems, objects）
   src/api/         # REST + WebSocket 适配层
   src/hooks/       # React hooks
 data/              # JSON 数据存储
@@ -166,6 +170,18 @@ cd server && npx vitest    # 运行测试
 ---
 
 ## 近期更新
+
+### 2026-05-09
+
+- **Swarm 办公室** — 集成 Phaser 4，将中间看板区域替换为像素风蜜蜂工作室
+- **角色可视化** — 每个 Agent 对应一只机器人蜜蜂角色，实时展示位置与状态动画
+- **碰撞系统** — 从 collision.png 解析像素级碰撞网格，角色不会穿墙
+- **5 大区域** — 花粉大厅（休息）、编程蜂巢（工作站）、服务器蜂房、蜂后会议室、花蜜图书馆
+- **6 种动画** — idle / working / stuck / offline / celebrate / moving
+- **视图切换** — 一键在看板与 Swarm 办公室之间切换
+- **拖拽创建** — 从左侧拖拽 Agent 到中间区域即可创建任务（两种视图均支持）
+- **后端扩展** — 新增 World REST API + WorldSimulator 状态映射服务
+- **独立展示页** — `docs/swarm-office.html` 可直接在浏览器打开体验
 
 ### 2026-05-07
 

@@ -189,6 +189,11 @@ interface BackendTask {
   lastEventAt?: number;
   pipelineType?: string;
   inputFiles?: string[];
+  autodataMeta?: {
+    groupId: string;
+    round: number;
+    role: "challenger" | "weak_solver" | "strong_solver" | "judge";
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +317,14 @@ function mapTaskFromBackend(raw: BackendTask): Task {
     turnCount: raw.turnCount,
     budgetUsed: raw.budgetUsed,
     createdAt: raw.createdAt,
+    ...(raw.autodataMeta ? { autodataMeta: raw.autodataMeta } : {}),
+    ...(raw.pipelineType ? { pipelineType: raw.pipelineType as any } : {}),
+    ...(raw.inputFiles ? { inputFiles: raw.inputFiles } : {}),
+    ...(raw.completedReason ? { completedReason: raw.completedReason } : {}),
+    ...(raw.startedAt ? { startedAt: raw.startedAt } : {}),
+    ...(raw.completedAt ? { completedAt: raw.completedAt } : {}),
+    ...(raw.stuckReason ? { stuckReason: raw.stuckReason } : {}),
+    ...(raw.eventCount !== undefined ? { eventCount: raw.eventCount } : {}),
   };
 }
 
@@ -447,8 +460,13 @@ export const AgentApi = {
   async testConnection(
     model: string,
     apiKey: string,
-    apiBaseUrl: string,
-  ): Promise<{ ok: boolean; model?: string; message?: string; error?: string }> {
+    apiBaseUrl: string
+  ): Promise<{
+    ok: boolean;
+    model?: string;
+    message?: string;
+    error?: string;
+  }> {
     return request("POST", "/api/agents/test-connection", {
       model,
       apiKey,
@@ -737,6 +755,51 @@ export const UserApi = {
 };
 
 // ===========================================================================
+// API: Files
+// ===========================================================================
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  path: string;
+  relativePath: string;
+  size: number;
+  source: "uploads" | "papers";
+}
+
+export const FileApi = {
+  /** GET /api/files/:projectId — list PDF files in project */
+  async list(projectId: string): Promise<ProjectFile[]> {
+    const res = await request<{ files: ProjectFile[] }>(
+      "GET",
+      `/api/files/${projectId}`
+    );
+    return res.files ?? [];
+  },
+
+  /** POST /api/files/upload — upload PDFs */
+  async upload(projectId: string, files: File[]): Promise<ProjectFile[]> {
+    const formData = new FormData();
+    formData.append("projectId", projectId);
+    for (const f of files) {
+      formData.append("files", f);
+    }
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${API_BASE_URL}/api/files/upload`, {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Upload failed: ${res.status}`);
+    }
+    const data = (await res.json()) as { files: ProjectFile[] };
+    return data.files ?? [];
+  },
+};
+
+// ===========================================================================
 // API: Tool Approval
 // ===========================================================================
 
@@ -890,3 +953,85 @@ export function createWebSocket(
 
   return ws;
 }
+
+// ===========================================================================
+// API: Autodata
+// ===========================================================================
+
+export interface AutodataRoleModel {
+  model: string;
+  apiKey: string;
+  apiBaseUrl: string;
+}
+
+export interface AutodataGroupRound {
+  round: number;
+  challengerTaskId: string;
+  weakSolverTaskId?: string;
+  strongSolverTaskId?: string;
+  judgeTaskId?: string;
+  weakDone: boolean;
+  strongDone: boolean;
+  scores?: {
+    weakScore: number;
+    strongScore: number;
+    gap: number;
+    passed: boolean;
+  };
+  taskStatuses?: Record<string, { id: string; status: string }>;
+}
+
+export interface AutodataGroup {
+  groupId: string;
+  projectId: string;
+  inputFiles: string[];
+  status: "running" | "accepted" | "rejected" | "error";
+  currentRound: number;
+  maxRounds: number;
+  createdAt: number;
+  completedAt?: number;
+  challengerAgentId: string;
+  weakSolverAgentId: string;
+  strongSolverAgentId: string;
+  judgeAgentId: string;
+  rounds: AutodataGroupRound[];
+  lastFailureReason?: string;
+}
+
+export const AutodataApi = {
+  /** POST /api/autodata/create */
+  async create(params: {
+    projectId: string;
+    inputFiles: string[];
+    maxRounds?: number;
+    challenger: AutodataRoleModel;
+    weakSolver: AutodataRoleModel;
+    strongSolver: AutodataRoleModel;
+    judge: AutodataRoleModel;
+  }): Promise<{ group: AutodataGroup; firstTaskId: string }> {
+    return request("POST", "/api/autodata/create", params);
+  },
+
+  /** GET /api/autodata/groups */
+  async listGroups(): Promise<AutodataGroup[]> {
+    const res = await request<{ groups: AutodataGroup[] }>(
+      "GET",
+      "/api/autodata/groups"
+    );
+    return res.groups ?? [];
+  },
+
+  /** GET /api/autodata/groups/:id */
+  async getGroup(id: string): Promise<AutodataGroup> {
+    const res = await request<{ group: AutodataGroup }>(
+      "GET",
+      `/api/autodata/groups/${id}`
+    );
+    return res.group;
+  },
+
+  /** POST /api/autodata/groups/:id/retry */
+  async retry(id: string): Promise<{ group: AutodataGroup; taskId?: string }> {
+    return request("POST", `/api/autodata/groups/${id}/retry`);
+  },
+};

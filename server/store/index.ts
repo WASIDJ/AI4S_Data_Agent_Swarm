@@ -84,6 +84,8 @@ export * as taskStore from "./taskStore.js";
 export * as sessionStore from "./sessionStore.js";
 export * as projectStore from "./projectStore.js";
 export * as userStore from "./userStore.js";
+export * as autodataStore from "./autodataStore.js";
+export * as worldStore from "./worldStore.js";
 
 // ---------------------------------------------------------------------------
 // Initialisation
@@ -106,12 +108,16 @@ export async function loadAllStores(): Promise<void> {
   const { loadSessions } = await import("./sessionStore.js");
   const { loadProjects } = await import("./projectStore.js");
   const { loadUsers } = await import("./userStore.js");
+  const { loadGroups } = await import("./autodataStore.js");
+  const { loadWorldState } = await import("./worldStore.js");
 
   loadAgents();
   loadTasks();
   loadSessions();
   loadProjects();
   loadUsers();
+  loadGroups();
+  loadWorldState();
 }
 
 /**
