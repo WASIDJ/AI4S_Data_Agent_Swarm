@@ -76,7 +76,9 @@ docker compose up --build -d
 
 三栏布局：**Agent 面板**（左） · **Swarm 办公室 / 任务看板**（中） · **详情面板**（右）
 
-> 🐝 **[在线体验 Swarm 办公室](https://github-ninghai.github.io/AI4S_Data_Agent_Swarm/swarm-office.html)** — 像素风蜜蜂工作室实时预览
+> 🐝 **[在线体验 Swarm 办公室](https://github.com/GitHub-Ninghai/AI4S_Data_Agent_Swarm/blob/main/docs/swarm-office.html)** — 下载后在浏览器打开即可体验像素风蜜蜂工作室
+>
+> 启用 GitHub Pages 后可直接在线预览：Settings → Pages → Source 选 `docs/` 文件夹 → Save
 
 <table>
   <tr>
