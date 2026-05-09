@@ -27,7 +27,7 @@ const STATUS_DOT_COLORS: Record<AgentVisualState, number> = {
 };
 
 /** 容器整体缩放（让角色在 32px tile 世界中大小合适） */
-const CONTAINER_SCALE = 0.35;
+const CONTAINER_SCALE = 0.7;
 
 /** 移动速度：像素/秒 */
 const DEFAULT_MOVE_SPEED = 120;
@@ -412,6 +412,11 @@ export class AgentSprite extends Phaser.GameObjects.Container {
     const currentState = this._visualState;
     this._visualState = "idle"; // 重置以强制刷新
     this.setVisualState(currentState);
+  }
+
+  /** Apply a tint color to the body sprite for visual differentiation. */
+  setTint(color: number): void {
+    this.bodySprite.setTint(color);
   }
 
   // ============================================================

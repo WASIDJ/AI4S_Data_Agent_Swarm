@@ -18,12 +18,16 @@ const SPRITE_KEYS = [
 export class WorldScene extends Phaser.Scene {
   private cameraController!: CameraController;
   private worldConfig!: WorldConfig;
+  private mapManager!: MapManager;
 
   /** Agent sprites indexed by agentId */
   private agents: Map<string, AgentSprite> = new Map();
 
   /** Unsubscribe functions for event bus */
   private cleanups: Array<() => void> = [];
+
+  /** Demo wandering timers keyed by agentId */
+  private wanderTimers: Map<string, Phaser.Time.TimerEvent> = new Map();
 
   constructor() {
     super({ key: "WorldScene" });
@@ -39,6 +43,7 @@ export class WorldScene extends Phaser.Scene {
     // MapManager parses collision grid from collision.png texture.
     // Stored in scene data for access by agents during movement / pathfinding.
     const mapManager = new MapManager(this, this.worldConfig);
+    this.mapManager = mapManager;
     this.data.set("mapManager", mapManager);
     this.cameraController = new CameraController(this);
 
@@ -67,6 +72,9 @@ export class WorldScene extends Phaser.Scene {
 
     // --- Notify React that the scene is ready ---
     worldEventBus.emit("scene:ready", undefined);
+
+    // --- Spawn demo bees that wander around ---
+    this.spawnDemoBees();
   }
 
   // ---------------------------------------------------------------------------
@@ -155,6 +163,105 @@ export class WorldScene extends Phaser.Scene {
         repeat: -1,
       });
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Demo bees — random wandering for default scene
+  // ---------------------------------------------------------------------------
+
+  private readonly DEMO_BEES = [
+    {
+      id: "demo-1",
+      name: "论文爬取蜂",
+      sprite: "character-002",
+      tint: 0xffffff,
+    },
+    {
+      id: "demo-2",
+      name: "PDF 解析蜂",
+      sprite: "character-002",
+      tint: 0x99ccff,
+    },
+    {
+      id: "demo-3",
+      name: "数据合成蜂",
+      sprite: "character-002",
+      tint: 0xffcc99,
+    },
+  ];
+
+  /** All walkable area bounding boxes for random target picking */
+  private getWalkableAreas(): { x: number; y: number; w: number; h: number }[] {
+    return this.worldConfig.areas.map(a => ({
+      x: a.x + 32,
+      y: a.y + 48,
+      w: a.width - 64,
+      h: a.height - 80,
+    }));
+  }
+
+  /** Pick a random walkable position inside one of the areas */
+  private randomWalkablePosition(): { x: number; y: number } {
+    const areas = this.getWalkableAreas();
+    // Pick a random area
+    const area = areas[Math.floor(Math.random() * areas.length)];
+    return {
+      x: area.x + Math.random() * area.w,
+      y: area.y + Math.random() * area.h,
+    };
+  }
+
+  private spawnDemoBees(): void {
+    for (const bee of this.DEMO_BEES) {
+      const pos = this.randomWalkablePosition();
+      const sprite = new AgentSprite(
+        this,
+        bee.id,
+        bee.name,
+        pos.x,
+        pos.y,
+        bee.sprite
+      );
+      sprite.setDepth(10);
+      if (bee.tint !== 0xffffff) {
+        sprite.setTint(bee.tint);
+      }
+      sprite.setVisualState("idle");
+      this.agents.set(bee.id, sprite);
+
+      // Start wandering after a short random delay
+      const initialDelay = 500 + Math.random() * 3000;
+      this.time.delayedCall(initialDelay, () => this.wanderTo(bee.id));
+    }
+  }
+
+  /** Send a demo bee to a random position; on arrival, wait then wander again */
+  private wanderTo(agentId: string): void {
+    const sprite = this.agents.get(agentId);
+    if (!sprite) return;
+
+    const target = this.randomWalkablePosition();
+    sprite.navigateTo(target.x, target.y);
+
+    // Set a timer to check arrival and trigger next wander
+    // We poll because we don't have an "arrived" callback
+    const checkArrival = () => {
+      const s = this.agents.get(agentId);
+      if (!s) return;
+      if (!s.isMoving) {
+        // Arrived — wait 1-4 seconds then wander again
+        const wait = 1000 + Math.random() * 3000;
+        const timer = this.time.delayedCall(wait, () => this.wanderTo(agentId));
+        this.wanderTimers.set(agentId, timer);
+      } else {
+        // Still moving, check again in 200ms
+        const timer = this.time.delayedCall(200, checkArrival);
+        this.wanderTimers.set(agentId, timer);
+      }
+    };
+
+    const timer = this.time.delayedCall(300, checkArrival);
+    this.wanderTimers.set(agentId, timer);
   }
 
   // ---------------------------------------------------------------------------
@@ -326,6 +433,10 @@ export class WorldScene extends Phaser.Scene {
       cleanup();
     }
     this.cleanups = [];
+    for (const timer of this.wanderTimers.values()) {
+      timer.destroy();
+    }
+    this.wanderTimers.clear();
     this.cameraController.destroy();
 
     for (const agent of this.agents.values()) {
