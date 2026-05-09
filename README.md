@@ -76,10 +76,6 @@ docker compose up --build -d
 
 三栏布局：**Agent 面板**（左） · **Swarm 办公室 / 任务看板**（中） · **详情面板**（右）
 
-> 🐝 **[在线体验 Swarm 办公室](https://github.com/GitHub-Ninghai/AI4S_Data_Agent_Swarm/blob/main/docs/swarm-office.html)** — 下载后在浏览器打开即可体验像素风蜜蜂工作室
->
-> 启用 GitHub Pages 后可直接在线预览：Settings → Pages → Source 选 `docs/` 文件夹 → Save
-
 <table>
   <tr>
     <td align="center"><b>Landing Page</b></td>
@@ -90,28 +86,10 @@ docker compose up --build -d
     <td><img src="screenshots/auth-login.png" width="420" /></td>
   </tr>
   <tr>
-    <td align="center"><b>Swarm 办公室（新）</b></td>
-    <td align="center"><b>Agent 详情</b></td>
+    <td align="center" colspan="2"><b>Swarm 办公室</b></td>
   </tr>
   <tr>
-    <td><img src="screenshots/01-homepage.png" width="420" /></td>
-    <td><img src="screenshots/08-agent-detail.png" width="420" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>新建任务</b></td>
-    <td align="center"><b>新建智能体</b></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/06-create-task.png" width="420" /></td>
-    <td><img src="screenshots/create-agent-modal.png" width="420" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>项目切换</b></td>
-    <td align="center"><b>用户菜单</b></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/project-dropdown.png" width="420" /></td>
-    <td><img src="screenshots/user-dropdown.png" width="420" /></td>
+    <td colspan="2" align="center"><img src="screenshots/大厅.jpg" width="800" /></td>
   </tr>
 </table>
 
