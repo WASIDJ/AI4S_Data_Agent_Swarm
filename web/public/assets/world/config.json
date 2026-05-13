@@ -1,63 +1,53 @@
 {
   "backgroundImage": "background.png",
   "collisionImage": "collision.png",
-  "backgroundWidth": 2752,
-  "backgroundHeight": 1536,
+  "backgroundWidth": 1448,
+  "backgroundHeight": 1086,
   "tileWidth": 32,
   "tileHeight": 32,
-  "mapWidth": 86,
-  "mapHeight": 48,
+  "mapWidth": 46,
+  "mapHeight": 34,
   "defaultSpritesheet": "sprites/default.png",
   "areas": [
     {
       "id": "lobby",
-      "name": "花粉大厅",
-      "description": "Agent 闲置/休息区域",
+      "name": "花蜜休息区",
+      "description": "休闲/社交区域，沙发和植物",
       "type": "common",
-      "x": 64,
-      "y": 64,
-      "width": 640,
-      "height": 640
+      "x": 28,
+      "y": 28,
+      "width": 562,
+      "height": 432
     },
     {
       "id": "workstation",
-      "name": "编程蜂巢",
-      "description": "4个编程工位",
+      "name": "编程工坊",
+      "description": "3组办公桌椅，编码工作区",
       "type": "workstation",
-      "x": 736,
-      "y": 128,
-      "width": 960,
-      "height": 640
-    },
-    {
-      "id": "server-room",
-      "name": "服务器蜂房",
-      "description": "服务器机柜区",
-      "type": "workstation",
-      "x": 2048,
-      "y": 64,
-      "width": 640,
-      "height": 480
+      "x": 28,
+      "y": 460,
+      "width": 562,
+      "height": 598
     },
     {
       "id": "meeting-room",
-      "name": "蜂后会议室",
-      "description": "圆桌会议室",
+      "name": "蜂后议事厅",
+      "description": "六边形会议桌，科技面板",
       "type": "meeting",
-      "x": 2048,
-      "y": 576,
-      "width": 640,
-      "height": 480
+      "x": 618,
+      "y": 28,
+      "width": 802,
+      "height": 482
     },
     {
-      "id": "library",
-      "name": "花蜜图书馆",
-      "description": "书架/储物/阅读区",
+      "id": "storage",
+      "name": "花蜜储藏室",
+      "description": "储物架、餐桌",
       "type": "common",
-      "x": 2048,
-      "y": 1088,
-      "width": 640,
-      "height": 384
+      "x": 618,
+      "y": 534,
+      "width": 802,
+      "height": 524
     }
   ],
   "tagAreaMapping": {
@@ -65,8 +55,8 @@
     "data": "workstation",
     "test": "workstation",
     "review": "meeting-room",
-    "docs": "library",
-    "deploy": "server-room",
+    "docs": "storage",
+    "deploy": "workstation",
     "_default": "workstation"
   },
   "agentSpriteMapping": {
@@ -76,25 +66,23 @@
   },
   "agentSlots": {
     "lobby": [
-      { "x": 200, "y": 300 },
-      { "x": 400, "y": 400 },
-      { "x": 300, "y": 550 }
+      { "x": 200, "y": 250 },
+      { "x": 350, "y": 350 },
+      { "x": 160, "y": 380 }
     ],
     "workstation": [
-      { "x": 850, "y": 300 },
-      { "x": 1100, "y": 300 },
-      { "x": 1350, "y": 300 },
-      { "x": 1600, "y": 300 }
-    ],
-    "server-room": [
-      { "x": 2200, "y": 250 }
+      { "x": 180, "y": 540 },
+      { "x": 330, "y": 540 },
+      { "x": 180, "y": 660 },
+      { "x": 330, "y": 660 }
     ],
     "meeting-room": [
-      { "x": 2250, "y": 750 },
-      { "x": 2400, "y": 800 }
+      { "x": 750, "y": 350 },
+      { "x": 900, "y": 350 }
     ],
-    "library": [
-      { "x": 2250, "y": 1200 }
+    "storage": [
+      { "x": 750, "y": 800 },
+      { "x": 900, "y": 800 }
     ]
   }
 }

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Agent Swarm 架构图</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0e1a;
+    font-family: 'Noto Sans SC', sans-serif;
+    padding: 40px 60px;
+    min-height: 100vh;
+  }
+
+  .diagram-section {
+    margin-bottom: 60px;
+    page-break-after: always;
+  }
+
+  .diagram-title {
+    color: #e2e8f0;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .diagram-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    margin-bottom: 24px;
+    letter-spacing: 0.3px;
+  }
+
+  .mermaid-wrapper {
+    background: linear-gradient(135deg, #0f1629 0%, #111a2e 100%);
+    border: 1px solid rgba(255,162,122,0.08);
+    border-radius: 16px;
+    padding: 36px 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .mermaid {
+    width: 100%;
+  }
+
+  /* Mermaid overrides for dark theme */
+  .node rect, .node circle, .node polygon {
+    rx: 8;
+    ry: 8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== Diagram 1: System Architecture ========== -->
+<div class="diagram-section" id="d1">
+  <div class="diagram-title">01 / 系统架构总览</div>
+  <div class="diagram-subtitle">Frontend — Server — SDK — Claude Code Sessions 全链路</div>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e3a5f',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'secondaryColor': '#1a2744',
+    'tertiaryColor': '#0f1629',
+    'fontFamily': 'Noto Sans SC, sans-serif',
+    'fontSize': '14px',
+    'nodeBorder': '#3b82f6'
+  }
+}}%%
+graph TB
+    subgraph FE["🖥️  前端 React + Vite"]
+        AP["Agent Panel<br/>智能体面板"]
+        KB["Kanban Board<br/>任务看板"]
+        DP["Detail Panel<br/>详情面板"]
+        CP["Copilot<br/>智能助手"]
+    end
+
+    subgraph SV["⚙️  本地服务 Node.js + Express"]
+        REST["REST API<br/>/api/*"]
+        WS["WebSocket<br/>/ws"]
+        EP["Event Processor<br/>事件处理器"]
+        TM["Task Manager<br/>任务管理器"]
+        SM["SDK Session Manager<br/>会话管理器"]
+        SD["Stuck Detector<br/>卡住检测"]
+        AD["Autodata Service<br/>对抗验证编排"]
+    end
+
+    subgraph STORE["💾  JSON 存储"]
+        AJSON["agents.json"]
+        TJSON["tasks.json"]
+        ADJSON["autodata_groups.json"]
+    end
+
+    subgraph SDK["🔧  Claude Agent SDK"]
+        Q["query()"]
+    end
+
+    subgraph SESSIONS["🤖  Claude Code Sessions"]
+        S1["Session #1<br/>Task T1"]
+        S2["Session #2<br/>Task T2"]
+        S3["Session #3<br/>Task T3"]
+    end
+
+    FE -- "WebSocket + REST" --> SV
+    SV --- STORE
+    SV -- "query()" --> SDK
+    SDK --- S1
+    SDK --- S2
+    SDK --- S3
+    S1 -. "Hook POST /event" .-> SV
+    S2 -. "Hook POST /event" .-> SV
+    S3 -. "Hook POST /event" .-> SV
+    S1 -- "SDK Message Stream" --> SV
+    S2 -- "SDK Message Stream" --> SV
+    S3 -- "SDK Message Stream" --> SV
+
+    style FE fill:#1a2744,stroke:#3b82f6,stroke-width:2px,color:#e2e8f0
+    style SV fill:#1a1f35,stroke:#8b5cf6,stroke-width:2px,color:#e2e8f0
+    style STORE fill:#1a2a1a,stroke:#22c55e,stroke-width:2px,color:#e2e8f0
+    style SDK fill:#2a1a35,stroke:#a855f7,stroke-width:2px,color:#e2e8f0
+    style SESSIONS fill:#2a1a1a,stroke:#f59e0b,stroke-width:2px,color:#e2e8f0
+    </pre>
+  </div>
+</div>
+
+<!-- ========== Diagram 2: Autodata Pipeline ========== -->
+<div class="diagram-section" id="d2">
+  <div class="diagram-title">02 / Autodata 弱-强对抗验证流程</div>
+  <div class="diagram-subtitle">Challenger → Weak/Strong Solver → Judge 迭代循环</div>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e3a5f',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'secondaryColor': '#1a2744',
+    'tertiaryColor': '#0f1629',
+    'fontFamily': 'Noto Sans SC, sans-serif',
+    'fontSize': '14px'
+  }
+}}%%
+graph TB
+    START(["🚀 用户创建 Pipeline"]) --> C["Challenger<br/>生成 QA + Rubric"]
+    C -- "写入 round_N_challenger.json" --> WAIT["⏳ 等待完成"]
+    WAIT --> WS["Weak Solver<br/>回答问题"]
+    WAIT --> SS["Strong Solver<br/>高质量回答"]
+    WS -- "写入 round_N_weak_solver.json" --> JOIN["⏳ 两个 Solver 都完成"]
+    SS -- "写入 round_N_strong_solver.json" --> JOIN
+    JOIN --> J["Judge<br/>按 Rubric 逐维度评分"]
+    J -- "写入 round_N_judge.json" --> EVAL{"📊 计算评分<br/>weakScore ≤ 65%<br/>strongScore ≥ 60%<br/>gap ≥ 20%"}
+
+    EVAL -- "✅ 通过" --> ACCEPT(["🎉 ACCEPTED"])
+    EVAL -- "❌ 未通过" --> CHECK{"达到 maxRounds?"}
+    CHECK -- "是" --> REJECT(["⛔ REJECTED"])
+    CHECK -- "否" --> FEEDBACK["📝 分析失败原因<br/>注入反馈"]
+    FEEDBACK --> C
+
+    style START fill:#1a4a2a,stroke:#22c55e,stroke-width:2px,color:#e2e8f0
+    style C fill:#3a1a4a,stroke:#a855f7,stroke-width:2px,color:#e2e8f0
+    style WS fill:#3a2a1a,stroke:#f59e0b,stroke-width:2px,color:#e2e8f0
+    style SS fill:#1a3a4a,stroke:#06b6d4,stroke-width:2px,color:#e2e8f0
+    style J fill:#1a2a4a,stroke:#3b82f6,stroke-width:2px,color:#e2e8f0
+    style EVAL fill:#2a1a3a,stroke:#8b5cf6,stroke-width:2px,color:#e2e8f0
+    style ACCEPT fill:#1a4a2a,stroke:#22c55e,stroke-width:2px,color:#e2e8f0
+    style REJECT fill:#4a1a1a,stroke:#ef4444,stroke-width:2px,color:#e2e8f0
+    style FEEDBACK fill:#3a2a1a,stroke:#f59e0b,stroke-width:2px,color:#e2e8f0
+    </pre>
+  </div>
+</div>
+
+<!-- ========== Diagram 3: Task State Machine ========== -->
+<div class="diagram-section" id="d3">
+  <div class="diagram-title">03 / Task 状态机</div>
+  <div class="diagram-subtitle">Todo → Running → Done / Stuck / Cancelled</div>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e3a5f',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'fontFamily': 'Noto Sans SC, sans-serif',
+    'fontSize': '14px'
+  }
+}}%%
+stateDiagram-v2
+    [*] --> Todo : 创建任务
+    Todo --> Running : start (SDK query)
+    Running --> Done : SDK ResultMessage
+    Running --> Done : 用户标记完成
+    Running --> Stuck : canUseTool deny
+    Running --> Stuck : 权限等待
+    Running --> Cancelled : 用户取消 (abort stream)
+    Stuck --> Running : 用户消息 (SDK resume)
+    Stuck --> Cancelled : 用户取消 (abort stream)
+    Todo --> Cancelled : 用户取消
+    Done --> [*]
+    Cancelled --> [*]
+    </pre>
+  </div>
+</div>
+
+<!-- ========== Diagram 4: Data Model ========== -->
+<div class="diagram-section" id="d4">
+  <div class="diagram-title">04 / 核心数据模型关系</div>
+  <div class="diagram-subtitle">Agent 1:N Task 1:1 Session — 双通道事件收集</div>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e3a5f',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'fontFamily': 'Noto Sans SC, sans-serif',
+    'fontSize': '14px'
+  }
+}}%%
+erDiagram
+    PROJECT ||--o{ AGENT : "包含"
+    PROJECT ||--o{ TASK : "包含"
+    AGENT ||--o{ TASK : "负责"
+    TASK ||--|| SESSION : "1:1 映射"
+    TASK ||--o{ EVENT : "产生"
+
+    PROJECT {
+        string id PK
+        string name
+        string path
+        string description
+    }
+
+    AGENT {
+        string id PK
+        string name
+        string prompt "系统提示词"
+        string model "模型名称"
+        string provider "claude/glm/deepseek"
+        string status "idle/working/stuck"
+        object stats "统计信息"
+    }
+
+    TASK {
+        string id PK
+        string title
+        string description
+        string status "Todo/Running/Done/Stuck/Cancelled"
+        string pipelineType "qa/scievo/autodata"
+        object autodataMeta "groupId+round+role"
+        number maxTurns
+        number budgetUsed
+    }
+
+    SESSION {
+        string id PK
+        string taskId FK
+        string agentId FK
+        string cwd
+        string status "active/paused/completed"
+    }
+
+    EVENT {
+        string id PK
+        string taskId FK
+        string eventType "SDKAssistant/PreToolUse/PostToolUse"
+        string source "sdk/hook"
+    }
+    </pre>
+  </div>
+</div>
+
+<!-- ========== Diagram 5: Dual Channel Events ========== -->
+<div class="diagram-section" id="d5">
+  <div class="diagram-title">05 / 双通道事件收集架构</div>
+  <div class="diagram-subtitle">SDK Message Stream（主通道）+ Hook POST（补充通道）</div>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e3a5f',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'fontFamily': 'Noto Sans SC, sans-serif',
+    'fontSize': '14px'
+  }
+}}%%
+graph LR
+    subgraph SDK_CHANNEL["🔵 主通道：SDK Message Stream"]
+        SDKQ["SDK query()"] --> SDKI["SDKInit"]
+        SDKQ --> SDKA["SDKAssistant"]
+        SDKQ --> SDKR["SDKResult"]
+    end
+
+    subgraph HOOK_CHANNEL["🟡 补充通道：Claude Hooks"]
+        H1["PreToolUse Hook"] --> HE1["工具调用前事件"]
+        H2["PostToolUse Hook"] --> HE2["工具调用后事件"]
+        H3["Notification Hook"] --> HE3["通知事件"]
+    end
+
+    subgraph PROCESSOR["Event Processor"]
+        DEDUP["去重 (sessionId + timestamp)"]
+        DUR["duration 计算"]
+        STORE_EVENT["存储到 events/*.jsonl"]
+        BROADCAST["WebSocket 广播"]
+    end
+
+    SDK_CHANNEL --> PROCESSOR
+    HOOK_CHANNEL -- "POST /event" --> PROCESSOR
+    DEDUP --> DUR --> STORE_EVENT --> BROADCAST
+
+    style SDK_CHANNEL fill:#1a2744,stroke:#3b82f6,stroke-width:2px,color:#e2e8f0
+    style HOOK_CHANNEL fill:#2a2a1a,stroke:#f59e0b,stroke-width:2px,color:#e2e8f0
+    style PROCESSOR fill:#1a2a2a,stroke:#06b6d4,stroke-width:2px,color:#e2e8f0
+    </pre>
+  </div>
+</div>
+
+<!-- ========== Diagram 6: Autodata Timing ========== -->
+<div class="diagram-section" id="d6">
+  <div class="diagram-title">06 / Autodata 自动编排时序</div>
+  <div class="diagram-subtitle">Task 完成后自动触发下一步，无需手动干预</div>
+  <div class="mermaid-wrapper">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'themeVariables': {
+    'primaryColor': '#1e3a5f',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#3b82f6',
+    'lineColor': '#64748b',
+    'fontFamily': 'Noto Sans SC, sans-serif',
+    'fontSize': '14px'
+  }
+}}%%
+sequenceDiagram
+    participant U as 用户
+    participant API as /api/autodata
+    participant SVC as autodataService
+    participant TM as taskManager
+    participant SM as sdkSessionManager
+    participant Agent as Agent (各角色)
+
+    U->>API: POST /create
+    API->>SVC: createAutodataPipeline()
+    SVC->>TM: startTask(Challenger)
+    TM->>SM: startTask()
+    SM->>Agent: Challenger 生成 QA+Rubric
+    Agent-->>SM: stream 完成
+    SM->>SVC: onTaskCompleted(challenger)
+    Note over SVC: handleChallengerDone
+    SVC->>TM: startTask(Weak Solver)
+    SVC->>TM: startTask(Strong Solver)
+    Note over Agent: 两个 Solver 并行执行
+    SM->>Agent: Weak Solver 回答
+    SM->>Agent: Strong Solver 回答
+    SM->>SVC: onTaskCompleted(solver) ×2
+    Note over SVC: handleSolverDone (两次)
+    SVC->>TM: startTask(Judge)
+    SM->>Agent: Judge 评分
+    SM->>SVC: onTaskCompleted(judge)
+    Note over SVC: handleJudgeDone
+    SVC->>SVC: 计算 scores, 判断通过?
+    alt 通过
+        SVC-->>U: WebSocket: autodata_accepted
+    else 未通过且有剩余轮次
+        SVC->>TM: startTask(下一轮 Challenger)
+        Note over SVC: 注入反馈到 prompt
+    else 达到 maxRounds
+        SVC-->>U: WebSocket: autodata_rejected
+    end
+    </pre>
+  </div>
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#1e3a5f',
+    primaryTextColor: '#e2e8f0',
+    primaryBorderColor: '#3b82f6',
+    lineColor: '#64748b',
+    secondaryColor: '#1a2744',
+    tertiaryColor: '#0f1629',
+    fontFamily: 'Noto Sans SC, sans-serif',
+    fontSize: '14px',
+    mainBkg: '#1e3a5f',
+    nodeBorder: '#3b82f6',
+    clusterBkg: '#111a2e',
+    clusterBorder: '#3b82f680',
+    titleColor: '#e2e8f0',
+    edgeLabelBackground: '#111a2e',
+    nodeTextColor: '#e2e8f0'
+  },
+  flowchart: {
+    htmlLabels: true,
+    curve: 'basis',
+    padding: 20,
+    nodeSpacing: 40,
+    rankSpacing: 50
+  },
+  sequence: {
+    actorMargin: 80,
+    mirrorActors: false,
+    messageAlign: 'center'
+  }
+});
+
+// Wait for render then signal ready
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.title = 'READY';
+  }, 3000);
+});
+</script>
+</body>
+</html>

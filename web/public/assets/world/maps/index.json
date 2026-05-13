@@ -1,0 +1,17 @@
+{
+  "maps": [
+    {
+      "id": "map-1",
+      "name": "蜂巢科技园",
+      "description": "2752x1536 大型蜂巢办公空间",
+      "preview": "map-1/background.png"
+    },
+    {
+      "id": "map-2",
+      "name": "温馨工作室",
+      "description": "1448x1086 紧凑型办公空间",
+      "preview": "map-2/background.png"
+    }
+  ],
+  "activeMap": "map-2"
+}

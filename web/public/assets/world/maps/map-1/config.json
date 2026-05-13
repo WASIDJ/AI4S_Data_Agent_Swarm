@@ -1,0 +1,100 @@
+{
+  "backgroundImage": "background.png",
+  "collisionImage": "collision.png",
+  "backgroundWidth": 2752,
+  "backgroundHeight": 1536,
+  "tileWidth": 32,
+  "tileHeight": 32,
+  "mapWidth": 86,
+  "mapHeight": 48,
+  "defaultSpritesheet": "sprites/default.png",
+  "areas": [
+    {
+      "id": "lobby",
+      "name": "花粉大厅",
+      "description": "Agent 闲置/休息区域",
+      "type": "common",
+      "x": 64,
+      "y": 64,
+      "width": 640,
+      "height": 640
+    },
+    {
+      "id": "workstation",
+      "name": "编程蜂巢",
+      "description": "4个编程工位",
+      "type": "workstation",
+      "x": 736,
+      "y": 128,
+      "width": 960,
+      "height": 640
+    },
+    {
+      "id": "server-room",
+      "name": "服务器蜂房",
+      "description": "服务器机柜区",
+      "type": "workstation",
+      "x": 2048,
+      "y": 64,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "id": "meeting-room",
+      "name": "蜂后会议室",
+      "description": "圆桌会议室",
+      "type": "meeting",
+      "x": 2048,
+      "y": 576,
+      "width": 640,
+      "height": 480
+    },
+    {
+      "id": "library",
+      "name": "花蜜图书馆",
+      "description": "书架/储物/阅读区",
+      "type": "common",
+      "x": 2048,
+      "y": 1088,
+      "width": 640,
+      "height": 384
+    }
+  ],
+  "tagAreaMapping": {
+    "coding": "workstation",
+    "data": "workstation",
+    "test": "workstation",
+    "review": "meeting-room",
+    "docs": "library",
+    "deploy": "server-room",
+    "_default": "workstation"
+  },
+  "agentSpriteMapping": {
+    "default": "sprites/default.png",
+    "001": "sprites/character-001.png",
+    "002": "sprites/character-002.png"
+  },
+  "agentSlots": {
+    "lobby": [
+      { "x": 200, "y": 300 },
+      { "x": 400, "y": 400 },
+      { "x": 300, "y": 550 }
+    ],
+    "workstation": [
+      { "x": 850, "y": 300 },
+      { "x": 1100, "y": 300 },
+      { "x": 1350, "y": 300 },
+      { "x": 1600, "y": 300 }
+    ],
+    "server-room": [
+      { "x": 2200, "y": 250 }
+    ],
+    "meeting-room": [
+      { "x": 2250, "y": 750 },
+      { "x": 2400, "y": 800 }
+    ],
+    "library": [
+      { "x": 2250, "y": 1200 }
+    ]
+  }
+}

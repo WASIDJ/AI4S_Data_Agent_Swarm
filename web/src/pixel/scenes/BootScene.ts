@@ -1,7 +1,19 @@
 import Phaser from "phaser";
 
+interface MapIndex {
+  maps: Array<{
+    id: string;
+    name: string;
+    description: string;
+    preview: string;
+  }>;
+  activeMap: string;
+}
+
 /**
  * BootScene — loads all world assets and shows a progress bar.
+ * Reads maps/index.json to determine the active map, then loads
+ * its config and assets from the corresponding map directory.
  * Transitions to WorldScene when loading is complete.
  */
 export class BootScene extends Phaser.Scene {
@@ -42,12 +54,20 @@ export class BootScene extends Phaser.Scene {
       loadingText.destroy();
     });
 
-    // --- Load world config ---
-    this.load.json("world-config", "assets/world/config.json");
+    // --- Load map index to determine active map ---
+    this.load.json("map-index", "assets/world/maps/index.json");
+    this.load.on("filecomplete-json-map-index", () => {
+      const mapIndex = this.cache.json.get("map-index") as MapIndex;
+      const activeMapId = mapIndex?.activeMap ?? "map-1";
+      const basePath = `assets/world/maps/${activeMapId}`;
 
-    // --- Load images ---
-    this.load.image("world-bg", "assets/world/background.png");
-    this.load.image("world-collision", "assets/world/collision.png");
+      // --- Load world config from active map directory ---
+      this.load.json("world-config", `${basePath}/config.json`);
+
+      // --- Load images from active map directory ---
+      this.load.image("world-bg", `${basePath}/background.png`);
+      this.load.image("world-collision", `${basePath}/collision.png`);
+    });
 
     // --- Load character sprite sheets (6 cols x 5 rows, 170x204 per frame) ---
     const frameWidth = 170;
