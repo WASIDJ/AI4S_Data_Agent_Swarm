@@ -2,8 +2,15 @@ import { Router } from "express";
 import crypto from "node:crypto";
 import * as agentStore from "../store/agentStore.js";
 import * as taskStore from "../store/taskStore.js";
+import * as ownershipStore from "../store/ownershipStore.js";
 import { broadcast } from "../services/wsBroadcaster.js";
 import type { Agent } from "../store/types.js";
+import type { Request } from "express";
+import type { JwtPayload } from "../middleware/auth.js";
+
+interface AuthRequest extends Request {
+  user?: JwtPayload;
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -139,7 +146,7 @@ agentsRouter.get("/:id", (req, res) => {
 });
 
 // POST /api/agents
-agentsRouter.post("/", (req, res) => {
+agentsRouter.post("/", (req: AuthRequest, res) => {
   const { name, avatar, role, prompt, projectId, maxTurns, maxBudgetUsd, allowedTools, model, provider, apiKey, apiBaseUrl } = req.body;
 
   // Validate required fields
@@ -200,6 +207,12 @@ agentsRouter.post("/", (req, res) => {
   };
 
   agentStore.createAgent(agent);
+
+  // 绑定归属关系
+  if (req.user) {
+    ownershipStore.grantOwnership(req.user.userId, "agent", agent.id);
+  }
+
   broadcast("agent:update", sanitizeAgentForResponse(agent));
   res.status(201).json({ agent: sanitizeAgentForResponse(agent) });
 });
@@ -318,6 +331,7 @@ agentsRouter.delete("/:id", (req, res) => {
   }
 
   agentStore.deleteAgent(req.params.id);
+  ownershipStore.revokeOwnership("agent", req.params.id as string);
   broadcast("agent:delete", { id: req.params.id });
   res.json({ ok: true });
 });
