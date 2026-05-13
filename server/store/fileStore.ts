@@ -21,6 +21,27 @@ export interface FileStoreOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Startup cleanup
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove stale `.tmp.*` files left over from interrupted safeWrite calls.
+ * Safe to call at server startup — these files are never needed.
+ */
+export async function cleanupTmpFiles(dir: string): Promise<void> {
+  try {
+    const entries = await fs.promises.readdir(dir);
+    for (const entry of entries) {
+      if (entry.includes('.tmp.')) {
+        await fs.promises.unlink(path.join(dir, entry)).catch(() => {});
+      }
+    }
+  } catch {
+    // Directory doesn't exist yet — nothing to clean
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Low-level helpers
 // ---------------------------------------------------------------------------
 
