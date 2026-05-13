@@ -6,10 +6,17 @@ import zlib from "node:zlib";
 import * as taskStore from "../store/taskStore.js";
 import * as agentStore from "../store/agentStore.js";
 import * as projectStore from "../store/projectStore.js";
+import * as ownershipStore from "../store/ownershipStore.js";
 import { broadcast } from "../services/wsBroadcaster.js";
 import { taskManager, TaskManagerError } from "../services/taskManager.js";
 import { resolveToolDecision } from "../sdk/queryWrapper.js";
 import type { Task, Event } from "../store/types.js";
+import type { Request } from "express";
+import type { JwtPayload } from "../middleware/auth.js";
+
+interface AuthRequest extends Request {
+  user?: JwtPayload;
+}
 
 // ---------------------------------------------------------------------------
 // Events directory
@@ -223,7 +230,7 @@ tasksRouter.get("/:id/sdk-status", async (req, res) => {
 });
 
 // POST /api/tasks — create
-tasksRouter.post("/", (req, res) => {
+tasksRouter.post("/", (req: AuthRequest, res) => {
   const { title, description, agentId, projectId, priority, tags, maxTurns, maxBudgetUsd, pipelineType, inputFiles } = req.body;
 
   // Validate required fields
@@ -290,6 +297,11 @@ tasksRouter.post("/", (req, res) => {
   };
 
   taskStore.createTask(task);
+
+  // 绑定归属关系
+  if (req.user) {
+    ownershipStore.grantOwnership(req.user.userId, "task", task.id);
+  }
 
   // Update agent taskCount
   agentStore.updateAgent(agentId, { taskCount: agent.taskCount + 1 });
@@ -410,6 +422,7 @@ tasksRouter.delete("/:id", (req, res) => {
   } else {
     // Hard delete (Todo status)
     taskStore.deleteTask(req.params.id);
+    ownershipStore.revokeOwnership("task", req.params.id as string);
 
     // Update agent taskCount
     const agent = agentStore.getAgentById(existing.agentId);
@@ -639,6 +652,12 @@ tasksRouter.post("/:id/retry", (req, res) => {
   };
 
   taskStore.createTask(newTask);
+
+  // 继承原任务的归属关系
+  const originalOwner = ownershipStore.getResourceOwner("task", existing.id);
+  if (originalOwner) {
+    ownershipStore.grantOwnership(originalOwner, "task", newTask.id);
+  }
 
   // Update agent taskCount
   const agent = agentStore.getAgentById(existing.agentId);

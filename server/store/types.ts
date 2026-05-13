@@ -178,6 +178,23 @@ export interface UsersEnvelope extends SchemaEnvelope<User> {
   users: User[];
 }
 
+// ---- Resource Ownership ----------------------------------------------------
+
+/**
+ * 资源归属映射表（用于数据隔离，不修改原有模型）
+ */
+export interface ResourceOwnership {
+  id: string;              // 映射记录 ID
+  userId: string;          // 用户 ID
+  resourceType: "project" | "agent" | "task";  // 资源类型
+  resourceId: string;       // 资源 ID
+  createdAt: number;       // 创建时间
+}
+
+export interface OwnershipsEnvelope extends SchemaEnvelope<ResourceOwnership> {
+  ownerships: ResourceOwnership[];
+}
+
 // ---- World ------------------------------------------------------------------
 
 export interface WorldArea {
