@@ -15,6 +15,7 @@ import {
   type WSMessage,
 } from "./api";
 import Dashboard from "./components/Dashboard";
+import CapabilityCenter from "./components/capabilities/CapabilityCenter";
 import { showToast } from "./components/NotificationContainer";
 
 const AVATAR_DEFAULT = "/images/avatar-default.png";
@@ -341,6 +342,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={dashboardElement} />
       <Route path="/dashboard" element={dashboardElement} />
+      <Route path="/capabilities" element={<CapabilityCenter agents={agents} />} />
     </Routes>
   );
 }

@@ -102,6 +102,48 @@ export interface Toast {
   message: string;
 }
 
+export type CapabilityType = "mcp" | "skill";
+export type CapabilityStatus = "available" | "enabled" | "disabled";
+
+interface BaseCapability {
+  id: string;
+  type: CapabilityType;
+  name: string;
+  subtitle: string;
+  description: string;
+  category: string;
+  tags: string[];
+  featured?: boolean;
+  status: CapabilityStatus;
+  recommendedAgentIds: string[];
+  dependsOn?: string[];
+}
+
+export interface McpCapability extends BaseCapability {
+  type: "mcp";
+  transport: "stdio" | "http" | "sse" | "builtin";
+  serverName: string;
+  command?: string;
+  args?: string[];
+  tools: string[];
+  allowedTools: string[];
+}
+
+export interface SkillCapability extends BaseCapability {
+  type: "skill";
+  skillPath: string;
+  triggerExamples: string[];
+  promptSummary: string;
+}
+
+export type Capability = McpCapability | SkillCapability;
+
+export interface AgentCapabilityBinding {
+  agentId: string;
+  capabilityId: string;
+  enabled: boolean;
+}
+
 export const EVENT_ICONS: Record<EventType, string> = {
   task_created: "\u{1F4DD}",
   task_started: "\u25B6",

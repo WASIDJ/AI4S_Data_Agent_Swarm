@@ -6,11 +6,12 @@ import {
   Settings,
   User,
   Diamond,
+  Boxes,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import type { Project } from "../types";
 import type { UserProfile } from "../App";
-import { showToast } from "./NotificationContainer";
 
 interface Props {
   activeProject: string;
@@ -202,6 +203,18 @@ export default function TopBar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      <Link
+        to="/capabilities"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all hover:border-[rgba(255,162,122,0.2)]"
+        style={{
+          border: "1px solid var(--border-medium)",
+          color: "var(--text-secondary)",
+        }}
+      >
+        <Boxes size={12} style={{ color: "#ffa27a" }} />
+        <span className="hidden sm:inline">能力中心</span>
+      </Link>
 
       {/* New Project Quick Action */}
       <button
