@@ -114,6 +114,12 @@ export default function CapabilityCenter({
   const recommendedAgents = selected.recommendedAgentIds
     .map(id => agents.find(agent => agent.id === id))
     .filter(Boolean) as Agent[];
+  const featuredAgents = featured
+    ? (featured.recommendedAgentIds
+        .map(id => agents.find(agent => agent.id === id))
+        .filter(Boolean) as Agent[])
+    : [];
+  const heroAgents = featuredAgents.length > 0 ? featuredAgents : agents.slice(0, 3);
 
   return (
     <div
@@ -180,7 +186,7 @@ export default function CapabilityCenter({
                     "linear-gradient(90deg, transparent, rgba(255,162,122,0.55), transparent)",
                 }}
               />
-              <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-0">
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-0">
                 <div className="p-5 lg:p-6">
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     <span
@@ -211,17 +217,25 @@ export default function CapabilityCenter({
                   <p className="text-sm leading-6 max-w-3xl" style={{ color: "#c8beb2" }}>
                     面向 AI4S 数据生产的 PDF 解析、OCR、公式表格抽取与结构化 JSON 生成能力。
                   </p>
-                  <div className="mt-5 grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-2 items-stretch">
-                    {["论文 PDF", "MinerU 解析", "结构化 JSON"].map(
-                      (step, index) => (
-                        <PipelineStep
-                          key={step}
-                          label={step}
-                          active={index === 1}
-                          showArrow={index < 2}
-                        />
-                      )
-                    )}
+                  <div
+                    className="mt-5 rounded-lg p-3"
+                    style={{
+                      background: "rgba(0,0,0,0.16)",
+                      border: "1px solid rgba(255,162,122,0.08)",
+                    }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-2 items-stretch">
+                      {["论文 PDF", "MinerU 解析", "结构化 JSON"].map(
+                        (step, index) => (
+                          <PipelineStep
+                            key={step}
+                            label={step}
+                            active={index === 1}
+                            showArrow={index < 2}
+                          />
+                        )
+                      )}
+                    </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <CapabilityMetric label="OCR" value="版面识别" />
@@ -232,7 +246,7 @@ export default function CapabilityCenter({
                 </div>
 
                 <div
-                  className="p-5 lg:p-6"
+                  className="p-5 lg:p-6 flex flex-col"
                   style={{
                     background:
                       "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.08))",
@@ -251,10 +265,17 @@ export default function CapabilityCenter({
                     </div>
                     <ShieldCheck size={16} style={{ color: "#5ecf8a" }} />
                   </div>
+
+                  <div
+                    className="grid grid-cols-2 gap-2 mb-3"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <MiniStat label="MCP Server" value="mineru" />
+                    <MiniStat label="Tools" value="4" />
+                  </div>
+
                   <div className="space-y-2">
-                    {featured.recommendedAgentIds.map(agentId => {
-                      const agent = agents.find(item => item.id === agentId);
-                      if (!agent) return null;
+                    {heroAgents.map(agent => {
                       const bound = isBound(agent.id, featured.id);
                       return (
                         <button
@@ -301,6 +322,26 @@ export default function CapabilityCenter({
                         </button>
                       );
                     })}
+                    {heroAgents.length === 0 && (
+                      <div
+                        className="rounded-md px-3 py-4 text-center text-xs"
+                        style={{
+                          color: "var(--text-muted)",
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid var(--border-medium)",
+                        }}
+                      >
+                        暂无可绑定 Agent
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className="mt-auto pt-4 text-[10px] leading-5"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    当前为可视化能力绑定，不会改变后端执行链路；后续可映射到
+                    Claude MCP 工具白名单与项目级 Skills。
                   </div>
                 </div>
               </div>
@@ -660,6 +701,25 @@ function CapabilityMetric({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      className="rounded-md px-3 py-2"
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        border: "1px solid var(--border-subtle)",
+      }}
+    >
+      <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </div>
+      <div className="text-xs mt-1 font-mono" style={{ color: "#ffa27a" }}>
         {value}
       </div>
     </div>
