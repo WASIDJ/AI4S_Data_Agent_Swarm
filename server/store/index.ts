@@ -74,6 +74,12 @@ export const capabilityBindingsStore = new FileStore({
   currentVersion: SCHEMA_VERSION,
 });
 
+export const ownershipsStore = new FileStore({
+  filePath: dataPath("ownerships.json"),
+  defaultValue: emptyEnvelope("ownerships"),
+  currentVersion: SCHEMA_VERSION,
+});
+
 // ---------------------------------------------------------------------------
 // Re-exports: low-level file store
 // ---------------------------------------------------------------------------
@@ -93,6 +99,7 @@ export * as userStore from "./userStore.js";
 export * as autodataStore from "./autodataStore.js";
 export * as worldStore from "./worldStore.js";
 export * as capabilityStore from "./capabilityStore.js";
+export * as ownershipStore from "./ownershipStore.js";
 
 // ---------------------------------------------------------------------------
 // Initialisation
@@ -105,6 +112,7 @@ const ALL_FILE_STORES = [
   projectsStore,
   usersStore,
   capabilityBindingsStore,
+  ownershipsStore,
 ];
 
 /**
@@ -125,6 +133,7 @@ export async function loadAllStores(): Promise<void> {
   const { loadGroups } = await import("./autodataStore.js");
   const { loadWorldState } = await import("./worldStore.js");
   const { loadCapabilityBindings } = await import("./capabilityStore.js");
+  const { loadOwnerships } = await import("./ownershipStore.js");
 
   loadAgents();
   loadTasks();
@@ -134,6 +143,7 @@ export async function loadAllStores(): Promise<void> {
   loadGroups();
   loadWorldState();
   loadCapabilityBindings();
+  loadOwnerships();
 }
 
 /**

@@ -106,6 +106,14 @@ async function request<T>(
   const res = await fetch(url, options);
 
   if (!res.ok) {
+    // Handle 401 Unauthorized — redirect to login page
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/auth.html";
+      throw new Error("请先登录");
+    }
+
     // Try to extract structured error from the backend
     let errorMessage = `HTTP ${res.status}: ${res.statusText}`;
     try {

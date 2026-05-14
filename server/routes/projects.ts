@@ -4,7 +4,14 @@ import fs from "node:fs";
 import path from "node:path";
 import * as projectStore from "../store/projectStore.js";
 import * as taskStore from "../store/taskStore.js";
+import * as ownershipStore from "../store/ownershipStore.js";
 import { broadcast } from "../services/wsBroadcaster.js";
+import type { Request } from "express";
+import type { JwtPayload } from "../middleware/auth.js";
+
+interface AuthRequest extends Request {
+  user?: JwtPayload;
+}
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -43,11 +50,13 @@ export const projectsRouter = Router();
 
 // GET /api/projects
 projectsRouter.get("/", (_req, res) => {
-  res.json({ projects: projectStore.getAllProjects() });
+  const projects = projectStore.getAllProjects();
+  res.json({ projects });
 });
 
-// POST /api/projects
-projectsRouter.post("/", (req, res) => {
+// POST /api/projects - 创建项目并绑定归属
+projectsRouter.post("/", (req: AuthRequest, res) => {
+  const userId = req.user!.userId;
   const { name, path: projectPath, description } = req.body;
 
   const nameError = validateName(name);
@@ -74,13 +83,17 @@ projectsRouter.post("/", (req, res) => {
     updatedAt: now,
   });
 
+  // 绑定归属关系
+  ownershipStore.grantOwnership(userId, "project", project.id);
+
   broadcast("project:update", project);
   res.status(201).json({ project });
 });
 
 // PUT /api/projects/:id
 projectsRouter.put("/:id", (req, res) => {
-  const existing = projectStore.getProjectById(req.params.id);
+  const projectId = req.params.id as string;
+  const existing = projectStore.getProjectById(projectId);
   if (!existing) {
     return res.status(404).json({
       error: { code: "PROJECT_NOT_FOUND", message: "Project not found" },
@@ -113,14 +126,15 @@ projectsRouter.put("/:id", (req, res) => {
     patch.description = req.body.description;
   }
 
-  const updated = projectStore.updateProject(req.params.id, patch);
+  const updated = projectStore.updateProject(projectId, patch);
   broadcast("project:update", updated);
   res.json({ project: updated });
 });
 
 // DELETE /api/projects/:id
 projectsRouter.delete("/:id", (req, res) => {
-  const existing = projectStore.getProjectById(req.params.id);
+  const projectId = req.params.id as string;
+  const existing = projectStore.getProjectById(projectId);
   if (!existing) {
     return res.status(404).json({
       error: { code: "PROJECT_NOT_FOUND", message: "Project not found" },
@@ -132,7 +146,7 @@ projectsRouter.delete("/:id", (req, res) => {
     .getAllTasks()
     .filter(
       (t) =>
-        t.projectId === req.params.id &&
+        t.projectId === projectId &&
         (t.status === "Running" || t.status === "Stuck"),
     );
 
@@ -145,7 +159,8 @@ projectsRouter.delete("/:id", (req, res) => {
     });
   }
 
-  projectStore.deleteProject(req.params.id);
-  broadcast("project:delete", { id: req.params.id });
+  projectStore.deleteProject(projectId);
+  ownershipStore.revokeOwnership("project", projectId);
+  broadcast("project:delete", { id: projectId });
   res.json({ ok: true });
 });

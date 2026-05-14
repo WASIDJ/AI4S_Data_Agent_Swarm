@@ -22,7 +22,7 @@ import { autodataRouter } from "./routes/autodata.js";
 import { worldRouter } from "./routes/world.js";
 import { capabilitiesRouter } from "./routes/capabilities.js";
 import { authRouter, userRouter } from "./routes/auth.js";
-import { optionalAuth } from "./middleware/auth.js";
+import { requireAuth } from "./middleware/auth.js";
 import { sdkSessionManager } from "./services/sdkSessionManager.js";
 import { worldSimulator } from "./services/worldSimulator.js";
 
@@ -155,29 +155,11 @@ app.use(
 
 app.use(express.json({ limit: "10mb" }));
 
-app.use(optionalAuth);
-
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 
-app.use("/api/auth", authRouter);
-app.use("/api/user", userRouter);
-app.use("/api/projects", projectsRouter);
-app.use("/api/agents", agentsRouter);
-app.use("/api/tasks", tasksRouter);
-app.use("/api/copilot", copilotRouter);
-app.use("/api/files", filesRouter);
-app.use("/api/pipeline", pipelineRouter);
-app.use("/api/autodata", autodataRouter);
-app.use("/api/world", worldRouter);
-app.use("/api/capabilities", capabilitiesRouter);
-app.use("/", eventsRouter);
-
-// ---------------------------------------------------------------------------
-// Health check
-// ---------------------------------------------------------------------------
-
+// 公开接口 - 无需认证
 app.get("/api/health", (_req, res) => {
   const allTasks = taskStore.getAllTasks();
   const activeTaskCount = allTasks.filter(
@@ -193,6 +175,23 @@ app.get("/api/health", (_req, res) => {
     storageOk: true,
   });
 });
+
+app.use("/api/auth", authRouter);
+
+// 业务接口 - 强制认证
+app.use("/api/user", requireAuth, userRouter);
+app.use("/api/projects", requireAuth, projectsRouter);
+app.use("/api/agents", requireAuth, agentsRouter);
+app.use("/api/tasks", requireAuth, tasksRouter);
+app.use("/api/copilot", requireAuth, copilotRouter);
+app.use("/api/files", requireAuth, filesRouter);
+app.use("/api/pipeline", requireAuth, pipelineRouter);
+app.use("/api/autodata", requireAuth, autodataRouter);
+app.use("/api/world", requireAuth, worldRouter);
+app.use("/api/capabilities", requireAuth, capabilitiesRouter);
+
+// Hook 接口 - 内部调用（仅本地）
+app.use("/", eventsRouter);
 
 // ---------------------------------------------------------------------------
 // Error handling
