@@ -104,10 +104,16 @@ export interface Toast {
 
 export type CapabilityType = "mcp" | "skill";
 export type CapabilityStatus = "available" | "enabled" | "disabled";
+export type CapabilityRuntimeMode =
+  | "sdk-tool"
+  | "project-skill"
+  | "mcp-server"
+  | "display-only";
 
 interface BaseCapability {
   id: string;
   type: CapabilityType;
+  runtimeMode: CapabilityRuntimeMode;
   name: string;
   subtitle: string;
   description: string;
@@ -117,6 +123,7 @@ interface BaseCapability {
   status: CapabilityStatus;
   recommendedAgentIds: string[];
   dependsOn?: string[];
+  sourceUrl?: string;
 }
 
 export interface McpCapability extends BaseCapability {

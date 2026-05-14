@@ -15,7 +15,11 @@ import {
   Wrench,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { capabilities, featuredCapabilityId } from "../../capabilityData";
+import {
+  capabilities,
+  featuredCapabilityId,
+  runtimeModeLabels,
+} from "../../capabilityData";
 import type { Agent, AgentCapabilityBinding, Capability } from "../../types";
 
 type Tab = "featured" | "mcp" | "skill";
@@ -483,7 +487,8 @@ export default function CapabilityCenter({
                     </div>
                     <div className="mt-3 flex items-center justify-between text-[10px]">
                       <span style={{ color: "var(--text-muted)" }}>
-                        {typeLabel(capability.type)}
+                        {typeLabel(capability.type)} /{" "}
+                        {runtimeModeLabels[capability.runtimeMode]}
                       </span>
                       <span
                         style={{
@@ -528,7 +533,8 @@ export default function CapabilityCenter({
                     className="text-[11px] mt-1"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    {typeLabel(selected.type)} / {selected.category}
+                    {typeLabel(selected.type)} / {selected.category} /{" "}
+                    {runtimeModeLabels[selected.runtimeMode]}
                   </div>
                 </div>
               </div>
