@@ -4,6 +4,7 @@ import type { Task, Agent } from "../store/types.js";
 import * as taskStore from "../store/taskStore.js";
 import * as agentStore from "../store/agentStore.js";
 import { broadcast } from "../services/wsBroadcaster.js";
+import { resolveAgentCapabilityRuntime } from "../services/capabilityRuntime.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -316,11 +317,15 @@ export async function startQuery(
 ): Promise<StartQueryResult> {
   const abortController = new AbortController();
 
+  const capabilityRuntime = resolveAgentCapabilityRuntime(agent.id);
+
   // Build system prompt
   const systemPrompt: Options["systemPrompt"] = {
     type: "preset",
     preset: "claude_code",
-    append: agent.prompt,
+    append: [agent.prompt, capabilityRuntime.promptAppend]
+      .filter(Boolean)
+      .join("\n\n"),
   };
 
   // Build canUseTool callback
@@ -331,7 +336,9 @@ export async function startQuery(
 
   // Determine tools
   const tools = agent.allowedTools && agent.allowedTools.length > 0
-    ? agent.allowedTools
+    ? Array.from(new Set([...agent.allowedTools, ...capabilityRuntime.allowedTools]))
+    : capabilityRuntime.allowedTools.length > 0
+      ? capabilityRuntime.allowedTools
     : undefined;
 
   const options: Options = {
@@ -346,6 +353,10 @@ export async function startQuery(
 
   if (tools) {
     options.allowedTools = tools;
+  }
+
+  if (capabilityRuntime.mcpServers) {
+    options.mcpServers = capabilityRuntime.mcpServers;
   }
 
   applyAgentOverrides(options, agent);
@@ -372,6 +383,7 @@ export async function resumeQuery(
   const abortController = new AbortController();
 
   const canUseTool = createCanUseToolCallback(task.id, sessionId);
+  const capabilityRuntime = resolveAgentCapabilityRuntime(agent.id);
 
   const options: Options = {
     abortController,
@@ -384,9 +396,25 @@ export async function resumeQuery(
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: agent.prompt,
+      append: [agent.prompt, capabilityRuntime.promptAppend]
+        .filter(Boolean)
+        .join("\n\n"),
     },
   };
+
+  const resumeTools = agent.allowedTools && agent.allowedTools.length > 0
+    ? Array.from(new Set([...agent.allowedTools, ...capabilityRuntime.allowedTools]))
+    : capabilityRuntime.allowedTools.length > 0
+      ? capabilityRuntime.allowedTools
+      : undefined;
+
+  if (resumeTools) {
+    options.allowedTools = resumeTools;
+  }
+
+  if (capabilityRuntime.mcpServers) {
+    options.mcpServers = capabilityRuntime.mcpServers;
+  }
 
   applyAgentOverrides(options, agent);
 
