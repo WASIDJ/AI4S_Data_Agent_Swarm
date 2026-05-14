@@ -276,7 +276,8 @@ export const capabilities: Capability[] = [
     status: "enabled",
     recommendedAgentIds: ["agent-parser"],
     dependsOn: ["mineru-parser"],
-    skillPath: ".claude/skills/mineru-pdf/SKILL.md",
+    sourceUrl: "https://github.com/claude-office-skills/skills/tree/main/pdf-extraction",
+    skillPath: ".claude/skills/pdf-extraction/SKILL.md",
     triggerExamples: ["解析这批论文 PDF", "把 PDF 转成结构化 JSON", "抽取论文公式和表格"],
     promptSummary:
       "遇到论文 PDF 时，先执行 MinerU 解析，再按 AI4S 数据生产字段整理结构化结果。",
@@ -294,7 +295,8 @@ export const capabilities: Capability[] = [
     status: "available",
     recommendedAgentIds: ["agent-crawler", "agent-parser"],
     dependsOn: ["web-crawler"],
-    skillPath: ".claude/skills/html-extraction/SKILL.md",
+    sourceUrl: "https://github.com/claude-office-skills/skills/tree/main/data-extractor",
+    skillPath: ".claude/skills/data-extractor/SKILL.md",
     triggerExamples: ["抽取网页正文", "把 HTML 转成结构化 JSON"],
     promptSummary:
       "处理 HTML 时优先保留正文结构、表格、链接和来源 URL。",
@@ -313,7 +315,7 @@ export const capabilities: Capability[] = [
     sourceUrl: "https://github.com/claude-office-skills/skills",
     recommendedAgentIds: ["agent-parser"],
     dependsOn: ["docx-parser"],
-    skillPath: ".claude/skills/docx-parsing/SKILL.md",
+    skillPath: ".claude/skills/doc-parser/SKILL.md",
     triggerExamples: ["解析 Word 文档", "把 DOCX 转成 Markdown"],
     promptSummary:
       "处理 DOCX 时按标题层级、段落、表格和引用信息输出结构化内容。",
@@ -331,7 +333,8 @@ export const capabilities: Capability[] = [
     status: "available",
     recommendedAgentIds: ["agent-synthesizer", "agent-qa"],
     dependsOn: ["json-validator"],
-    skillPath: ".claude/skills/json-normalization/SKILL.md",
+    sourceUrl: "https://github.com/claude-office-skills/skills/tree/main/data-extractor",
+    skillPath: ".claude/skills/data-extractor/SKILL.md",
     triggerExamples: ["清洗 JSON 数据", "修复字段结构", "对齐 schema"],
     promptSummary:
       "清洗 JSON 时保留原始字段映射，输出规范化结果和异常列表。",
@@ -350,7 +353,7 @@ export const capabilities: Capability[] = [
     sourceUrl: "https://github.com/claude-office-skills/skills",
     recommendedAgentIds: ["agent-synthesizer", "agent-qa"],
     dependsOn: ["spreadsheet-processor"],
-    skillPath: ".claude/skills/spreadsheet-cleaning/SKILL.md",
+    skillPath: ".claude/skills/excel-automation/SKILL.md",
     triggerExamples: ["整理 Excel 数据", "清洗 CSV", "统计表格字段"],
     promptSummary:
       "处理表格数据时检查列名、类型、缺失值和导出格式。",
@@ -368,7 +371,8 @@ export const capabilities: Capability[] = [
     status: "available",
     recommendedAgentIds: ["agent-parser", "agent-synthesizer"],
     dependsOn: ["image-ocr"],
-    skillPath: ".claude/skills/multimodal-extraction/SKILL.md",
+    sourceUrl: "https://github.com/claude-office-skills/skills/tree/main/smart-ocr",
+    skillPath: ".claude/skills/smart-ocr/SKILL.md",
     triggerExamples: ["抽取图片和图注", "生成图文样本"],
     promptSummary:
       "处理图片时同时保留图注、正文引用位置和 OCR 结果。",
@@ -455,9 +459,9 @@ export const capabilities: Capability[] = [
     category: "流程编排",
     tags: ["Agent", "Pipeline", "Orchestration"],
     status: "available",
-    sourceUrl: "https://github.com/OneWave-AI/claude-skills",
+    sourceUrl: "https://github.com/OneWave-AI/claude-skills/tree/main/data-pipeline-builder",
     recommendedAgentIds: ["agent-orchestrator"],
-    skillPath: ".claude/skills/pipeline-orchestration/SKILL.md",
+    skillPath: ".claude/skills/data-pipeline-builder/SKILL.md",
     triggerExamples: ["启动一批论文数据生产流水线", "为这些 PDF 分配 Agent 任务"],
     promptSummary:
       "把数据生产拆成多个 Agent 任务，并根据状态推进、返修或终止。",
