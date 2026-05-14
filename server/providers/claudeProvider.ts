@@ -36,6 +36,13 @@ function safeStringify(obj: unknown, maxLen: number): string {
   }
 }
 
+function getResultErrors(resultMsg: SDKResultMessage): string[] | undefined {
+  if ("errors" in resultMsg && Array.isArray(resultMsg.errors)) {
+    return resultMsg.errors.map(String);
+  }
+  return undefined;
+}
+
 async function* convertSDKStream(sdkStream: Query): AsyncGenerator<ProviderMessage> {
   for await (const message of sdkStream) {
     const providerMessages = convertSDKMessage(message);
@@ -106,7 +113,7 @@ function convertSDKMessage(message: SDKMessage): ProviderMessage[] {
       durationMs: resultMsg.duration_ms,
       resultSubtype: resultMsg.subtype,
       isError: resultMsg.is_error === true || resultMsg.subtype !== "success",
-      errors: resultMsg.errors?.map(String),
+      errors: getResultErrors(resultMsg),
     }];
   }
 

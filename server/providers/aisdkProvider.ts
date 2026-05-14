@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { streamText, type StreamTextResult } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { openai } from "@ai-sdk/openai";
-import { moonshotai } from "@ai-sdk/moonshotai";
+import { createOpenAI, openai } from "@ai-sdk/openai";
+import { createMoonshotAI, moonshotai } from "@ai-sdk/moonshotai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type {
   AgentProvider,
@@ -61,13 +61,15 @@ function getModelForProvider(providerType: ProviderType, modelId: string, config
 
   switch (providerType) {
     case "kimi":
-      return moonshotai(modelId, apiKey ? { apiKey } : undefined);
+      return apiKey ? createMoonshotAI({ apiKey })(modelId) : moonshotai(modelId);
     case "openai":
     case "codex":
-      return openai(modelId, {
-        ...(apiKey ? { apiKey } : {}),
-        ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-      });
+      return apiKey || config.baseUrl
+        ? createOpenAI({
+            ...(apiKey ? { apiKey } : {}),
+            ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
+          })(modelId)
+        : openai(modelId);
     case "glm": {
       const glmProvider = createOpenAICompatible({
         name: "zhipu",
@@ -93,7 +95,7 @@ function getModelForProvider(providerType: ProviderType, modelId: string, config
       return deepseekProvider(modelId);
     }
     default:
-      return openai(modelId, { apiKey });
+      return apiKey ? createOpenAI({ apiKey })(modelId) : openai(modelId);
   }
 }
 
@@ -127,8 +129,6 @@ export class AISDKProvider implements AgentProvider {
       model,
       system: agent.prompt || "You are a helpful assistant.",
       prompt: task.description,
-      signal: abortController.signal,
-      maxTokens: undefined,
       abortSignal: abortController.signal,
     });
 
@@ -152,7 +152,6 @@ export class AISDKProvider implements AgentProvider {
       model,
       system: agent.prompt || "You are a helpful assistant.",
       prompt: message,
-      signal: abortController.signal,
       abortSignal: abortController.signal,
     });
 
