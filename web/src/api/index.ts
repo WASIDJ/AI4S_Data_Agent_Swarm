@@ -22,6 +22,7 @@ import type {
   AgentStatus,
   Event,
   EventType,
+  AgentCapabilityBinding,
   Project,
   Task,
   TaskStatus,
@@ -388,6 +389,47 @@ export const ProjectApi = {
   /** DELETE /api/projects/:id — response: { ok: true } */
   async remove(id: string): Promise<void> {
     await request("DELETE", `/api/projects/${id}`);
+  },
+};
+
+// ===========================================================================
+// API: Capabilities
+// ===========================================================================
+
+interface BackendCapabilityBinding {
+  agentId: string;
+  capabilityId: string;
+  enabled: boolean;
+}
+
+function mapCapabilityBinding(raw: BackendCapabilityBinding): AgentCapabilityBinding {
+  return {
+    agentId: raw.agentId,
+    capabilityId: raw.capabilityId,
+    enabled: raw.enabled,
+  };
+}
+
+export const CapabilityApi = {
+  async listBindings(): Promise<AgentCapabilityBinding[]> {
+    const res = await request<{ bindings: BackendCapabilityBinding[] }>(
+      "GET",
+      "/api/capabilities/bindings"
+    );
+    return (res.bindings ?? []).map(mapCapabilityBinding);
+  },
+
+  async setBinding(
+    agentId: string,
+    capabilityId: string,
+    enabled: boolean
+  ): Promise<AgentCapabilityBinding> {
+    const res = await request<{ binding: BackendCapabilityBinding }>(
+      "PUT",
+      `/api/capabilities/agents/${agentId}/bindings/${capabilityId}`,
+      { enabled }
+    );
+    return mapCapabilityBinding(res.binding);
   },
 };
 

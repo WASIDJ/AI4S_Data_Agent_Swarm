@@ -161,6 +161,20 @@ export interface ProjectsEnvelope extends SchemaEnvelope<Project> {
   projects: Project[];
 }
 
+// ---- Capabilities ----------------------------------------------------------
+
+export interface AgentCapabilityBinding {
+  agentId: string;
+  capabilityId: string;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CapabilityBindingsEnvelope extends SchemaEnvelope<AgentCapabilityBinding> {
+  capabilityBindings: AgentCapabilityBinding[];
+}
+
 // ---- User -------------------------------------------------------------------
 
 export interface User {

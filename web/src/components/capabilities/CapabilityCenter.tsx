@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,6 +20,7 @@ import {
   featuredCapabilityId,
   runtimeModeLabels,
 } from "../../capabilityData";
+import { CapabilityApi } from "../../api";
 import type { Agent, AgentCapabilityBinding, Capability } from "../../types";
 
 type Tab = "featured" | "mcp" | "skill";
@@ -64,6 +65,18 @@ export default function CapabilityCenter({
   const [selectedId, setSelectedId] = useState(featuredCapabilityId);
   const [bindings, setBindings] =
     useState<AgentCapabilityBinding[]>(loadBindings);
+
+  useEffect(() => {
+    CapabilityApi.listBindings()
+      .then(next => {
+        setBindings(next);
+        saveBindings(next);
+      })
+      .catch(() => {
+        // Keep local fallback so the capability center remains usable in
+        // frontend-only demos.
+      });
+  }, []);
 
   const selected =
     capabilities.find(capability => capability.id === selectedId) ??
@@ -112,6 +125,10 @@ export default function CapabilityCenter({
         : [...current, { agentId, capabilityId, enabled: true }];
       saveBindings(next);
       return next;
+    });
+    const nextEnabled = !isBound(agentId, capabilityId);
+    CapabilityApi.setBinding(agentId, capabilityId, nextEnabled).catch(() => {
+      // Local optimistic state is intentionally kept as demo fallback.
     });
   };
 

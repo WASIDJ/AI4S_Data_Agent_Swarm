@@ -20,6 +20,7 @@ import { filesRouter } from "./routes/files.js";
 import { pipelineRouter } from "./routes/pipeline.js";
 import { autodataRouter } from "./routes/autodata.js";
 import { worldRouter } from "./routes/world.js";
+import { capabilitiesRouter } from "./routes/capabilities.js";
 import { authRouter, userRouter } from "./routes/auth.js";
 import { optionalAuth } from "./middleware/auth.js";
 import { sdkSessionManager } from "./services/sdkSessionManager.js";
@@ -170,6 +171,7 @@ app.use("/api/files", filesRouter);
 app.use("/api/pipeline", pipelineRouter);
 app.use("/api/autodata", autodataRouter);
 app.use("/api/world", worldRouter);
+app.use("/api/capabilities", capabilitiesRouter);
 app.use("/", eventsRouter);
 
 // ---------------------------------------------------------------------------
